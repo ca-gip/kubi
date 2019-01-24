@@ -11,4 +11,4 @@ FROM scratch
 WORKDIR /root/
 COPY --from=0 /go/src/intomy.land/kubi/bin/kubi .
 EXPOSE 8000
-CMD ["./app"]
+CMD ["./kubi"]
