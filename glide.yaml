@@ -1,0 +1,18 @@
+package: intomy.land/kube-ldap
+import:
+- package: github.com/dgrijalva/jwt-go
+  version: ~3.2.0
+- package: github.com/go-ozzo/ozzo-validation
+  version: ~3.5.0
+  subpackages:
+  - is
+- package: github.com/gorilla/mux
+  version: ~1.6.2
+- package: github.com/rs/zerolog
+  version: ~1.11.0
+- package: gopkg.in/ldap.v2
+  version: ~3.0.0
+- package: gopkg.in/yaml.v2
+  version: ~2.2.2
+- package: k8s.io/api
+- package: k8s.io/apimachinery

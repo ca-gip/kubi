@@ -1,0 +1,35 @@
+version: 1
+
+#!RESULT OK
+#!CONNECTION ldap://127.0.0.1:389
+#!DATE 2019-01-22T16:35:14.984
+dn: dc=example,dc=org
+objectClass: organization
+objectClass: dcObject
+objectClass: top
+dc: example
+o: example.org
+
+#!RESULT OK
+#!CONNECTION ldap://127.0.0.1:389
+#!DATE 2019-01-22T16:35:14.989
+dn: cn=admin,dc=example,dc=org
+objectClass: organizationalRole
+objectClass: simpleSecurityObject
+cn: admin
+userPassword: {SSHA}Z44bPI6wx81XaAD76ZXTiPvrwtaTkUvY
+description: LDAP administrator
+
+#!RESULT ERROR
+#!CONNECTION ldap://127.0.0.1:389
+#!DATE 2019-01-22T16:35:14.991
+#!ERROR [LDAP: error code 32 - No Such Object]
+dn: cn=fortin_e,ou=People,dc=example,dc=org
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: fortin_e
+sn: 0
+userPassword: {SSHA}dlW+F1lSKj0H8QJEgX32hUfVeqhTSkWypZ787w==
+
