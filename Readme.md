@@ -4,9 +4,9 @@ Kubi is a Kubernetes IAM authentication proxy to authenticate user through
 LDAP, AD LDS and assign permission dynamically using a predefined naming convention (LDAP Group).
 
 For example:
-- a ldap group named: xxx-yyyy-NAMESPACE-DEMO_ADMIN give ADMIN `role binding`  permissions to the existing namespace `NAMESPACE-DEMO`.
+- a ldap group named: GROUP-NAMESPACE-DEMO_ADMIN give ADMIN `role binding`  permissions to the existing namespace `NAMESPACE-DEMO`.
 
-The `_` is used to split Role and Namespace, the patter is `XXX_NAMESPACE-NAME_ROLE`.
+The `_` is used to split Role and Namespace, the pattern is `XXX_NAMESPACE-NAME_ROLE`.
 
 > In this version, you need to create Role binding manually to grant permission.
 It will be automatically create in the next release.
@@ -21,47 +21,47 @@ It will be automatically create in the next release.
 - You need to have admin access to an existing kubernetes cluster
 - You need to have cfssl installed
 
-1. Create a private key signed by Kubernetes CA
+#### Create a private key signed by Kubernetes CA
 
-1.1. Kube Api Server Url
-> Change `api.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
-that point to an existing Kubernetes Cluster node.
-**Eg: 10.56.221.4, kubernetes.<my_domain>...**
+1. Kube Api Server Url
+  > Change `api.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
+  that point to an existing Kubernetes Cluster node.
+  **Eg: 10.56.221.4, kubernetes.<my_domain>...**
 
-
-```bash
-cat <<EOF | cfssl genkey - | cfssljson -bare server
-{
-  "hosts": [
-    "api.devops.managed.kvm"
-    "kubi-svc.kube-system.svc.cluster.local",
-  ],
-  "CN": "kubi-svc.kube-system.svc.cluster.local",
-  "key": {
-    "algo": "ecdsa",
-    "size": 256
+  ```bash
+  cat <<EOF | cfssl genkey - | cfssljson -bare server
+  {
+    "hosts": [
+      "api.devops.managed.kvm"
+      "kubi-svc.kube-system.svc.cluster.local",
+    ],
+    "CN": "kubi-svc.kube-system.svc.cluster.local",
+    "key": {
+      "algo": "ecdsa",
+      "size": 256
+    }
   }
-}
-EOF
-```
+  EOF
+  ```
+
 2. Create the signing request
 
-```bash
-cat <<EOF | kubectl create -f -
-apiVersion: certificates.k8s.io/v1beta1
-kind: CertificateSigningRequest
-metadata:
-  name: kubi-svc.kube-system
-spec:
-  groups:
-  - system:authenticated
-  request: $(cat server.csr | base64 | tr -d '\n')
-  usages:
-  - digital signature
-  - key encipherment
-  - server auth
-EOF
-```
+  ```bash
+  cat <<EOF | kubectl create -f -
+  apiVersion: certificates.k8s.io/v1beta1
+  kind: CertificateSigningRequest
+  metadata:
+    name: kubi-svc.kube-system
+  spec:
+    groups:
+    - system:authenticated
+    request: $(cat server.csr | base64 | tr -d '\n')
+    usages:
+    - digital signature
+    - key encipherment
+    - server auth
+  EOF
+  ```
 
 3. Approve the csr
 ```bash
