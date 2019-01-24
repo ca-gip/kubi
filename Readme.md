@@ -28,39 +28,39 @@ It will be automatically create in the next release.
   that point to an existing Kubernetes Cluster node.
   **Eg: 10.56.221.4, kubernetes.<my_domain>...**
 
-  ```bash
-  cat <<EOF | cfssl genkey - | cfssljson -bare server
-  {
-    "hosts": [
-      "api.devops.managed.kvm"
-      "kubi-svc.kube-system.svc.cluster.local",
-    ],
-    "CN": "kubi-svc.kube-system.svc.cluster.local",
-    "key": {
-      "algo": "ecdsa",
-      "size": 256
-    }
+```bash
+cat <<EOF | cfssl genkey - | cfssljson -bare server
+{
+  "hosts": [
+    "api.devops.managed.kvm",
+    "kubi-svc.kube-system.svc.cluster.local"
+  ],
+  "CN": "kubi-svc.kube-system.svc.cluster.local",
+  "key": {
+    "algo": "ecdsa",
+    "size": 256
   }
-  EOF
-  ```
+}
+EOF
+```
 
 2. Create the signing request
 
   ```bash
-  cat <<EOF | kubectl create -f -
-  apiVersion: certificates.k8s.io/v1beta1
-  kind: CertificateSigningRequest
-  metadata:
-    name: kubi-svc.kube-system
-  spec:
-    groups:
-    - system:authenticated
-    request: $(cat server.csr | base64 | tr -d '\n')
-    usages:
-    - digital signature
-    - key encipherment
-    - server auth
-  EOF
+cat <<EOF | kubectl create -f -
+apiVersion: certificates.k8s.io/v1beta1
+kind: CertificateSigningRequest
+metadata:
+  name: kubi-svc.kube-system
+spec:
+  groups:
+  - system:authenticated
+  request: $(cat server.csr | base64 | tr -d '\n')
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+EOF
   ```
 
 3. Approve the csr
@@ -122,8 +122,8 @@ cat <<EOF | kubectl create -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: "demo-admin"
-  namespace: "demo"
+  name: "test-admin"
+  namespace: "test"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -131,7 +131,7 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
-  name: "demo-admin"
+  name: "test-admin"
 EOF
 ```
 
