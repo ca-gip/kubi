@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"intomy.land/kube-ldap/utils"
+	"intomy.land/kubi/utils"
 	"net/http"
 )
 

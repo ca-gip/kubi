@@ -34,9 +34,9 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
 {
   "hosts": [
     "api.devops.managed.kvm"
-    "kube-ldap-svc.kube-system.svc.cluster.local",
+    "kubi-svc.kube-system.svc.cluster.local",
   ],
-  "CN": "kube-ldap-svc.kube-system.svc.cluster.local",
+  "CN": "kubi-svc.kube-system.svc.cluster.local",
   "key": {
     "algo": "ecdsa",
     "size": 256
@@ -51,7 +51,7 @@ cat <<EOF | kubectl create -f -
 apiVersion: certificates.k8s.io/v1beta1
 kind: CertificateSigningRequest
 metadata:
-  name: kube-ldap-svc.kube-system
+  name: kubi-svc.kube-system
 spec:
   groups:
   - system:authenticated
@@ -65,17 +65,17 @@ EOF
 
 3. Approve the csr
 ```bash
-kubectl certificate approve kube-ldap-svc.kube-system
+kubectl certificate approve kubi-svc.kube-system
 ```
 
 4. retrieve the crt
 ```bash
-kubectl get csr kube-ldap-svc.kube-system -o jsonpath='{.status.certificate}'     | base64 --decode > server.crt
+kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}'     | base64 --decode > server.crt
 ```
 
 5. Create a secret for the deployment
 ```bash
-kubectl -n kube-system create secret tls kube-ldap --key server-key.pem --cert server.crt
+kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 ```
 
 6. Deploy the kubernetes.yaml file
@@ -103,7 +103,7 @@ data:
   LDAP_PASSWD: "password"
   APISERVER_URL: "10.96.0.1:443"
 metadata:
-  name: kube-ldap-config
+  name: kubi-config
 EOF
 ```
 

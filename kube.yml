@@ -1,76 +1,76 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kube-ldap-deployment
+  name: kubi-deployment
   labels:
-    app: kube-ldap
+    app: kubi
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kube-ldap
+      app: kubi
   template:
     metadata:
       labels:
-        app: kube-ldap
+        app: kubi
     spec:
       serviceAccountName: admin
       containers:
-        - name: kube-ldap
-          image: efortin/kube-ldap:latest
+        - name: kubi
+          image: efortin/kubi:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
           volumeMounts:
-            - name: kube-ldap-tls
+            - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
           env:
             - name: APISERVER_URL
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: APISERVER_URL
             - name: LDAP_USERBASE
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: LDAP_USERBASE
             - name: LDAP_GROUPBASE
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: LDAP_GROUPBASE
             - name: LDAP_SERVER
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: LDAP_SERVER
             - name: LDAP_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: LDAP_PORT
             - name: LDAP_BINDDN
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: LDAP_BINDDN
             - name: LDAP_PASSWD
               valueFrom:
                 configMapKeyRef:
-                  name: kube-ldap-config
+                  name: kubi-config
                   key: LDAP_PASSWD
       volumes:
-        - name: kube-ldap-tls
+        - name: kubi-tls
           secret:
-            secretName: kube-ldap
+            secretName: kubi
 ---
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: kube-ldap-svc
+  name: kubi-svc
 spec:
   type: NodePort
   ports:
@@ -80,4 +80,4 @@ spec:
       protocol: TCP
       nodePort: 30003
   selector:
-    app: kube-ldap
+    app: kubi

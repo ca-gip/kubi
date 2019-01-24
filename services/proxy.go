@@ -1,7 +1,7 @@
 package services
 
 import (
-	"intomy.land/kube-ldap/utils"
+	"intomy.land/kubi/utils"
 	"net/http"
 	"net/http/httputil"
 	"time"

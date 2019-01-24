@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
-	"intomy.land/kube-ldap/types"
+	"intomy.land/kubi/types"
 	"io/ioutil"
 	"log"
 	"os"
@@ -60,7 +60,7 @@ func makeConfig() *types.Config {
 		os.Exit(1)
 	}
 
-	kubeApiServerUrl :=  os.Getenv("APISERVER_URL")
+	kubeApiServerUrl := os.Getenv("APISERVER_URL")
 	if len(kubeApiServerUrl) == 0 {
 		kubeApiServerUrl = "10.96.0.1:443"
 	}

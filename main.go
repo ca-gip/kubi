@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/gorilla/mux"
-	"intomy.land/kube-ldap/services"
-	"intomy.land/kube-ldap/utils"
+	"intomy.land/kubi/services"
+	"intomy.land/kubi/utils"
 	"log"
 	"net/http"
 )

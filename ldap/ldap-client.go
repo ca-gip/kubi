@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"gopkg.in/ldap.v2"
-	"intomy.land/kube-ldap/utils"
+	"intomy.land/kubi/utils"
 )
 
 type LDAPClient struct {
