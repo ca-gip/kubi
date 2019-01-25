@@ -103,6 +103,8 @@ kubectl -n kube-system create secret generic kubi-secret \
 ```
 
 #### Deploy the config map
+
+** YOU MUST CHANGE VALUE WITH YOUR OWN **
 ```bash
 cat <<EOF | kubectl -n kube-system create -f -
 apiVersion: v1
@@ -134,8 +136,8 @@ cat <<EOF | kubectl create -f -
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: "test-admin"
-  namespace: "test"
+  name: "demo-admin"
+  namespace: "demo"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -143,7 +145,7 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
-  name: "test-admin"
+  name: "demo-admin"
 EOF
 ```
 
