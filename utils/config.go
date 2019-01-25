@@ -4,20 +4,51 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"fmt"
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"intomy.land/kubi/types"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
 var Config *types.Config = makeConfig()
 
-var ApiPrefix = []string{
-	"/api", "/apis", "/metrics", "/resetMetrics", "/logs", "/debug", "/healthz", "/swagger-ui", "/swaggerapi", "/ui", "/version", "/openapi", "swagger-2.0.0.pb-v1",
+const (
+	TlsCertPath = "/var/run/secrets/certs/tls.crt"
+	TlsKeyPath  = "/var/run/secrets/certs/tls.key"
+	TlsCaFile   = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	SATokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)
+
+// Print error and exit if error occured
+func check(e error) {
+	if e != nil {
+		Log.Fatal().Err(e)
+		os.Exit(1)
+	}
+}
+
+func checkf(e error, msg string) {
+	if e != nil {
+		Log.Fatal().Msgf("%v : %v", msg, e)
+		os.Exit(1)
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
+func ApiPrefix() []string {
+	return []string{
+		"/api", "/apis", "/metrics", "/resetMetrics", "/logs", "/debug", "/healthz", "/swagger-ui", "/swaggerapi", "/ui", "/version", "/openapi", "swagger-2.0.0.pb-v1",
+	}
 }
 
 // Build the configuration from environment variable
@@ -26,9 +57,13 @@ var ApiPrefix = []string{
 // it limit misconfiguration ( lack of parameter ).
 func makeConfig() *types.Config {
 
-	// TODO, aller chercher dans le kubeconfig si pas accès au /var/run/secrets
-	kubeToken, errToken := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-	kubeCA, errCA := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	// TODO, if not exists in /var/run/secrets search in ~/.kube/config
+	kubeToken, errToken := ioutil.ReadFile(SATokenFile)
+	check(errToken)
+
+	kubeCA, errCA := ioutil.ReadFile(TlsCaFile)
+	check(errCA)
+
 	caEncoded := base64.StdEncoding.EncodeToString(kubeCA)
 
 	// Get the SystemCertPool, continue with an empty pool on error
@@ -36,43 +71,47 @@ func makeConfig() *types.Config {
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
-	if errCA != nil {
-		log.Fatalf("Failed to append %q to RootCAs: %v", kubeCA, errCA)
-	}
 
 	if ok := rootCAs.AppendCertsFromPEM(kubeCA); !ok {
-		log.Println("No certs appended, using system certs only")
+		log.Fatalf("Cannot add Kubernetes CA, exiting for security reason")
 	}
+
 	// Trust the augmented cert pool in our client
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false,
 		RootCAs:            rootCAs,
 	}
-	//
 
-	if errToken != nil {
-		log.Fatal(errToken)
-		os.Exit(1)
+	// LDAP validation
+	ldapPort, errLdapPort := strconv.Atoi(getEnv("LDAP_PORT", "389"))
+	checkf(errLdapPort, "Invalid LDAP_PORT, must be an integer")
+
+	useSSL, errLdapSSL := strconv.ParseBool(getEnv("LDAP_USE_SSL", "false"))
+	checkf(errLdapSSL, "Invalid LDAP_USE_SSL, must be a boolean")
+
+	skipTLS, errSkipTLS := strconv.ParseBool(getEnv("LDAP_SKIP_TLS", "true"))
+	checkf(errSkipTLS, "Invalid LDAP_SKIP_TLS, must be a boolean")
+
+	if len(os.Getenv("LDAP_PORT")) > 0 {
+		envLdapPort, err := strconv.Atoi(os.Getenv("LDAP_PORT"))
+		check(err)
+		ldapPort = envLdapPort
+		if ldapPort == 389 && os.Getenv("LDAP_SKIP_TLS") == "false" {
+			skipTLS = false
+		}
+		if ldapPort == 636 && os.Getenv("LDAP_SKIP_TLS") == "false" {
+			skipTLS = false
+			useSSL = true
+		}
 	}
 
-	if errCA != nil {
-		log.Fatal(errCA)
-		os.Exit(1)
-	}
-
-	kubeApiServerUrl := os.Getenv("APISERVER_URL")
-	if len(kubeApiServerUrl) == 0 {
-		kubeApiServerUrl = "10.96.0.1:443"
-	}
-
-	// FIXME use SkipTLS true for non local
 	ldapConfig := types.LdapConfig{
 		UserBase:     os.Getenv("LDAP_USERBASE"),
 		GroupBase:    os.Getenv("LDAP_GROUPBASE"),
 		Host:         os.Getenv("LDAP_SERVER"),
-		Port:         os.Getenv("LDAP_PORT"),
-		UseSSL:       false,
-		SkipTLS:      true,
+		Port:         ldapPort,
+		UseSSL:       useSSL,
+		SkipTLS:      skipTLS,
 		BindDN:       os.Getenv("LDAP_BINDDN"),
 		BindPassword: os.Getenv("LDAP_PASSWD"),
 		UserFilter:   "(cn=%s)",
@@ -84,8 +123,9 @@ func makeConfig() *types.Config {
 		KubeCa:             caEncoded,
 		KubeCaText:         string(kubeCA),
 		KubeToken:          string(kubeToken),
-		ApiServerURL:       os.Getenv("APISERVER_URL"),
+		ApiServerURL:       getEnv("APISERVER_URL", "10.96.0.1:443"),
 		ApiServerTLSConfig: *tlsConfig,
+		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 	}
 
 	err := validation.ValidateStruct(config,
@@ -98,16 +138,16 @@ func makeConfig() *types.Config {
 		validation.Field(&ldapConfig.UserBase, validation.Required, validation.Length(2, 200)),
 		validation.Field(&ldapConfig.GroupBase, validation.Required, validation.Length(2, 200)),
 		validation.Field(&ldapConfig.Host, validation.Required, is.URL),
-		validation.Field(&ldapConfig.Port, validation.Required, is.Port),
 		validation.Field(&ldapConfig.BindDN, validation.Required, validation.Length(2, 200)),
 		validation.Field(&ldapConfig.BindPassword, validation.Required, validation.Length(2, 200)),
 	)
 
-	fmt.Println(err)
-	if errLdap != nil {
-		fmt.Println(strings.Replace(errLdap.Error(), "; ", "\n", -1))
+	if err != nil {
+		Log.Error().Err(err)
 	}
-
+	if errLdap != nil {
+		Log.Error().Msgf(strings.Replace(errLdap.Error(), "; ", "\n", -1))
+	}
 	if err != nil || errLdap != nil {
 		os.Exit(1)
 	}

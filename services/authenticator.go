@@ -12,14 +12,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
 
 var Config *types.Config
 
-var signingKey, _ = ioutil.ReadFile("/var/run/secrets/certs/tls.key")
+var signingKey, _ = ioutil.ReadFile(utils.TlsKeyPath)
 
 func generateToken(groups []string, username string) string {
 
@@ -41,7 +40,7 @@ func generateToken(groups []string, username string) string {
 		username,
 		jwt.StandardClaims{
 			ExpiresAt: time.Unix(),
-			Issuer:    "Kube Ldap Proxy",
+			Issuer:    "Kubi Server",
 		},
 	}
 
@@ -190,12 +189,11 @@ func basicAuth(r *http.Request) (error, *Auth) {
 // Return error to caller if any occured
 func ldapBindUser(config *types.Config, auth Auth) ([]string, error) {
 
-	port, _ := strconv.Atoi(config.Ldap.Port)
 	client := &ldap.LDAPClient{
 		UserBase:     config.Ldap.UserBase,
 		GroupBase:    config.Ldap.GroupBase,
 		Host:         config.Ldap.Host,
-		Port:         port,
+		Port:         config.Ldap.Port,
 		SkipTLS:      config.Ldap.SkipTLS,
 		UseSSL:       config.Ldap.UseSSL,
 		BindDN:       config.Ldap.BindDN,

@@ -10,7 +10,7 @@ type LdapConfig struct {
 	UserBase     string
 	GroupBase    string
 	Host         string
-	Port         string
+	Port         int
 	UseSSL       bool
 	SkipTLS      bool
 	BindDN       string
@@ -27,6 +27,7 @@ type Config struct {
 	KubeCaText         string
 	KubeToken          string
 	ApiServerTLSConfig tls.Config
+	TokenLifeTime      string
 }
 
 // Note: struct fields must be public in order for unmarshal to

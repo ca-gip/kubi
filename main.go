@@ -4,7 +4,6 @@ import (
 	"github.com/gorilla/mux"
 	"intomy.land/kubi/services"
 	"intomy.land/kubi/utils"
-	"log"
 	"net/http"
 )
 
@@ -17,7 +16,7 @@ func main() {
 	})
 	//router.Use(middlewares.LoggingMiddleware)
 
-	for _, prefix := range utils.ApiPrefix {
+	for _, prefix := range utils.ApiPrefix() {
 		router.PathPrefix(prefix).Methods(http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete, http.MethodOptions).HandlerFunc(services.ProxyHandler)
 	}
 
@@ -27,6 +26,6 @@ func main() {
 	router.HandleFunc("/token/{username}", services.VerifyJWT).Methods(http.MethodPost)
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
-	log.Fatal(http.ListenAndServeTLS(":8000", "/var/run/secrets/certs/tls.crt", "/var/run/secrets/certs/tls.key", router))
+	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))
 
 }
