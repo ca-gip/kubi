@@ -155,16 +155,13 @@ EOF
 kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
 ```
 
-### Using `curl` or `wget`
+### Using `curl`
 
 ```bash
-# For dev
 curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
-# For ops
-wget --no-check-certificate --user <user_cn> --ask-password https://<kubi-server-fqdn-or-ip>:30003/config
 ```
 
-> It is not recommanded to use curl, because it is used with -k parameter or --no-check-certificate ( insecure mode).
+> It is not recommanded to use curl, because it is used with -k parameter ( insecure mode).
 
 # Roadmap
 
