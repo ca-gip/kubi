@@ -38,9 +38,8 @@ It will be automatically create in the next release.
 - You need to have `cfssl` installed: https://github.com/cloudflare/cfssl
 - A coffee
 
-#### Create a private key signed by Kubernetes CA
+#### Create a crt signed by Kubernetes CA
 
-1. Kube Api Server Url
   > Change `api.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
   that point to an existing Kubernetes Cluster node.
   **Eg: 10.56.221.4, kubernetes.<my_domain>...**
@@ -61,7 +60,7 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
 EOF
 ```
 
-2. Create the signing request
+#### Create the signing request
 
 ```bash
 cat <<EOF | kubectl create -f -
@@ -80,24 +79,30 @@ spec:
 EOF
 ```
 
-3. Approve the csr
+#### Approve the csr
 ```bash
 kubectl certificate approve kubi-svc.kube-system
 ```
 
-4. retrieve the crt
+#### Retrieve the crt
 ```bash
 kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}'     | base64 --decode > server.crt
 ```
 
-5. Create a secret for the deployment
+#### Create a secret for the deployment
 ```bash
 kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 ```
+### Deploy the the application
 
-6. Deploy the kubernetes.yaml file
+#### Create a secret for LDAP Bind password
 
-** Deploy the config map**
+```bash
+kubectl -n kube-system create secret generic kubi-secret \
+  --from-literal ldap_passwd='changethispasswordnow!'
+```
+
+#### Deploy the config map
 ```bash
 cat <<EOF | kubectl -n kube-system create -f -
 apiVersion: v1
@@ -108,19 +113,18 @@ data:
   LDAP_SERVER: "192.168.2.1"
   LDAP_PORT: "389"
   LDAP_BINDDN: "CN=admin,DC=example,DC=ORG"
-  LDAP_PASSWD: "password"
   APISERVER_URL: "10.96.0.1:443"
 metadata:
   name: kubi-config
 EOF
 ```
+#### Deploy the manifest
 
-** Deploy the the application**
 ```bash
 kubectl -n kube-system apply -f kube.yaml
 ```
 
-** Deploy a role-binding for a namespace**
+#### Deploy a role-binding for a namespace
 
 Below an example for a LDAP group named: `GROUP_DEMO_ADMIN`
 An existing namespace named `demo` in lowercase must exists.

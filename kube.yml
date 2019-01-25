@@ -58,9 +58,9 @@ spec:
                   key: LDAP_BINDDN
             - name: LDAP_PASSWD
               valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_PASSWD
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
       volumes:
         - name: kubi-tls
           secret:
