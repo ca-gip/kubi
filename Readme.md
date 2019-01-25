@@ -1,7 +1,7 @@
 # Kubi
 
-Kubi is a Kubernetes IAM authentication proxy to authenticate user through
-LDAP, AD LDS and assign permission dynamically using a predefined naming convention (LDAP Group).
+Kubi is the missing tool to integrate company using LDAP or ACTIVE DIRECTORY. KUBI acts as a Kubernetes IAM proxy to authenticate user through
+LDAP, AD LDS and assign permissions dynamically using a predefined naming convention (LDAP Group).
 
 For example:
 - a ldap group named: GROUP-NAMESPACE-DEMO_ADMIN give ADMIN `role binding`  permissions to the existing namespace `NAMESPACE-DEMO`.
