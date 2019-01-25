@@ -167,7 +167,7 @@ curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
 
 # Roadmap
 
-We following features will be available soon.
+The following features should be available soon.
 
 - Create role binding dynamically
 - Add regexp to customize LDAP group pattern
