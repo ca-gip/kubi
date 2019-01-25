@@ -1,12 +1,12 @@
 # Kubi
 
-Kubi is the missing tool to integrate company using LDAP or ACTIVE DIRECTORY. KUBI acts as a Kubernetes IAM proxy to authenticate user through
-LDAP, AD LDS and assign permissions dynamically using a predefined naming convention (LDAP Group).
+Kubi is the missing tool to handle LDAP or ACTIVE DIRECTORY authentication for Kubernetes clusters.
+It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
 
 For example:
-- a ldap group named: GROUP-NAMESPACE-DEMO_ADMIN give ADMIN `role binding`  permissions to the existing namespace `NAMESPACE-DEMO`.
+- a ldap group named: `GROUP_DEMO_ADMIN` give ADMIN `role binding`  permissions to the existing namespace `DEMO`.
 
-The `_` is used to split Role and Namespace, the pattern is `XXX_NAMESPACE-NAME_ROLE`.
+The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespace>_<role>`.
 
 > In this version, you need to create Role binding manually to grant permission.
 It will be automatically create in the next release.
@@ -97,6 +97,7 @@ kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server
 
 #### Create a secret for LDAP Bind password
 
+//TODO check uppercase
 ```bash
 kubectl -n kube-system create secret generic kubi-secret \
   --from-literal ldap_passwd='changethispasswordnow!'
@@ -123,7 +124,7 @@ EOF
 #### Deploy the manifest
 
 ```bash
-kubectl -n kube-system apply -f kube.yaml
+kubectl -n kube-system apply -f kube.yml
 ```
 
 #### Deploy a role-binding for a namespace
@@ -151,7 +152,7 @@ EOF
 
 ## Connect to Kubi server
 
-### Using `kubi` cli for serious guy, [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi-cli)
+### Using `kubi` cli for serious guy, [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi)
 
 ```bash
 kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
