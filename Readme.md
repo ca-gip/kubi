@@ -1,15 +1,14 @@
 # Kubi
 
-Kubi is the missing tool to handle LDAP or ACTIVE DIRECTORY authentication for Kubernetes clusters.
-It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
+
+Kubi is the missing tool for Active Directory or LDAP driven company. It handle OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
+
+Namespaces and Rolebindings are automaticaly created by Kubi.
 
 For example:
 - a ldap group named: `GROUP_DEMO_ADMIN` give ADMIN `role binding`  permissions to the existing namespace `DEMO`.
 
-The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespace>_<role>`.
-
-> In this version, you need to create Role binding manually to grant permission.
-It will be automatically create in the next release.
+The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespace>_<role>`. Namespace must be DNS1123 compatible and can´t exceed 63 characters ( kubernetes constraint ).
 
 ## Parameters
 
@@ -170,8 +169,6 @@ curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
 
 The following features should be available soon.
 
-- Create role binding dynamically
-- Add regexp to customize LDAP group pattern
 - Allow usage of static mapping ( a json file mapping with LDAP group and Kubernetes namspaces)
 - Expose /metrics
 
