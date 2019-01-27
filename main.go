@@ -16,6 +16,10 @@ func main() {
 	}
 	utils.Config = config
 
+	// Generate namespace and role binding for ldap groups
+	// no need to wait here
+	go services.GenerateResourcesFromLdapGroups()
+
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
