@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
+	"intomy.land/kubi/ldap"
 	"intomy.land/kubi/types"
 	"io/ioutil"
 	"log"
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-var Config *types.Config = makeConfig()
+var Config *types.Config
 
 const (
 	TlsCertPath = "/var/run/secrets/certs/tls.crt"
@@ -23,18 +24,23 @@ const (
 	SATokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
+var BlacklistedNamespaces = []string{
+	"kube-system",
+	"kube-public",
+	"ingress-nginx",
+	"default",
+}
+
 // Print error and exit if error occured
 func check(e error) {
 	if e != nil {
-		Log.Fatal().Err(e)
-		os.Exit(1)
+		Log.Error().Err(e)
 	}
 }
 
 func checkf(e error, msg string) {
 	if e != nil {
-		Log.Fatal().Msgf("%v : %v", msg, e)
-		os.Exit(1)
+		Log.Error().Msgf("%v : %v", msg, e)
 	}
 }
 
@@ -55,7 +61,7 @@ func ApiPrefix() []string {
 // and validate that is consistent. If false, the program exit
 // with validation message. The validation is not error safe but
 // it limit misconfiguration ( lack of parameter ).
-func makeConfig() *types.Config {
+func MakeConfig() (*types.Config, error) {
 
 	// TODO, if not exists in /var/run/secrets search in ~/.kube/config
 	kubeToken, errToken := ioutil.ReadFile(SATokenFile)
@@ -144,12 +150,29 @@ func makeConfig() *types.Config {
 
 	if err != nil {
 		Log.Error().Err(err)
+		return nil, err
 	}
 	if errLdap != nil {
 		Log.Error().Msgf(strings.Replace(errLdap.Error(), "; ", "\n", -1))
+		return nil, err
 	}
-	if err != nil || errLdap != nil {
-		os.Exit(1)
+	return config, nil
+}
+
+// Generate a new LDAP Client to make
+// Bind or Group search
+func LdapClient() *ldap.LDAPClient {
+	return &ldap.LDAPClient{
+		UserBase:     Config.Ldap.UserBase,
+		GroupBase:    Config.Ldap.GroupBase,
+		Host:         Config.Ldap.Host,
+		Port:         Config.Ldap.Port,
+		SkipTLS:      Config.Ldap.SkipTLS,
+		UseSSL:       Config.Ldap.UseSSL,
+		BindDN:       Config.Ldap.BindDN,
+		BindPassword: Config.Ldap.BindPassword,
+		UserFilter:   Config.Ldap.UserFilter,
+		GroupFilter:  Config.Ldap.GroupFilter,
+		Attributes:   Config.Ldap.Attributes,
 	}
-	return config
 }

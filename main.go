@@ -2,12 +2,19 @@ package main
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog/log"
 	"intomy.land/kubi/services"
 	"intomy.land/kubi/utils"
 	"net/http"
 )
 
 func main() {
+
+	config, err := utils.MakeConfig()
+	if err != nil {
+		log.Fatal().Msg("Config error")
+	}
+	utils.Config = config
 
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

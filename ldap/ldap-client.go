@@ -6,8 +6,8 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/ldap.v2"
-	"intomy.land/kubi/utils"
 )
 
 type LDAPClient struct {
@@ -149,7 +149,7 @@ func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
 		[]string{"cn"}, // can it be something else than "cn"?
 		nil,
 	)
-	utils.Log.Info().Msgf("groupBase is %v", lc.GroupBase)
+	log.Info().Msgf("groupBase is %v", lc.GroupBase)
 	sr, err := lc.Conn.Search(searchRequest)
 	if err != nil {
 		return nil, err

@@ -71,8 +71,8 @@ type KubeConfigUserToken struct {
 }
 
 type AuthJWTClaims struct {
-	Auths []AuthJWTTupple `json:"auths"`
-	User  string          `json:"user"`
+	Auths []*AuthJWTTupple `json:"auths"`
+	User  string           `json:"user"`
 	jwt.StandardClaims
 }
 

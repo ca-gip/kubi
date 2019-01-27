@@ -1,3 +1,4 @@
 vendor
 .idea
 glide.lock
+coverage.*

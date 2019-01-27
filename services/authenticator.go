@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"gopkg.in/yaml.v2"
 	"intomy.land/kubi/ldap"
@@ -20,16 +19,9 @@ var Config *types.Config
 
 var signingKey, _ = ioutil.ReadFile(utils.TlsKeyPath)
 
-func generateToken(groups []string, username string) string {
+func generateToken(groups []string, username string) (string, error) {
 
-	var auths = make([]types.AuthJWTTupple, len(groups))
-	for i, v := range groups {
-		splits := strings.Split(v, "_")
-		auths[i] = types.AuthJWTTupple{
-			Namespace: strings.ToLower(splits[len(splits)-2]),
-			Role:      strings.ToLower(splits[len(splits)-1]),
-		}
-	}
+	var auths = GetUserNamespaces(groups)
 
 	duration, err := time.ParseDuration("4h")
 	time := time.Now().Add(duration)
@@ -46,9 +38,9 @@ func generateToken(groups []string, username string) string {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	signedToken, err := token.SignedString(signingKey)
-	fmt.Println("%v %v", signedToken, err)
+	//fmt.Println("%v %v", signedToken, err)
 
-	return signedToken
+	return signedToken, err
 }
 
 func GenerateJWT(w http.ResponseWriter, r *http.Request) {
@@ -68,9 +60,16 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	token := generateToken(groups, auth.Username)
-	io.WriteString(w, token)
+	token, err := generateToken(groups, auth.Username)
+	if err != nil {
+		utils.Log.Info().Err(err)
+		w.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(w, err.Error())
+		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		io.WriteString(w, token)
+	}
 
 }
 
@@ -94,7 +93,13 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := generateToken(groups, auth.Username)
+	token, err := generateToken(groups, auth.Username)
+	if err != nil {
+		utils.Log.Info().Err(err)
+		w.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(w, err.Error())
+		return
+	}
 
 	config := &types.KubeConfig{
 		ApiVersion: "v1",
@@ -127,6 +132,7 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 
 	yml, err := yaml.Marshal(config)
 	utils.Log.Error().Err(err)
+	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")
 	w.Write(yml)
 

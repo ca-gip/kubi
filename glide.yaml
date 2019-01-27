@@ -16,3 +16,9 @@ import:
   version: ~2.2.2
 - package: k8s.io/api
 - package: k8s.io/apimachinery
+- package: k8s.io/client-go
+  version: ^10.0.0
+- package: github.com/googleapis/gnostic
+  version: ^0.2.0
+- package: github.com/stretchr/testify
+  version: ^1.3.0
