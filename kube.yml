@@ -36,7 +36,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi
-          image: efortin/kubi:latest
+          image: cagip/kubi:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
