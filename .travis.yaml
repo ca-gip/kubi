@@ -1,0 +1,19 @@
+language: go
+go:
+  - "1.10"
+
+env:
+  global:
+    - COMMIT=${TRAVIS_COMMIT::8}
+    - REPO=augabet/kubi
+
+script:
+  - make test
+  - docker build -f Dockerfile -t $REPO:$COMMIT .
+
+after_success:
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else (echo $TRAVIS_BRANCH | cut -c 9-) ; fi`
+  - docker tag $REPO:$COMMIT $REPO:$TAG
+  - docker push $REPO:$TAG
+
