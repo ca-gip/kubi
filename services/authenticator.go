@@ -212,18 +212,18 @@ func ldapBindUser(config *types.Config, auth Auth) ([]string, error) {
 	// It is the responsibility of the caller to close the connection
 	defer client.Close()
 
-	ok, _, err := client.Authenticate(auth.Username, auth.Password)
+	ok, userDn, err := client.Authenticate(auth.Username, auth.Password)
 	if !ok {
-		utils.Log.Info().Msgf("Error authenticating user %s: %+v", "cn="+auth.Username+","+utils.Config.Ldap.UserBase, err)
+		utils.Log.Info().Msgf("Error authenticating user %s: dn=%v", *userDn, err)
 		return nil, err
 	}
 
-	groups, err := client.GetGroupsOfUser("cn=" + auth.Username + "," + utils.Config.Ldap.UserBase)
+	groups, err := client.GetGroupsOfUser(*userDn)
 	if err != nil {
-		utils.Log.Info().Msgf("Error getting groups for user %s: %+v", "username", err)
+		utils.Log.Info().Msgf("Error getting groups for user %s: dn=%v", "username", err)
 		return nil, err
 	}
-	utils.Log.Info().Msgf("Groups for user %s are %s", auth.Username, groups)
+	utils.Log.Info().Msgf("Groups for user %s are %s", userDn, groups)
 
 	return groups, err
 }

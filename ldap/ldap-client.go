@@ -75,7 +75,7 @@ func (lc *LDAPClient) Close() {
 }
 
 // Authenticate authenticates the user against the ldap backend.
-func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]string, error) {
+func (lc *LDAPClient) Authenticate(username, password string) (bool, *string, error) {
 	err := lc.Connect()
 	if err != nil {
 		return false, nil, err
@@ -121,22 +121,21 @@ func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]
 	// Bind as the user to verify their password
 	err = lc.Conn.Bind(userDN, password)
 	if err != nil {
-		return false, user, err
+		return false, &userDN, err
 	}
 
 	// Rebind as the read only user for any further queries
 	if lc.BindDN != "" && lc.BindPassword != "" {
 		err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
 		if err != nil {
-			return true, user, err
+			return true, &userDN, err
 		}
 	}
-
-	return true, user, nil
+	return true, &userDN, nil
 }
 
 // GetGroupsOfUser returns the group for a user.
-func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
+func (lc *LDAPClient) GetGroupsOfUser(userDN string) ([]string, error) {
 	err := lc.Connect()
 	if err != nil {
 		return nil, err
@@ -145,7 +144,7 @@ func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
 	searchRequest := ldap.NewSearchRequest(
 		lc.GroupBase,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf(lc.GroupFilter, username),
+		fmt.Sprintf(lc.GroupFilter, userDN),
 		[]string{"cn"}, // can it be something else than "cn"?
 		nil,
 	)
