@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/ca-gip/kubi/services"
+	"github.com/ca-gip/kubi/utils"
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
-	"intomy.land/kubi/services"
-	"intomy.land/kubi/utils"
 	"net/http"
 )
 
@@ -18,7 +18,8 @@ func main() {
 
 	// Generate namespace and role binding for ldap groups
 	// no need to wait here
-	go services.GenerateResourcesFromLdapGroups()
+	utils.Log.Info().Msg("Generating resources from Ldap backend")
+	services.GenerateResourcesFromLdapGroups()
 
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

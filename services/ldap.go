@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"fmt"
-	"intomy.land/kubi/types"
-	"intomy.land/kubi/utils"
+	"github.com/ca-gip/kubi/types"
+	"github.com/ca-gip/kubi/utils"
 	"regexp"
 	"strings"
 )

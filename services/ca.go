@@ -1,7 +1,7 @@
 package services
 
 import (
-	"intomy.land/kubi/utils"
+	"github.com/ca-gip/kubi/utils"
 	"io"
 	"net/http"
 )

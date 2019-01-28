@@ -1,8 +1,8 @@
 package services_test
 
 import (
+	"github.com/ca-gip/kubi/services"
 	"github.com/stretchr/testify/assert"
-	"intomy.land/kubi/services"
 	"regexp"
 	"testing"
 )

@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"intomy.land/kubi/utils"
+	"github.com/ca-gip/kubi/utils"
 	"net/http"
 )
 

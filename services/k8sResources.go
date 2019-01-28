@@ -2,8 +2,8 @@ package services
 
 import (
 	"fmt"
-	"intomy.land/kubi/types"
-	"intomy.land/kubi/utils"
+	"github.com/ca-gip/kubi/types"
+	"github.com/ca-gip/kubi/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +26,7 @@ func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 func GenerateResourcesFromLdapGroups() error {
 	groups, err := utils.LdapClient().GetGroups()
 	if err != nil {
+		utils.Log.Error().Err(err)
 		return err
 	}
 	auths := GetUserNamespaces(groups)

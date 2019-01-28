@@ -1,4 +1,4 @@
-package: intomy.land/kubi
+package: github.com/ca-gip/kubi
 import:
 - package: github.com/dgrijalva/jwt-go
   version: ~3.2.0
