@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
@@ -26,8 +27,11 @@ func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 func GenerateResourcesFromLdapGroups() error {
 	groups, err := utils.LdapClient().GetGroups()
 	if err != nil {
-		utils.Log.Error().Err(err)
+		utils.Log.Error().Msg(err.Error())
 		return err
+	}
+	if len(groups) == 0 {
+		return errors.New("LDAP, no ldap groups found!")
 	}
 	auths := GetUserNamespaces(groups)
 	GenerateNamespaces(auths)

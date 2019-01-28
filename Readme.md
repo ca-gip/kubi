@@ -126,33 +126,17 @@ EOF
 kubectl -n kube-system apply -f kube.yml
 ```
 
-#### Deploy a role-binding for a namespace
-
-Below an example for a LDAP group named: `GROUP_DEMO_ADMIN`
-An existing namespace named `demo` in lowercase must exists.
-
-```bash
-cat <<EOF | kubectl create -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: "demo-admin"
-  namespace: "demo"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: "demo-admin"
-EOF
-```
-
 ## Connect to Kubi server
+
 
 ### Using `kubi` cli for serious guy, [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi)
 
+#### Install the kubi cli
+```bash
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.0/kubi -P /usr/local/bin
+sudo chmod a+x /usr/local/bin/kubi
+```
+#### Connect to the cluster
 ```bash
 kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
 ```
