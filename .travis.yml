@@ -12,6 +12,7 @@ env:
     - REPO=augabet/kubi
 
 script:
+  - glide install
   - make test
   - docker build -f Dockerfile -t $REPO:$COMMIT .
 
