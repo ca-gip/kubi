@@ -91,6 +91,8 @@ func MakeConfig() (*types.Config, error) {
 		}
 	}
 
+	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
+
 	ldapConfig := types.LdapConfig{
 		UserBase:     os.Getenv("LDAP_USERBASE"),
 		GroupBase:    os.Getenv("LDAP_GROUPBASE"),
@@ -100,9 +102,9 @@ func MakeConfig() (*types.Config, error) {
 		SkipTLS:      skipTLS,
 		BindDN:       os.Getenv("LDAP_BINDDN"),
 		BindPassword: os.Getenv("LDAP_PASSWD"),
-		UserFilter:   "(cn=%s)",
+		UserFilter:   ldapUserFilter,
 		GroupFilter:  "(member=%s)",
-		Attributes:   []string{"givenName", "sn", "mail", "uid", "cn"},
+		Attributes:   []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
 		Ldap:               ldapConfig,

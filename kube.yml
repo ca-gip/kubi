@@ -75,6 +75,11 @@ spec:
                 configMapKeyRef:
                   name: kubi-config
                   key: LDAP_BINDDN
+            - name: LDAP_USERFILTER
+              valueFrom:
+                configMapKeyRef:
+                  name: kubi-config
+                  key: LDAP_USERFILTER
             - name: LDAP_PASSWD
               valueFrom:
                 secretKeyRef:

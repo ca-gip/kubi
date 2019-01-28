@@ -141,6 +141,12 @@ func (lc *LDAPClient) GetGroupsOfUser(userDN string) ([]string, error) {
 		return nil, err
 	}
 
+	err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Info().Msgf("LDAP: searching groups for user %v", userDN)
 	searchRequest := ldap.NewSearchRequest(
 		lc.GroupBase,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,

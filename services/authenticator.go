@@ -214,13 +214,13 @@ func ldapBindUser(config *types.Config, auth Auth) ([]string, error) {
 
 	ok, userDn, err := client.Authenticate(auth.Username, auth.Password)
 	if !ok {
-		utils.Log.Info().Msgf("Error authenticating user %s: dn=%v", *userDn, err)
+		utils.Log.Info().Msgf("Error authenticating user %s: %v", auth.Username, err)
 		return nil, err
 	}
 
 	groups, err := client.GetGroupsOfUser(*userDn)
 	if err != nil {
-		utils.Log.Info().Msgf("Error getting groups for user %s: dn=%v", "username", err)
+		utils.Log.Info().Msgf("Error getting groups for user %s: %v", "username", err)
 		return nil, err
 	}
 	utils.Log.Info().Msgf("Groups for user %s are %s", userDn, groups)
