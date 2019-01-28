@@ -1,7 +1,7 @@
 # Kubi
 
 
-Kubi is the missing tool for Active Directory or LDAP driven company. It handle OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
+Kubi is the missing tool for Active Directory or LDAP driven company. It handles OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
 
 Namespaces and Rolebindings are automaticaly created by Kubi.
 
@@ -14,17 +14,17 @@ The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespa
 
 | Name                  | Description                           | Example                       | Mandatory | Default     |
 | :--------------       | :-----------------------------:       | ----------------------------: | ---------:| ----------: |
-|  **LDAP_USERBASE**        |  *BaseDn for user base search      *    | `ou=People,dc=example,dc=org   ` | `yes  `     | -           |
-|  **LDAP_GROUPBASE**       |  *BaseDn for group base search     *    | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
-|  **LDAP_SERVER**          |  *LDAP server ip address           *    | `"192.168.2.1"                 ` | `yes  `     | -           |
-|  **LDAP_PORT**            |  *LDAP server port 389, 636...     *    | `389                           ` | `no   `     | `389  `     |
-|  **LDAP_USE_SSL**         |  *Use SSL or no                    *    | `true                          ` | `no   `     | `false`     |
+|  **LDAP_USERBASE**        |  *BaseDn for user base search*    | `ou=People,dc=example,dc=org   ` | `yes  `     | -           |
+|  **LDAP_GROUPBASE**       |  *BaseDn for group base search*    | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
+|  **LDAP_SERVER**          |  *LDAP server ip address*    | `"192.168.2.1"                 ` | `yes  `     | -           |
+|  **LDAP_PORT**            |  *LDAP server port 389, 636...*    | `389                           ` | `no   `     | `389  `     |
+|  **LDAP_USE_SSL**         |  *Use SSL or no*    | `true                          ` | `no   `     | `false`     |
 |  **LDAP_SKIP_TLS**        |  *Use StartTLS ( use with 389 port)*    | `true                          ` | `false`     | `false`     |
-|  **LDAP_PORT**            |  *LDAP server port 389, 636...     *    | `389                           ` | `no   `     | `389  `     |
-|  **LDAP_BINDDN**          |  *LDAP bind account DN             *    | `"CN=admin,DC=example,DC=ORG"  ` | `yes  `     | -           |
-|  **LDAP_PASSWD**          |  *LDAP bind account password       *    | `"password"                    ` | `yes  `     | -           |
-|  **APISERVER_URL**        |  *Internal kubernetes svc ip       *    | `"10.96.0.1:443"               ` | `no   `     | -           |
-|  **TOKEN_LIFETIME**       |  *Duration for the JWT token       *    | `"4h"                          ` | `no   `     | 4h          |
+|  **LDAP_PORT**            |  *LDAP server port 389, 636...*    | `389                           ` | `no   `     | `389  `     |
+|  **LDAP_BINDDN**          |  *LDAP bind account DN*    | `"CN=admin,DC=example,DC=ORG"  ` | `yes  `     | -           |
+|  **LDAP_PASSWD**          |  *LDAP bind account password*    | `"password"                    ` | `yes  `     | -           |
+|  **APISERVER_URL**        |  *Internal kubernetes svc ip*    | `"10.96.0.1:443"               ` | `no   `     | -           |
+|  **TOKEN_LIFETIME**       |  *Duration for the JWT token*    | `"4h"                          ` | `no   `     | 4h          |
 
 # Launching Applications
 
