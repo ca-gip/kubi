@@ -44,42 +44,10 @@ spec:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
           env:
-            - name: APISERVER_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: APISERVER_URL
-            - name: LDAP_USERBASE
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_USERBASE
-            - name: LDAP_GROUPBASE
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_GROUPBASE
-            - name: LDAP_SERVER
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_SERVER
-            - name: LDAP_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_PORT
-            - name: LDAP_BINDDN
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_BINDDN
-            - name: LDAP_USERFILTER
-              valueFrom:
-                configMapKeyRef:
-                  name: kubi-config
-                  key: LDAP_USERFILTER
             - name: LDAP_PASSWD
               valueFrom:
                 secretKeyRef:
