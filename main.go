@@ -32,6 +32,7 @@ func main() {
 	}
 
 	router.HandleFunc("/ca", services.CA).Methods(http.MethodGet)
+	router.HandleFunc("/refresh", services.RefreshK8SResources).Methods(http.MethodGet) // TODO, protect from users
 	router.HandleFunc("/config", services.GenerateConfig).Methods(http.MethodGet)
 	router.HandleFunc("/token", services.GenerateJWT).Methods(http.MethodGet)
 	router.HandleFunc("/token/{username}", services.VerifyJWT).Methods(http.MethodPost)

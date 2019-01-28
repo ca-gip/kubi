@@ -9,7 +9,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"net/http"
 )
+
+// Handler to regenerate all resources created by kubi
+func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
+
+	w.WriteHeader(http.StatusAccepted)
+	err := GenerateResourcesFromLdapGroups()
+	if err != nil {
+		utils.Log.Error().Err(err)
+	}
+}
 
 // Generate Namespaces and Rolebinding from Ldap groups
 func GenerateResourcesFromLdapGroups() error {
