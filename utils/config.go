@@ -19,26 +19,6 @@ import (
 
 var Config *types.Config
 
-const (
-	TlsCertPath = "/var/run/secrets/certs/tls.crt"
-	TlsKeyPath  = "/var/run/secrets/certs/tls.key"
-	TlsCaFile   = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	SATokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-)
-
-var BlacklistedNamespaces = []string{
-	"kube-system",
-	"kube-public",
-	"ingress-nginx",
-	"default",
-}
-
-func ApiPrefix() []string {
-	return []string{
-		"/api", "/apis", "/metrics", "/resetMetrics", "/logs", "/debug", "/healthz", "/swagger-ui", "/swaggerapi", "/ui", "/version", "/openapi", "swagger-2.0.0.pb-v1",
-	}
-}
-
 // Build the configuration from environment variable
 // and validate that is consistent. If false, the program exit
 // with validation message. The validation is not error safe but
@@ -50,7 +30,7 @@ func MakeConfig() (*types.Config, error) {
 		return nil, rest.ErrNotInCluster
 	}
 
-	kubeToken, errToken := ioutil.ReadFile(SATokenFile)
+	kubeToken, errToken := ioutil.ReadFile(TokenFile)
 	check(errToken)
 
 	kubeCA, errCA := ioutil.ReadFile(TlsCaFile)

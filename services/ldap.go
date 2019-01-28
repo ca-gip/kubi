@@ -11,12 +11,6 @@ import (
 
 var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
 
-const dns1123LabelFmt string = "^[a-z0-9][-a-z0-9]*$"
-const dns1123LabelErrMsg string = "a DNS-1123 label must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
-
-// DNS1123LabelMaxLength is a label's max length in DNS (RFC 1123)
-const DNS1123LabelMaxLength int = 63
-
 // GetGroupsOfUser returns the group for the user 'username'
 // starting from GroupBaseDN
 func getGroups(username string) ([]string, error) {
@@ -72,8 +66,8 @@ func GetUserNamespace(group string) (*types.AuthJWTTupple, error) {
 	//lowerGroup = strings.TrimPrefix(lowerGroup, )
 	namespace, role := DnsParser.ReplaceAllString(lowerGroup, "${namespace}"), DnsParser.ReplaceAllString(lowerGroup, "${role}")
 
-	isNamespaceValid, _ := regexp.MatchString(dns1123LabelFmt, namespace)
-	isRoleValid, _ := regexp.MatchString(dns1123LabelFmt, role)
+	isNamespaceValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, namespace)
+	isRoleValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, role)
 
 	if utils.Index(utils.BlacklistedNamespaces, namespace) != -1 {
 		return nil, errors.New(fmt.Sprintf(`
@@ -87,12 +81,12 @@ func GetUserNamespace(group string) (*types.AuthJWTTupple, error) {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The ldap group %v, cannot be created. 
 			The role %v is not dns1123 compliant.`, group, namespace))
-	} else if len(namespace) > DNS1123LabelMaxLength {
+	} else if len(namespace) > utils.DNS1123LabelMaxLength {
 		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The name for namespace cannot exceeded %v characters.`, DNS1123LabelMaxLength))
-	} else if len(role) > DNS1123LabelMaxLength {
+			LDAP: The name for namespace cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
+	} else if len(role) > utils.DNS1123LabelMaxLength {
 		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The name for role cannot exceeded %v characters.`, DNS1123LabelMaxLength))
+			LDAP: The name for role cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
 	} else {
 		return &types.AuthJWTTupple{
 			Namespace: namespace,
