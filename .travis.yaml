@@ -2,6 +2,10 @@ language: go
 go:
   - "1.10"
 
+branches:
+  only:
+  - /.*/  
+
 env:
   global:
     - COMMIT=${TRAVIS_COMMIT::8}
