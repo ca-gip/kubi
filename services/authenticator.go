@@ -223,7 +223,7 @@ func ldapBindUser(config *types.Config, auth Auth) ([]string, error) {
 		utils.Log.Info().Msgf("Error getting groups for user %s: %v", "username", err)
 		return nil, err
 	}
-	utils.Log.Info().Msgf("Groups for user %s are %s", userDn, groups)
+	utils.Log.Info().Msgf("Groups for user %s are %s", *userDn, groups)
 
 	return groups, err
 }
