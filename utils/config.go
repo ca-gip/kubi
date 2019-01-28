@@ -9,7 +9,9 @@ import (
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"io/ioutil"
+	"k8s.io/client-go/rest"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -43,7 +45,11 @@ func ApiPrefix() []string {
 // it limit misconfiguration ( lack of parameter ).
 func MakeConfig() (*types.Config, error) {
 
-	// TODO, if not exists in /var/run/secrets search in ~/.kube/config
+	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+	if len(host) == 0 || len(port) == 0 {
+		return nil, rest.ErrNotInCluster
+	}
+
 	kubeToken, errToken := ioutil.ReadFile(SATokenFile)
 	check(errToken)
 
@@ -111,7 +117,7 @@ func MakeConfig() (*types.Config, error) {
 		KubeCa:             caEncoded,
 		KubeCaText:         string(kubeCA),
 		KubeToken:          string(kubeToken),
-		ApiServerURL:       getEnv("APISERVER_URL", "10.96.0.1:443"),
+		ApiServerURL:       net.JoinHostPort(host, port),
 		ApiServerTLSConfig: *tlsConfig,
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 	}

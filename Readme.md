@@ -26,7 +26,6 @@ The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespa
 |  **LDAP_BINDDN**          |  *LDAP bind account DN*             | `"CN=admin,DC=example,DC=ORG"  ` | `yes  `     | -           |
 |  **LDAP_PASSWD**          |  *LDAP bind account password*       | `"password"                    ` | `yes  `     | -           |
 |  **LDAP_USERFILTER**      |  *LDAP filter for user search*      | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
-|  **APISERVER_URL**        |  *Internal kubernetes svc ip*       | `"10.96.0.1:443"               ` | `no   `     | -           |
 |  **TOKEN_LIFETIME**       |  *Duration for the JWT token*       | `"4h"                          ` | `no   `     | 4h          |
 
 # Launching Applications
@@ -119,7 +118,6 @@ data:
   LDAP_PORT: "389"
   LDAP_BINDDN: "CN=admin,DC=example,DC=ORG"
   LDAP_USERFILTER: (cn=%s)
-  APISERVER_URL: "10.96.0.1:443"
 metadata:
   name: kubi-config
 EOF
