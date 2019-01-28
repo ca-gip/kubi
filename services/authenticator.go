@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/ca-gip/kubi/ldap"
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
@@ -23,7 +24,7 @@ func generateToken(groups []string, username string) (string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
-	duration, err := time.ParseDuration("4h")
+	duration, err := time.ParseDuration(utils.Config.TokenLifeTime)
 	time := time.Now().Add(duration)
 
 	// Create the Claims
@@ -154,11 +155,17 @@ func VerifyJWT(w http.ResponseWriter, r *http.Request) {
 }
 
 func CurrentJWT(w http.ResponseWriter, r *http.Request) (*types.AuthJWTClaims, error) {
-	reqToken := r.Header.Get("Authorization")
-	splitToken := strings.Split(reqToken, "Bearer ")
-	reqToken = splitToken[1]
 
-	token, err := jwt.ParseWithClaims(reqToken, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+	const bearerPrefix = "Bearer "
+
+	bearer := r.Header.Get("Authorization")
+	if !strings.HasPrefix(bearer, bearerPrefix) || len(bearer) < 8 {
+		return nil, errors.New(fmt.Sprintf("Invalid Authorization Header: %s", bearer))
+	}
+	splitToken := strings.Split(bearer, bearerPrefix)
+	bearer = splitToken[1]
+
+	token, err := jwt.ParseWithClaims(bearer, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return signingKey, nil
 	})
 	if err != nil {
@@ -166,20 +173,14 @@ func CurrentJWT(w http.ResponseWriter, r *http.Request) (*types.AuthJWTClaims, e
 		return nil, err
 	}
 	if claims, ok := token.Claims.(*types.AuthJWTClaims); ok && token.Valid {
-		utils.Log.Info().Msgf("Auth, token for user %v seems good, credentials: %v %v, client (%v, %v)", claims.User, claims.Auths, claims.StandardClaims.ExpiresAt, r.RemoteAddr, r.UserAgent())
 		return claims, nil
 	} else {
-		utils.Log.Info().Msgf("Auth token is bad: %v,  client (%v, %v)", err.Error(), r.RemoteAddr, r.UserAgent())
+		utils.Log.Info().Msgf("Auth token is invalid for %v: error  %v", r.RemoteAddr, err.Error())
 		return nil, err
 	}
 }
 
-type Auth struct {
-	Username string
-	Password string
-}
-
-func basicAuth(r *http.Request) (error, *Auth) {
+func basicAuth(r *http.Request) (error, *types.Auth) {
 	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 
 	if len(auth) != 2 || auth[0] != "Basic" {
@@ -188,12 +189,12 @@ func basicAuth(r *http.Request) (error, *Auth) {
 	}
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
-	return nil, &Auth{Username: pair[0], Password: pair[1]}
+	return nil, &types.Auth{Username: pair[0], Password: pair[1]}
 }
 
 // Bind a user to LDAP and retrieve user's groups
 // Return error to caller if any occured
-func ldapBindUser(config *types.Config, auth Auth) ([]string, error) {
+func ldapBindUser(config *types.Config, auth types.Auth) ([]string, error) {
 
 	client := &ldap.LDAPClient{
 		UserBase:     config.Ldap.UserBase,

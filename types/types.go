@@ -85,3 +85,8 @@ type ResponseError struct {
 	metav1.TypeMeta
 	metav1.Status
 }
+
+type Auth struct {
+	Username string
+	Password string
+}
