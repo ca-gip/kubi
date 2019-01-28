@@ -18,8 +18,11 @@ func main() {
 
 	// Generate namespace and role binding for ldap groups
 	// no need to wait here
-	utils.Log.Info().Msg("Generating resources from Ldap backend")
-	services.GenerateResourcesFromLdapGroups()
+	utils.Log.Info().Msg("Generating resources from LDAP groups")
+	err = services.GenerateResourcesFromLdapGroups()
+	if err != nil {
+		log.Error().Err(err)
+	}
 
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

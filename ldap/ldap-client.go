@@ -168,10 +168,15 @@ func (lc *LDAPClient) GetGroups() ([]string, error) {
 		return nil, err
 	}
 
+	err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+	if err != nil {
+		return nil, err
+	}
+
 	searchRequest := ldap.NewSearchRequest(
 		lc.GroupBase,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(objectClass=groupOfNames)",
+		"(|(objectClass=groupOfNames)(objectClass=group))",
 		[]string{"cn"}, // can it be something else than "cn"?
 		nil,
 	)
