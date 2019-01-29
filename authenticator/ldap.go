@@ -104,7 +104,7 @@ func getBindedConnection() (*ldap.Conn, error) {
 		conn, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", utils.Config.Ldap.Host, utils.Config.Ldap.Port))
 	}
 
-	if utils.Config.Ldap.UseSSL {
+	if utils.Config.Ldap.StartTLS {
 		err = conn.StartTLS(tlsConfig)
 		if err != nil {
 			return nil, errors.Wrapf(err, "unable to setup TLS connection")
