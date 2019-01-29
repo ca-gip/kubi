@@ -132,23 +132,34 @@ kubectl -n kube-system apply -f kube.yml
 
 ### Using `kubi` cli for serious guy, [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi)
 
-#### Install the kubi cli
+#### For Linux
+
+##### With kubi cli
 ```bash
+# Install the kubi cli
 sudo wget https://github.com/ca-gip/kubi/releases/download/v1.0/kubi -P /usr/local/bin
 sudo chmod a+x /usr/local/bin/kubi
-```
-#### Connect to the cluster
-```bash
+
+# Connect to the cluster
 kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
 ```
 
-### Using `curl`
+##### Using `curl`
 
 ```bash
 curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
 ```
-
 > It is not recommanded to use curl, because it is used with -k parameter ( insecure mode).
+
+#### For Windows users
+1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi.exe)
+2. Open Cmd
+```bash
+# Get help
+.\kubi.exe --help
+# Connect and generate config file
+.\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
+```
 
 # Roadmap
 
