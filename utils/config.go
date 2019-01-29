@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"github.com/ca-gip/kubi/ldap"
 	"github.com/ca-gip/kubi/types"
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
@@ -61,18 +60,21 @@ func MakeConfig() (*types.Config, error) {
 	useSSL, errLdapSSL := strconv.ParseBool(getEnv("LDAP_USE_SSL", "false"))
 	checkf(errLdapSSL, "Invalid LDAP_USE_SSL, must be a boolean")
 
-	skipTLS, errSkipTLS := strconv.ParseBool(getEnv("LDAP_SKIP_TLS", "true"))
-	checkf(errSkipTLS, "Invalid LDAP_SKIP_TLS, must be a boolean")
+	skipTLSVerification, errSkipTLS := strconv.ParseBool(getEnv("LDAP_SKIP_TLS_VERIFICATION", "true"))
+	checkf(errSkipTLS, "Invalid LDAP_SKIP_TLS_VERIFICATION, must be a boolean")
+
+	startTLS, errStartTLS := strconv.ParseBool(getEnv("LDAP_START_TLS", "false"))
+	checkf(errStartTLS, "Invalid LDAP_START_TLS, must be a boolean")
 
 	if len(os.Getenv("LDAP_PORT")) > 0 {
 		envLdapPort, err := strconv.Atoi(os.Getenv("LDAP_PORT"))
 		check(err)
 		ldapPort = envLdapPort
 		if ldapPort == 389 && os.Getenv("LDAP_SKIP_TLS") == "false" {
-			skipTLS = false
+			skipTLSVerification = false
 		}
 		if ldapPort == 636 && os.Getenv("LDAP_SKIP_TLS") == "false" {
-			skipTLS = false
+			skipTLSVerification = false
 			useSSL = true
 		}
 	}
@@ -80,17 +82,18 @@ func MakeConfig() (*types.Config, error) {
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 
 	ldapConfig := types.LdapConfig{
-		UserBase:     os.Getenv("LDAP_USERBASE"),
-		GroupBase:    os.Getenv("LDAP_GROUPBASE"),
-		Host:         os.Getenv("LDAP_SERVER"),
-		Port:         ldapPort,
-		UseSSL:       useSSL,
-		SkipTLS:      skipTLS,
-		BindDN:       os.Getenv("LDAP_BINDDN"),
-		BindPassword: os.Getenv("LDAP_PASSWD"),
-		UserFilter:   ldapUserFilter,
-		GroupFilter:  "(member=%s)",
-		Attributes:   []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
+		UserBase:            os.Getenv("LDAP_USERBASE"),
+		GroupBase:           os.Getenv("LDAP_GROUPBASE"),
+		Host:                os.Getenv("LDAP_SERVER"),
+		Port:                ldapPort,
+		UseSSL:              useSSL,
+		StartTLS:            startTLS,
+		SkipTLSVerification: skipTLSVerification,
+		BindDN:              os.Getenv("LDAP_BINDDN"),
+		BindPassword:        os.Getenv("LDAP_PASSWD"),
+		UserFilter:          ldapUserFilter,
+		GroupFilter:         "(member=%s)",
+		Attributes:          []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
 		Ldap:               ldapConfig,
@@ -125,22 +128,4 @@ func MakeConfig() (*types.Config, error) {
 		return nil, err
 	}
 	return config, nil
-}
-
-// Generate a new LDAP Client to make
-// Bind or Group search
-func LdapClient() *ldap.LDAPClient {
-	return &ldap.LDAPClient{
-		UserBase:     Config.Ldap.UserBase,
-		GroupBase:    Config.Ldap.GroupBase,
-		Host:         Config.Ldap.Host,
-		Port:         Config.Ldap.Port,
-		SkipTLS:      Config.Ldap.SkipTLS,
-		UseSSL:       Config.Ldap.UseSSL,
-		BindDN:       Config.Ldap.BindDN,
-		BindPassword: Config.Ldap.BindPassword,
-		UserFilter:   Config.Ldap.UserFilter,
-		GroupFilter:  Config.Ldap.GroupFilter,
-		Attributes:   Config.Ldap.Attributes,
-	}
 }

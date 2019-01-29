@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"github.com/ca-gip/kubi/authenticator"
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +26,7 @@ func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 
 // Generate Namespaces and Rolebinding from Ldap groups
 func GenerateResourcesFromLdapGroups() error {
-	groups, err := utils.LdapClient().GetGroups()
+	groups, err := ldap.GetAllGroups()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return err

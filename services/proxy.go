@@ -40,7 +40,7 @@ func ProxyHandler(w http.ResponseWriter, r *http.Request) {
 		} else if err != nil {
 			utils.Log.Error().Err(err)
 		}
-		utils.Log.Info().Msgf("Proxy user %s, %s %s, client (%s, %s)", req.Header.Get("Impersonate-User"), r.Method, r.RequestURI, r.RemoteAddr, r.UserAgent())
+		utils.Log.Info().Msgf("Proxy user %s, %s %s, client %s", req.Header.Get("Impersonate-User"), r.Method, r.RequestURI, r.RemoteAddr)
 	}
 
 	proxy := &httputil.ReverseProxy{Director: director, Transport: &http.Transport{

@@ -11,24 +11,6 @@ import (
 
 var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
 
-// GetGroupsOfUser returns the group for the user 'username'
-// starting from GroupBaseDN
-func getGroups(username string) ([]string, error) {
-	client := utils.LdapClient()
-
-	err := client.Connect()
-	if err != nil {
-		return nil, err
-	}
-
-	groups, err := client.GetGroupsOfUser(username)
-	if err != nil {
-		return nil, err
-	}
-
-	return groups, nil
-}
-
 // Get Namespace, Role for a list of group name
 func GetUserNamespaces(groups []string) []*types.AuthJWTTupple {
 	res := make([]*types.AuthJWTTupple, 0)

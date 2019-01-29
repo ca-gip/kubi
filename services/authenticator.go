@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/ca-gip/kubi/ldap"
+	"github.com/ca-gip/kubi/authenticator"
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
 	"github.com/dgrijalva/jwt-go"
@@ -39,7 +39,6 @@ func generateToken(groups []string, username string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	signedToken, err := token.SignedString(signingKey)
-	//fmt.Println("%v %v", signedToken, err)
 
 	return signedToken, err
 }
@@ -53,18 +52,24 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := ldapBindUser(utils.Config, *auth)
+	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
 	if err != nil {
 		utils.Log.Info().Err(err)
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, err.Error())
+		return
+	}
+
+	groups, err := ldap.GetUserGroups(*userDN)
+	if err != nil {
+		utils.Log.Info().Err(err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	token, err := generateToken(groups, auth.Username)
 	if err != nil {
 		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(w, err.Error())
 		return
 	} else {
@@ -86,18 +91,24 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := ldapBindUser(utils.Config, *auth)
+	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
 	if err != nil {
 		utils.Log.Info().Err(err)
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, err.Error())
+		return
+	}
+
+	groups, err := ldap.GetUserGroups(*userDN)
+	if err != nil {
+		utils.Log.Info().Err(err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	token, err := generateToken(groups, auth.Username)
 	if err != nil {
 		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(w, err.Error())
 		return
 	}
@@ -190,41 +201,4 @@ func basicAuth(r *http.Request) (error, *types.Auth) {
 	payload, _ := base64.StdEncoding.DecodeString(auth[1])
 	pair := strings.SplitN(string(payload), ":", 2)
 	return nil, &types.Auth{Username: pair[0], Password: pair[1]}
-}
-
-// Bind a user to LDAP and retrieve user's groups
-// Return error to caller if any occured
-func ldapBindUser(config *types.Config, auth types.Auth) ([]string, error) {
-
-	client := &ldap.LDAPClient{
-		UserBase:     config.Ldap.UserBase,
-		GroupBase:    config.Ldap.GroupBase,
-		Host:         config.Ldap.Host,
-		Port:         config.Ldap.Port,
-		SkipTLS:      config.Ldap.SkipTLS,
-		UseSSL:       config.Ldap.UseSSL,
-		BindDN:       config.Ldap.BindDN,
-		BindPassword: config.Ldap.BindPassword,
-		UserFilter:   config.Ldap.UserFilter,
-		GroupFilter:  config.Ldap.GroupFilter,
-		Attributes:   config.Ldap.Attributes,
-	}
-
-	// It is the responsibility of the caller to close the connection
-	defer client.Close()
-
-	ok, userDn, err := client.Authenticate(auth.Username, auth.Password)
-	if !ok {
-		utils.Log.Info().Msgf("Error authenticating user %s: %v", auth.Username, err)
-		return nil, err
-	}
-
-	groups, err := client.GetGroupsOfUser(*userDn)
-	if err != nil {
-		utils.Log.Info().Msgf("Error getting groups for user %s: %v", "username", err)
-		return nil, err
-	}
-	utils.Log.Info().Msgf("Groups for user %s are %s", *userDn, groups)
-
-	return groups, err
 }

@@ -1,5 +1,5 @@
-hash: 9b1bc98aec49ccf61b5bedb0d44a2b11a527519ec5b78bc723a7ab5f36532f56
-updated: 2019-01-28T13:52:39.318857288+01:00
+hash: 9119823d7af02d1b7ae9e8f71129d59cf5683cf748b901d8d56cc6a8332ecd7e
+updated: 2019-01-29T00:02:32.639364914+01:00
 imports:
 - name: github.com/asaskevich/govalidator
   version: ccb8e960c48f04d6935e72476ae4a51028f9e22f
@@ -48,6 +48,8 @@ imports:
   version: 94122c33edd36123c84d5368cfb2b69df93a0ec8
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/pkg/errors
+  version: ba968bfe8b2f7e042a574c888954fccecfa385b4
 - name: github.com/rs/zerolog
   version: 8747b7b3a51b5d08ee7ac50eaf4869edaf9f714a
   subpackages:
@@ -108,6 +110,8 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/ldap.v2
+  version: 412981c96a5ef1da5866f88e9f368a4728b44d6f
+- name: gopkg.in/ldap.v3
   version: 412981c96a5ef1da5866f88e9f368a4728b44d6f
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
