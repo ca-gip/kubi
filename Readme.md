@@ -1,9 +1,9 @@
-<p align=center style="background-color:#333333"><img align="center" src="/logo.png" width="200px" height="200px" /></p>
+<p align=center  style="background-color:#333333 !important;">
+  <img align="center" src="/logo.png" width="200px">
+</p>
 
 # Kubi
-
 [![Build Status](https://travis-ci.com/ca-gip/kubi.svg?branch=master)](https://travis-ci.com/ca-gip/kubi)
-
 
 Kubi is the missing tool for Active Directory or LDAP driven company. It handles OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
 
