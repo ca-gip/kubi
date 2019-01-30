@@ -72,18 +72,18 @@ func AuthenticateUser(username string, password string) (*string, error) {
 	}
 	defer conn.Close()
 
-	// Get User Distinguished Name
-	userDN, err := getUserDN(conn, username)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	// authenticate user
-	err = conn.Bind(userDN, password)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	// Get User Distinguished Name for Standard User
+	userDN, err := getUserDN(conn, utils.Config.Ldap.UserBase, username)
+	if err == nil {
+		err = conn.Bind(userDN, password)
+		return &userDN, err
+	} else if len(utils.Config.Ldap.AdminUserBase) > 0 {
+		userDN, err := getUserDN(conn, utils.Config.Ldap.AdminUserBase, username)
+		err = conn.Bind(userDN, password)
+		return &userDN, err
 	} else {
-		return &userDN, nil
+		utils.Log.Error().Msg(err.Error())
+		return nil, err
 	}
 }
 
@@ -125,12 +125,12 @@ func getBindedConnection() (*ldap.Conn, error) {
 }
 
 // Get User DN for searching in group
-func getUserDN(conn *ldap.Conn, username string) (string, error) {
-	req := newUserSearchRequest(username)
+func getUserDN(conn *ldap.Conn, userBaseDN string, username string) (string, error) {
+	req := newUserSearchRequest(userBaseDN, username)
 
 	res, err := conn.Search(req)
 	if err != nil {
-		return "", errors.Wrapf(err, "error searching for user %s", username)
+		return "", errors.Wrapf(err, "Error searching for user %s", username)
 	}
 
 	if len(res.Entries) == 0 {
@@ -142,11 +142,33 @@ func getUserDN(conn *ldap.Conn, username string) (string, error) {
 	return userDN, nil
 }
 
+// Check if a user is in admin LDAP group
+// return true if it belong to AdminGroup, false otherwise
+func HasAdminAccess(userDN string) bool {
+
+	// No need to go after, there is no Admin Group Base
+	if len(utils.Config.Ldap.AdminGroupBase) == 0 {
+		return false
+	}
+
+	conn, err := getBindedConnection()
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return false
+	}
+
+	defer conn.Close()
+	req := newUserAdminSearchRequest(userDN)
+	res, err := conn.Search(req)
+
+	return err == nil && len(res.Entries) > 0
+}
+
 // request to search user
-func newUserSearchRequest(username string) *ldap.SearchRequest {
+func newUserSearchRequest(userBaseDN string, username string) *ldap.SearchRequest {
 	userFilter := fmt.Sprintf(utils.Config.Ldap.UserFilter, username)
 	return &ldap.SearchRequest{
-		BaseDN:       utils.Config.Ldap.UserBase,
+		BaseDN:       userBaseDN,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
 		SizeLimit:    2, // limit number of entries in result
@@ -164,6 +186,21 @@ func newUserGroupSearchRequest(userDN string) *ldap.SearchRequest {
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
 		SizeLimit:    0, // limit number of entries in result, 0 values means no limitations
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       groupFilter, // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+}
+
+// request to get user group list
+func newUserAdminSearchRequest(userDN string) *ldap.SearchRequest {
+	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
+	return &ldap.SearchRequest{
+		BaseDN:       utils.Config.Ldap.AdminGroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations
 		TimeLimit:    30,
 		TypesOnly:    false,
 		Filter:       groupFilter, // filter default format : (&(objectClass=groupOfNames)(member=%s))

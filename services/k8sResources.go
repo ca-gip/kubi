@@ -18,6 +18,7 @@ import (
 func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
+	GenerateAdminClusterRoleBinding()
 	err := GenerateResourcesFromLdapGroups()
 	if err != nil {
 		utils.Log.Error().Err(err)
@@ -95,6 +96,50 @@ func GenerateRoleBinding(context *types.AuthJWTTupple) {
 		},
 	}
 	_, err = api.RoleBindings(context.Namespace).Create(&newRoleBinding)
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+	}
+
+}
+
+// GenerateRolebinding from tupple
+// If exists, nothing is done, only creating !
+func GenerateAdminClusterRoleBinding() {
+	kconfig, err := rest.InClusterConfig()
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	api := clientSet.RbacV1()
+
+	_, errRB := api.ClusterRoleBindings().Get(utils.KubiClusterRoleBindingName, metav1.GetOptions{})
+
+	if errRB == nil {
+		utils.Log.Info().Msgf("ClusterRolebinding: %v already exists, nothing to do.", utils.KubiClusterRoleBindingName)
+		return
+	}
+
+	utils.Log.Info().Msgf("ClusterRolebinding %v doesn't exist ", utils.KubiClusterRoleBindingName)
+
+	clusterRoleBinding := v1.ClusterRoleBinding{
+		RoleRef: v1.RoleRef{
+			"rbac.authorization.k8s.io",
+			"ClusterRole",
+			"cluster-admin",
+		},
+		Subjects: []v1.Subject{
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     utils.KubiClusterRoleBindingName,
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: utils.KubiClusterRoleBindingName,
+			Labels: map[string]string{
+				"name":    utils.KubiClusterRoleBindingName,
+				"creator": "kubi",
+			},
+		},
+	}
+	_, err = api.ClusterRoleBindings().Create(&clusterRoleBinding)
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 	}

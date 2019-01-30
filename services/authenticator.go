@@ -20,8 +20,7 @@ var Config *types.Config
 
 var signingKey, _ = ioutil.ReadFile(utils.TlsKeyPath)
 
-func generateToken(groups []string, username string) (string, error) {
-
+func generateUserToken(groups []string, username string, hasAdminAccess bool) (string, error) {
 	var auths = GetUserNamespaces(groups)
 
 	duration, err := time.ParseDuration(utils.Config.TokenLifeTime)
@@ -31,6 +30,7 @@ func generateToken(groups []string, username string) (string, error) {
 	claims := types.AuthJWTClaims{
 		auths,
 		username,
+		hasAdminAccess,
 		jwt.StandardClaims{
 			ExpiresAt: time.Unix(),
 			Issuer:    "Kubi Server",
@@ -43,38 +43,38 @@ func generateToken(groups []string, username string) (string, error) {
 	return signedToken, err
 }
 
+func baseGenerateToken(auth types.Auth) (*string, error) {
+
+	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	groups, err := ldap.GetUserGroups(*userDN)
+	if err != nil {
+		return nil, err
+	}
+	token, err := generateUserToken(groups, auth.Username, ldap.HasAdminAccess(*userDN))
+
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
 func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	err, auth := basicAuth(r)
 	if err != nil {
 		utils.Log.Info().Err(err)
 		w.WriteHeader(http.StatusUnauthorized)
 		io.WriteString(w, "Basic Auth: Invalid credentials")
-		return
 	}
 
-	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
-	if err != nil {
-		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	token, err := baseGenerateToken(*auth)
 
-	groups, err := ldap.GetUserGroups(*userDN)
-	if err != nil {
-		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	token, err := generateToken(groups, auth.Username)
-	if err != nil {
-		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		io.WriteString(w, err.Error())
-		return
-	} else {
+	if token != nil {
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, token)
+		io.WriteString(w, *token)
 	}
 
 }
@@ -84,32 +84,19 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 // by kubectl. It return a well formatted yaml
 func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 	err, auth := basicAuth(r)
+
 	if err != nil {
 		utils.Log.Info().Err(err)
+		utils.Log.Info().Msg(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		io.WriteString(w, "Basic Auth: Invalid credentials")
-		return
 	}
 
-	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
+	token, err := baseGenerateToken(*auth)
+
 	if err != nil {
 		utils.Log.Info().Err(err)
 		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	groups, err := ldap.GetUserGroups(*userDN)
-	if err != nil {
-		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	token, err := generateToken(groups, auth.Username)
-	if err != nil {
-		utils.Log.Info().Err(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		io.WriteString(w, err.Error())
 		return
 	}
 
@@ -137,12 +124,13 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 		},
 		Users: []types.KubeConfigUser{
 			{
-				User: types.KubeConfigUserToken{Token: token},
+				User: types.KubeConfigUserToken{Token: *token},
 				Name: auth.Username},
 		},
 	}
 
 	yml, err := yaml.Marshal(config)
+
 	utils.Log.Error().Err(err)
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")

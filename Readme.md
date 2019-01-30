@@ -16,17 +16,19 @@ The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespa
 
 | Name                            | Description                             | Example                       | Mandatory | Default      |
 | :--------------                 | :-----------------------------:         | ----------------------------: | ---------:| ----------:  |
-|  **LDAP_USERBASE**              |  *BaseDn for user base search*      | `ou=People,dc=example,dc=org   ` | `yes  `     | -           |
-|  **LDAP_GROUPBASE**             |  *BaseDn for group base search*     | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
-|  **LDAP_SERVER**                |  *LDAP server ip address*           | `"192.168.2.1"                 ` | `yes  `     | -           |
-|  **LDAP_PORT**                  |  *LDAP server port 389, 636...*     | `389                           ` | `no   `     | `389  `     |
-|  **LDAP_USE_SSL**               |  *Use SSL or no*                    | `true                          ` | `no   `     | `false`     |
-|  **LDAP_START_TLS**             |  *Use StartTLS ( use with 389 port)*| `true                          ` | `false`     | `false`     |
-|  **LDAP_SKIP_TLS_VERIFICATION** |  *Skip TLS verification*            | `true                          ` | `false`     | `true`      |
-|  **LDAP_BINDDN**                |  *LDAP bind account DN*             | `"CN=admin,DC=example,DC=ORG"  ` | `yes  `     | -           |
-|  **LDAP_PASSWD**                |  *LDAP bind account password*       | `"password"                    ` | `yes  `     | -           |
-|  **LDAP_USERFILTER**            |  *LDAP filter for user search*      | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
-|  **TOKEN_LIFETIME**             |  *Duration for the JWT token*       | `"4h"                          ` | `no   `     | 4h          |
+|  **LDAP_USERBASE**              |  *BaseDn for user base search*       | `ou=People,dc=example,dc=org   ` | `yes  `     | -           |
+|  **LDAP_GROUPBASE**             |  *BaseDn for group base search*      | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
+|  **LDAP_ADMIN_USERBASE**        |  *BaseDn for admin base search*      | `ou=Admin,dc=example,dc=org   `  | `yes  `     | -           |
+|  **LDAP_ADMIN_GROUPBASE**       |  *BaseDn for admin group base search*| `ou=AdminGroup,dc=example,dc=org`| `yes  `     | -           |
+|  **LDAP_SERVER**                |  *LDAP server ip address*            | `"192.168.2.1"                 ` | `yes  `     | -           |
+|  **LDAP_PORT**                  |  *LDAP server port 389, 636...*      | `389                           ` | `no   `     | `389  `     |
+|  **LDAP_USE_SSL**               |  *Use SSL or no*                     | `true                          ` | `no   `     | `false`     |
+|  **LDAP_START_TLS**             |  *Use StartTLS ( use with 389 port)* | `true                          ` | `false`     | `false`     |
+|  **LDAP_SKIP_TLS_VERIFICATION** |  *Skip TLS verification*             | `true                          ` | `false`     | `true`      |
+|  **LDAP_BINDDN**                |  *LDAP bind account DN*              | `"CN=admin,DC=example,DC=ORG"  ` | `yes  `     | -           |
+|  **LDAP_PASSWD**                |  *LDAP bind account password*        | `"password"                    ` | `yes  `     | -           |
+|  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
+|  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 
 # Launching Applications
 

@@ -10,11 +10,17 @@ const (
 	Dns1123LabelErrMsg    string = "a DNS-1123 label must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 )
 
+const (
+	KubiResourcePrefix         = "kubi"
+	KubiClusterRoleBindingName = KubiResourcePrefix + "-admin"
+)
+
 var BlacklistedNamespaces = []string{
 	"kube-system",
 	"kube-public",
 	"ingress-nginx",
 	"default",
+	KubiResourcePrefix,
 }
 
 func ApiPrefix() []string {

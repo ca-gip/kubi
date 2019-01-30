@@ -33,6 +33,11 @@ func ProxyHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Header Manipulation
 		if err == nil {
+			// The admin group is injected if admin
+			if token.AdminAccess {
+				req.Header.Add("Impersonate-Group", utils.KubiClusterRoleBindingName)
+			}
+			// Other ldap group are injected
 			for _, auth := range token.Auths {
 				req.Header.Add("Impersonate-Group", auth.Namespace+"-"+auth.Role)
 			}

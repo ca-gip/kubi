@@ -157,6 +157,13 @@ func TestGetUserNamespace(t *testing.T) {
 
 	})
 
+	t.Run("blacklisted kubi-admins clusterRoleBinding name should be protected", func(t *testing.T) {
+		result, error := services.GetUserNamespace("kubi_admins")
+		assert.NotNil(t, error)
+		assert.Nil(t, result)
+
+	})
+
 }
 
 func TestGetUserNamespaces(t *testing.T) {

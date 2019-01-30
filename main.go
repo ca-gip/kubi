@@ -18,7 +18,10 @@ func main() {
 
 	// Generate namespace and role binding for ldap groups
 	// no need to wait here
+
 	utils.Log.Info().Msg("Generating resources from LDAP groups")
+	services.GenerateAdminClusterRoleBinding()
+
 	err = services.GenerateResourcesFromLdapGroups()
 	if err != nil {
 		log.Error().Err(err)

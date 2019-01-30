@@ -9,6 +9,8 @@ import (
 type LdapConfig struct {
 	UserBase            string
 	GroupBase           string
+	AdminUserBase       string
+	AdminGroupBase      string
 	Host                string
 	Port                int
 	UseSSL              bool
@@ -72,8 +74,9 @@ type KubeConfigUserToken struct {
 }
 
 type AuthJWTClaims struct {
-	Auths []*AuthJWTTupple `json:"auths"`
-	User  string           `json:"user"`
+	Auths       []*AuthJWTTupple `json:"auths"`
+	User        string           `json:"user"`
+	AdminAccess bool             `json:"adminAccess"`
 	jwt.StandardClaims
 }
 
