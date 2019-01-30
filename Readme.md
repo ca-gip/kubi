@@ -1,3 +1,5 @@
+<p align=center style="background-color:#333333"><img align="center" src="/logo.png" width="200px" height="200px" /></p>
+
 # Kubi
 
 [![Build Status](https://travis-ci.com/ca-gip/kubi.svg?branch=master)](https://travis-ci.com/ca-gip/kubi)
