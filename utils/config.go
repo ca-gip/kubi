@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"k8s.io/client-go/rest"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -24,6 +23,7 @@ var Config *types.Config
 // it limit misconfiguration ( lack of parameter ).
 func MakeConfig() (*types.Config, error) {
 
+	// Check cluster deployment
 	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 	if len(host) == 0 || len(port) == 0 {
 		return nil, rest.ErrNotInCluster
@@ -102,16 +102,15 @@ func MakeConfig() (*types.Config, error) {
 		KubeCa:             caEncoded,
 		KubeCaText:         string(kubeCA),
 		KubeToken:          string(kubeToken),
-		ApiServerURL:       net.JoinHostPort(host, port),
+		PublicApiServerURL: getEnv("PUBLIC_APISERVER_URL", ""),
 		ApiServerTLSConfig: *tlsConfig,
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 	}
 
 	err := validation.ValidateStruct(config,
-		validation.Field(&config.ApiServerURL, validation.Required, is.URL),
 		validation.Field(&config.KubeToken, validation.Required),
 		validation.Field(&config.KubeCa, validation.Required, is.Base64),
-		validation.Field(&config.ApiServerURL, validation.Required, is.URL),
+		validation.Field(&config.PublicApiServerURL, validation.Required, is.URL),
 	)
 	errLdap := validation.ValidateStruct(&ldapConfig,
 		validation.Field(&ldapConfig.UserBase, validation.Required, validation.Length(2, 200)),
@@ -122,7 +121,7 @@ func MakeConfig() (*types.Config, error) {
 	)
 
 	if err != nil {
-		Log.Error().Err(err)
+		Log.Error().Msgf(strings.Replace(err.Error(), "; ", "\n", -1))
 		return nil, err
 	}
 	if errLdap != nil {

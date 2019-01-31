@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -13,6 +14,7 @@ func main() {
 	config, err := utils.MakeConfig()
 	if err != nil {
 		log.Fatal().Msg("Config error")
+		os.Exit(1)
 	}
 	utils.Config = config
 
@@ -37,7 +39,7 @@ func main() {
 	router.HandleFunc("/refresh", services.RefreshK8SResources).Methods(http.MethodGet) // TODO, protect from users
 	router.HandleFunc("/config", services.GenerateConfig).Methods(http.MethodGet)
 	router.HandleFunc("/token", services.GenerateJWT).Methods(http.MethodGet)
-	router.HandleFunc("/authenticate", services.GenerateKubeT).Methods(http.MethodPost)
+	router.HandleFunc("/authenticate", services.Authenticate).Methods(http.MethodPost)
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
 	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))

@@ -25,7 +25,7 @@ type LdapConfig struct {
 
 type Config struct {
 	Ldap               LdapConfig
-	ApiServerURL       string
+	PublicApiServerURL string
 	KubeCa             string
 	KubeCaText         string
 	KubeToken          string

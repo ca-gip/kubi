@@ -3,7 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
-	"github.com/ca-gip/kubi/authenticator"
+	"github.com/ca-gip/kubi/authprovider"
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
 	corev1 "k8s.io/api/core/v1"
