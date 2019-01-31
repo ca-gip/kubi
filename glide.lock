@@ -1,5 +1,5 @@
 hash: 9119823d7af02d1b7ae9e8f71129d59cf5683cf748b901d8d56cc6a8332ecd7e
-updated: 2019-01-29T00:02:32.639364914+01:00
+updated: 2019-01-31T04:50:33.890701666+01:00
 imports:
 - name: github.com/asaskevich/govalidator
   version: ccb8e960c48f04d6935e72476ae4a51028f9e22f
@@ -110,9 +110,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/ldap.v2
-  version: 412981c96a5ef1da5866f88e9f368a4728b44d6f
-- name: gopkg.in/ldap.v3
-  version: 412981c96a5ef1da5866f88e9f368a4728b44d6f
+  version: 214f299a0ecb2a6c6f6d2b0f13977032b207dc58
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
 - name: k8s.io/api

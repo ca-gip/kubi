@@ -22,9 +22,3 @@ var BlacklistedNamespaces = []string{
 	"default",
 	KubiResourcePrefix,
 }
-
-func ApiPrefix() []string {
-	return []string{
-		"/api", "/apis", "/metrics", "/resetMetrics", "/logs", "/debug", "/healthz", "/swagger-ui", "/swaggerapi", "/ui", "/version", "/openapi", "swagger-2.0.0.pb-v1",
-	}
-}

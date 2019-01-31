@@ -131,6 +131,40 @@ EOF
 kubectl -n kube-system apply -f kube.yml
 ```
 
+#### Configure the Kube api Server
+
+// On each master node in /etc/kubernetes/pki/webhook
+```yaml
+# Kubernetes API version
+apiVersion: v1
+# kind of the API object
+kind: Config
+# clusters refers to the remote service.
+clusters:
+  - name: kubi
+    cluster:
+      certificate-authority: /etc/kubernetes/pki/ca.crt
+      server: https://api.devops.managed.kvm:30003/authenticate   
+users:
+  - name: apiserver
+    user:
+      client-certificate: /etc/kubernetes/pki/apiserver.crt
+      client-key: /etc/kubernetes/pki/apiserver.key
+current-context: kubi
+contexts:
+- context:
+    cluster:  kubi
+    user: apiserver
+  name: webhook
+```
+
+```bash
+# vim /etc/kubernetes/manifests/kube-apiserver.yaml
+- --authentication-token-webhook-config-file=/etc/kubernetes/pki/webhook.yml
+```
+
+> Api servers reboot automatically, check logs `kubectl logs -f kube-apiserver-master-01 -n kube-system`
+
 ## Connect to Kubi server
 
 
