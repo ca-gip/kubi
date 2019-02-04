@@ -1,3 +1,4 @@
+
 <p align=center  style="background-color:#333333 !important;">
   <img align="center" src="/logo.png" width="200px">
 </p>
@@ -5,14 +6,61 @@
 # Kubi
 [![Build Status](https://travis-ci.com/ca-gip/kubi.svg?branch=master)](https://travis-ci.com/ca-gip/kubi)
 
-Kubi is the missing tool for Active Directory or LDAP driven company. It handles OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes IAM proxy to authenticate user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
+Kubi is the missing tool for Active Directory or LDAP driven company. It handles OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes Token Server, authenticating user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
 
-Namespaces and Rolebindings are automaticaly created by Kubi.
+Kubi is a webhook for the server part and has a cli for linux and windows users.
 
-For example:
-- a ldap group named: `GROUP_DEMO_ADMIN` give ADMIN `role binding`  permissions to the existing namespace `DEMO`.
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+## Index
+
+- [General](#general)
+  - [Parameters](#parameters)
+  - [Provisioning Parameters](#provisioning-parameters)
+- [Client](#client)
+  - [For Windows users](#for-windows-users)
+  - [For Linux](#for-linux)
+    - [With kubi cli](#with-kubi-cli)
+    - [With `curl`](#with-curl)
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Create a crt signed by Kubernetes CA](#create-a-crt-signed-by-kubernetes-ca)
+  - [Create the signing request](#create-the-signing-request)
+  - [Approve the csr](#approve-the-csr)
+  - [Retrieve the crt](#retrieve-the-crt)
+  - [Create a secret for the deployment](#create-a-secret-for-the-deployment)
+  - [Create a secret for LDAP Bind password](#create-a-secret-for-ldap-bind-password)
+  - [Deploy the config map](#deploy-the-config-map)
+  - [Deploy the manifest](#deploy-the-manifest)
+  - [Basic Webhook configuration](#basic-webhook-configuration)
+  - [Advanced Webhook configuration](#advanced-webhook-configuration)
+- [Roadmap](#roadmap)
+- [Additionnals](#additionnals)
+  - [Local LDAP Server](#local-ldap-server)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+# General
+
+Namespaces and Rolebindings are automaticaly created and managed by Kubi. Kubi parse the LDAP group and find the `namespace`and the `role`.
+The first part (from the righ) is the role, and the second is the namespace.
 
 The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespace>_<role>`. Namespace must be DNS1123 compatible and can´t exceed 63 characters ( kubernetes constraint ).
+
+For example:
+- a ldap group named: `WHATYOUWANT_DEMO_ADMIN` give cluster `role binding` admin permissions to the namespace `DEMO`.
+- a ldap group named: `WHATYOUWANT_PROJECT-IN-PRODUCTION_ADMIN` give cluster `role binding` admin permissions to the namespace `PROJECT-IN-PRODUCTION`.
+
+If the namespace is missing, it will be automatically created at startup. You can refresh it by calling `/refresh`. Some namespace are protected: `kube-system, kube-public, default`. Kubi can generate `NetworkPolicy` if `PROVISIONING_NETWORK_POLICIES` flag is enabled. In this case, it create a `Networpolicy` that create something like a bubble.
+
+The network policy works like this principle:
+- Every pods can communicate inside the namespace
+- Pods cannot communicate with external resources ( outisde cluster )
+- Dns is not filtered
+
+You can customize `PROVISIONING_EGRESS_ALLOWED_PORTS`, `PROVISIONING_EGRESS_ALLOWED_CIDR`, `PROVISIONING_INGRESS_ALLOWED_NAMESPACES` to add default rules.
+For specific exceptions, add another network policy.
 
 ## Parameters
 
@@ -33,26 +81,62 @@ The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespa
 |  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
 |  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 
-| Name                                           | Description                                        | Example           | Mandatory   | Default |
-| :--------------                                | :-----------------------------:                    | ---------------:  | ---------:  | ---:    |
-|  **PROVISIONING_NETWORK_POLICIES**             |  *If network policies are create automatically*    | `"true"`          | `no   `     | "no"    |
-|  **PROVISIONING_EGRESS_ALLOWED_PORTS**         |  *Port allowed for egress*                         | `"53,389,636"`    | `no   `     | "53"    |
-|  **PROVISIONING_EGRESS_ALLOWED_CIDR**          |  *Cidr allowed for egress*                         | `"10.0.0.0/24"`   | `no   `     | -       |
-|  **PROVISIONING_INGRESS_ALLOWED_NAMESPACES**   |  *Namespaces allowed for ingress*                  | `"ingres-nginx"`  | `no   `     | -       |
+## Provisioning Parameters
+
+You can use Kubi to generate Network policy for your newly created namespaces.
+
+| Name                                            | Description                                 | Example                       | Mandatory | Default      |
+| :--------------                                 | :-----------------------------:             | ----------------------------: | ---------:| ----------:  |
+|  **PROVISIONING_NETWORK_POLICIES**              |  *Activate Network policies*                | `true`                        | `no`      | `no`         |
+|  **PROVISIONING_EGRESS_ALLOWED_PORTS**          |  *A list of opened port*                    | `53,123,636`                  | `no`      | -            |
+|  **PROVISIONING_EGRESS_ALLOWED_CIDR**           |  *A list of egress cidr port*               | `10.0.0.0/12,192.168.1.0/24`  | `no`      | -            |
+|  **PROVISIONING_INGRESS_ALLOWED_NAMESPACES**    |  *A list of allowed namespaces for ingress* | `ingress-nginx`               | `no`      | -            |
+
+# Client
 
 
-# Launching Applications
 
-## Deploy on kubernetes
+## For Windows users
 
-### Create a certificate with kubernetes CA
+1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi.exe)
+2. Open Cmd
+```bash
+# Get help
+.\kubi.exe --help
+# Connect and generate config file
+.\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
+```
 
-**Prerequisites:**
-- You need to have admin access to an existing kubernetes cluster
+## For Linux
+
+### With kubi cli
+
+```bash
+# Install the kubi cli
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.0/kubi -P /usr/local/bin
+sudo chmod a+x /usr/local/bin/kubi
+
+# Connect to the cluster
+kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
+```
+
+### With `curl`
+
+```bash
+  curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
+```
+
+> It is not recommanded to use curl, because it is used with -k parameter ( insecure mode).
+
+# Installation
+
+## Prerequisites
+
+- You need to have admin access to an existing Kubernetes cluster
 - You need to have `cfssl` installed: https://github.com/cloudflare/cfssl
-- A coffee
+- Time
 
-#### Create a crt signed by Kubernetes CA
+## Create a crt signed by Kubernetes CA
 
   > Change `api.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
   that point to an existing Kubernetes Cluster node.
@@ -74,7 +158,7 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
 EOF
 ```
 
-#### Create the signing request
+## Create the signing request
 
 ```bash
 cat <<EOF | kubectl create -f -
@@ -93,31 +177,29 @@ spec:
 EOF
 ```
 
-#### Approve the csr
+## Approve the csr
 ```bash
 kubectl certificate approve kubi-svc.kube-system
 ```
 
-#### Retrieve the crt
+## Retrieve the crt
 ```bash
 kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}'     | base64 --decode > server.crt
 ```
 
-#### Create a secret for the deployment
+## Create a secret for the deployment
 ```bash
 kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 ```
-### Deploy the the application
 
-#### Create a secret for LDAP Bind password
+## Create a secret for LDAP Bind password
 
-//TODO check uppercase
 ```bash
 kubectl -n kube-system create secret generic kubi-secret \
   --from-literal ldap_passwd='changethispasswordnow!'
 ```
 
-#### Deploy the config map
+## Deploy the config map
 
 ** YOU MUST CHANGE VALUE WITH YOUR OWN **
 ```bash
@@ -130,20 +212,27 @@ data:
   LDAP_SERVER: "192.168.2.1"
   LDAP_PORT: "389"
   LDAP_BINDDN: "CN=admin,DC=example,DC=ORG"
+  LDAP_ADMIN_USERBASE: "ou=Administrator,dc=example,dc=org"
+  LDAP_ADMIN_GROUPBASE: "cn=administrator,ou=ADMIN,dc=example,dc=org"
   PUBLIC_APISERVER_URL: https://api.devops.managed.kvm
 metadata:
   name: kubi-config
 EOF
 ```
-#### Deploy the manifest
+## Deploy the manifest
 
 ```bash
 kubectl -n kube-system apply -f kube.yml
 ```
 
-#### Configure the Kube api Server
+## Basic Webhook configuration
 
-// On each master node in /etc/kubernetes/pki/webhook
+Kubi is installed as a Kubernetes webhook.
+> For more information about webhook: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication
+
+1. **On each master node in /etc/kubernetes/pki/webhook**
+
+
 ```yaml
 # Kubernetes API version
 apiVersion: v1
@@ -173,41 +262,32 @@ contexts:
 - --authentication-token-webhook-config-file=/etc/kubernetes/pki/webhook.yml
 ```
 
-> Api servers reboot automatically, check logs `kubectl logs -f kube-apiserver-master-01 -n kube-systemP
+> Api servers reboot automatically, check logs `kubectl logs -f kube-apiserver-master-01 -n kube-system`.
 
-## Connect to Kubi server
+## Advanced Webhook configuration
 
+You could change apiserver mount and create an aditionnal folder.
+Here we use /etc/kubernetes/pki which is automatically mounted.
 
-### Using `kubi` cli for serious guy, [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi)
+1. Add these params to kubeadm config in `ClusterConfiguration`:
 
-#### For Linux
+  ```bash
+  # Before, create the aditionnals folder in all master nodes
+  mkdir /etc/kubernetes/additionnals
+  ```
 
-##### With kubi cli
-```bash
-# Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/v1.0/kubi -P /usr/local/bin
-sudo chmod a+x /usr/local/bin/kubi
+2. And edit your `kubeadm-config.yml` file with the following values:
 
-# Connect to the cluster
-kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
-```
+  ```yaml
+  extraArgs:
+    authentication-token-webhook-config-file: /etc/kubernetes/additionnals/webhook.yml
+  extraVolumes:
+    - name: additionnals
+      hostPath: /etc/kubernetes/additionnals
+      mountPath: /etc/kubernetes/additionnals
+  ```
 
-##### Using `curl`
-
-```bash
-curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
-```
-> It is not recommanded to use curl, because it is used with -k parameter ( insecure mode).
-
-#### For Windows users
-1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi.exe)
-2. Open Cmd
-```bash
-# Get help
-.\kubi.exe --help
-# Connect and generate config file
-.\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
-```
+3. Copy the webhook file to `/etc/kubernetes/additionnals` folder.
 
 # Roadmap
 
@@ -217,9 +297,9 @@ The following features should be available soon.
 - Expose /metrics
 
 
-## Additionnals
+# Additionnals
 
-### Local LDAP Server
+## Local LDAP Server
 
 The server need to have memberof overlay
 ```bash
