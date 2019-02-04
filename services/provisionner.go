@@ -14,6 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
+	"strconv"
 )
 
 // Handler to regenerate all resources created by kubi
@@ -23,7 +24,7 @@ func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 	GenerateAdminClusterRoleBinding()
 	err := GenerateResources()
 	if err != nil {
-		utils.Log.Error().Err(err)
+		utils.Log.Error().Msg(err.Error())
 	}
 }
 
@@ -64,10 +65,12 @@ func GenerateNamespaces(context []*types.AuthJWTTupple) {
 // splitted for unit test !
 func GenerateNetworkPolicies(context []*types.AuthJWTTupple) {
 	if utils.Config.NetworkPolicyConfig == nil {
-		utils.Log.Info().Msg("PROVISIONING_NETWORK_POLICIES is not enabled")
+		utils.Log.Info().Msg("Network policy generation is not enabled")
 		return
 	}
+	utils.Log.Info().Msg("Network policy generation is enabled")
 	for _, auth := range context {
+		utils.Log.Info().Msgf("Generate NetworkPolicy for %v", auth.Namespace)
 		GenerateNetworkPolicy(auth.Namespace)
 	}
 
@@ -213,13 +216,17 @@ func GenerateNetworkPolicy(namespace string) {
 	}
 
 	netpolPorts := []v1n.NetworkPolicyPort{}
-	utils.Log.Info().Msgf("Adding port1 %v", utils.Config.NetworkPolicyConfig.AllowedPorts)
+	utils.Log.Info().Msgf("Adding port %v to network policy  ns: %s, policy %s ", utils.Config.NetworkPolicyConfig.AllowedPorts, namespace, utils.KubiDefaultNetworkPolicyName)
 
 	if len(utils.Config.NetworkPolicyConfig.AllowedPorts) > 0 {
 		for _, port := range utils.Config.NetworkPolicyConfig.AllowedPorts {
-			utils.Log.Info().Msgf("Adding port %s", port)
-			netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{StrVal: port}, Protocol: &UDP})
-			netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{StrVal: port}, Protocol: &TCP})
+			port32, err := strconv.Atoi(port)
+			if err != nil {
+				utils.Log.Error().Msgf("The following port %s is invalid, ignoring !", port)
+			} else {
+				netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: int32(port32)}, Protocol: &UDP})
+				netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: int32(port32)}, Protocol: &TCP})
+			}
 		}
 	}
 	netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: 53}, Protocol: &UDP})

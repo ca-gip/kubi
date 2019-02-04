@@ -142,6 +142,7 @@ func MakeConfig() (*types.Config, error) {
 
 func makeNetworkConfig() (*types.NetworkPolicyConfig, error) {
 	if !hasEnv("PROVISIONING_NETWORK_POLICIES") || os.Getenv("PROVISIONING_NETWORK_POLICIES") != "true" {
+
 		return nil, nil
 	}
 	result := types.NetworkPolicyConfig{}
@@ -152,11 +153,14 @@ func makeNetworkConfig() (*types.NetworkPolicyConfig, error) {
 		portSplits := strings.Split(portStrings, ",")
 		for _, port := range portSplits {
 			err := validation.Validate(port, is.Port)
+
 			if err != nil {
 				Log.Error().Msg(err.Error())
 				return nil, err
 			}
-			result.AllowedPorts = append(result.AllowedPorts, port)
+			if len(port) > 0 {
+				result.AllowedPorts = append(result.AllowedPorts, port)
+			}
 		}
 	}
 
@@ -164,10 +168,10 @@ func makeNetworkConfig() (*types.NetworkPolicyConfig, error) {
 	cidrStrings := getEnv("PROVISIONING_EGRESS_ALLOWED_CIDR", "")
 	if len(cidrStrings) > 0 {
 		cidrSplits := strings.Split(cidrStrings, ",")
-		for _, port := range cidrSplits {
-			err := validation.Validate(port, validation.Match(regexp.MustCompile("^([0-9]{1,3}\\.){3}\\.[0-9]{1,3}\\.\\/[0-9]{2}$")))
+		for _, cidr := range cidrSplits {
+			err := validation.Validate(cidr, validation.Match(regexp.MustCompile("^([0-9]{1,3}\\.){3}[0-9]{1,3}\\/[0-9]{1,2}$")))
 			if err != nil {
-				Log.Error().Msg("cidr %v not valid. for example 10.0.0.0/24")
+				Log.Error().Msgf("cidr %v not valid. for example 10.0.0.0/24", cidr)
 				return nil, err
 			}
 		}

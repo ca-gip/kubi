@@ -34,6 +34,8 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	} else {
+		utils.Log.Info().Msgf("Challenging token for user %v", token.User)
+
 		groups := []string{}
 		// Other ldap group are injected
 		for _, auth := range token.Auths {

@@ -93,6 +93,11 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token, err := baseGenerateToken(*auth)
+	if err == nil {
+		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
+	} else {
+		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
+	}
 
 	if err != nil {
 		utils.Log.Info().Err(err)
@@ -107,7 +112,7 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 			{
 				Name: "kubernetes",
 				Cluster: types.KubeConfigClusterData{
-					Server:          Config.PublicApiServerURL,
+					Server:          utils.Config.PublicApiServerURL,
 					CertificateData: utils.Config.KubeCa,
 				},
 			},
