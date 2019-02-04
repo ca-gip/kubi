@@ -7,13 +7,13 @@ func IsEmpty(value string) bool {
 }
 
 // Print error and exit if error occured
-func check(e error) {
+func Check(e error) {
 	if e != nil {
-		Log.Error().Err(e)
+		Log.Error().Msg(e.Error())
 	}
 }
 
-func checkf(e error, msg string) {
+func Checkf(e error, msg string) {
 	if e != nil {
 		Log.Error().Msgf("%v : %v", msg, e)
 	}
@@ -24,4 +24,9 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func hasEnv(key string) bool {
+	_, ok := os.LookupEnv(key)
+	return ok
 }

@@ -33,6 +33,14 @@ The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespa
 |  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
 |  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 
+| Name                                           | Description                                        | Example           | Mandatory   | Default |
+| :--------------                                | :-----------------------------:                    | ---------------:  | ---------:  | ---:    |
+|  **PROVISIONING_NETWORK_POLICIES**             |  *If network policies are create automatically*    | `"true"`          | `no   `     | "no"    |
+|  **PROVISIONING_EGRESS_ALLOWED_PORTS**         |  *Port allowed for egress*                         | `"53,389,636"`    | `no   `     | "53"    |
+|  **PROVISIONING_EGRESS_ALLOWED_CIDR**          |  *Cidr allowed for egress*                         | `"10.0.0.0/24"`   | `no   `     | -       |
+|  **PROVISIONING_INGRESS_ALLOWED_NAMESPACES**   |  *Namespaces allowed for ingress*                  | `"ingres-nginx"`  | `no   `     | -       |
+
+
 # Launching Applications
 
 ## Deploy on kubernetes

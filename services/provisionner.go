@@ -7,8 +7,10 @@ import (
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
 	corev1 "k8s.io/api/core/v1"
+	v1n "k8s.io/api/networking/v1"
 	"k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"net/http"
@@ -19,14 +21,14 @@ func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	GenerateAdminClusterRoleBinding()
-	err := GenerateResourcesFromLdapGroups()
+	err := GenerateResources()
 	if err != nil {
 		utils.Log.Error().Err(err)
 	}
 }
 
 // Generate Namespaces and Rolebinding from Ldap groups
-func GenerateResourcesFromLdapGroups() error {
+func GenerateResources() error {
 	groups, err := ldap.GetAllGroups()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -38,6 +40,7 @@ func GenerateResourcesFromLdapGroups() error {
 	auths := GetUserNamespaces(groups)
 	GenerateNamespaces(auths)
 	GenerateRoleBindings(auths)
+	GenerateNetworkPolicies(auths)
 	return nil
 }
 
@@ -55,6 +58,19 @@ func GenerateNamespaces(context []*types.AuthJWTTupple) {
 	for _, auth := range context {
 		GenerateNamespace(auth)
 	}
+}
+
+// A loop wrapper for GenerateNetworkPolicy
+// splitted for unit test !
+func GenerateNetworkPolicies(context []*types.AuthJWTTupple) {
+	if utils.Config.NetworkPolicyConfig == nil {
+		utils.Log.Info().Msg("PROVISIONING_NETWORK_POLICIES is not enabled")
+		return
+	}
+	for _, auth := range context {
+		GenerateNetworkPolicy(auth.Namespace)
+	}
+
 }
 
 // GenerateRolebinding from tupple
@@ -149,7 +165,7 @@ func GenerateAdminClusterRoleBinding() {
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
 func GenerateNamespace(context *types.AuthJWTTupple) {
-	kconfig, err := rest.InClusterConfig()
+	kconfig, _ := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
@@ -177,4 +193,82 @@ func GenerateNamespace(context *types.AuthJWTTupple) {
 		}
 	}
 
+}
+
+// Generate a NetworkPolicy based on NetworkPolicyConfig
+// If exists, the existing netpol is updates else it is created
+func GenerateNetworkPolicy(namespace string) {
+	kconfig, _ := rest.InClusterConfig()
+
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
+	api := clientSet.NetworkingV1()
+	_, errNetpol := api.NetworkPolicies(namespace).Get(utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
+
+	UDP := corev1.ProtocolUDP
+	TCP := corev1.ProtocolTCP
+
+	ingressNamespaces := map[string]string{}
+	for _, namespace := range utils.Config.NetworkPolicyConfig.AllowedNamespaceLabels {
+		ingressNamespaces["name"] = namespace
+	}
+
+	netpolPorts := []v1n.NetworkPolicyPort{}
+	utils.Log.Info().Msgf("Adding port1 %v", utils.Config.NetworkPolicyConfig.AllowedPorts)
+
+	if len(utils.Config.NetworkPolicyConfig.AllowedPorts) > 0 {
+		for _, port := range utils.Config.NetworkPolicyConfig.AllowedPorts {
+			utils.Log.Info().Msgf("Adding port %s", port)
+			netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{StrVal: port}, Protocol: &UDP})
+			netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{StrVal: port}, Protocol: &TCP})
+		}
+	}
+	netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: 53}, Protocol: &UDP})
+
+	policyPeers := []v1n.NetworkPolicyPeer{
+		{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
+		{NamespaceSelector: &metav1.LabelSelector{MatchLabels: nil}},
+	}
+	for _, cidr := range utils.Config.NetworkPolicyConfig.AllowedCidrs {
+		policyPeers = append(policyPeers, v1n.NetworkPolicyPeer{IPBlock: &v1n.IPBlock{CIDR: cidr}})
+	}
+
+	networkpolicy := &v1n.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.KubiDefaultNetworkPolicyName,
+			Namespace: namespace,
+		},
+		Spec: v1n.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: nil,
+			},
+			Ingress: []v1n.NetworkPolicyIngressRule{
+				{
+					From: []v1n.NetworkPolicyPeer{
+						{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
+						{
+							NamespaceSelector: &metav1.LabelSelector{MatchLabels: ingressNamespaces},
+							PodSelector:       &metav1.LabelSelector{MatchLabels: nil}},
+					},
+				},
+			},
+			Egress: []v1n.NetworkPolicyEgressRule{
+				{Ports: netpolPorts},
+				{
+					To: policyPeers,
+				},
+			},
+			PolicyTypes: []v1n.PolicyType{
+				v1n.PolicyTypeIngress, v1n.PolicyTypeEgress,
+			},
+		},
+	}
+	if errNetpol != nil {
+		_, err := api.NetworkPolicies(namespace).Create(networkpolicy)
+		utils.Check(err)
+		return
+	} else {
+		_, err := api.NetworkPolicies(namespace).Update(networkpolicy)
+		utils.Check(err)
+		return
+	}
 }

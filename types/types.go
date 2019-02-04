@@ -24,13 +24,20 @@ type LdapConfig struct {
 }
 
 type Config struct {
-	Ldap               LdapConfig
-	PublicApiServerURL string
-	KubeCa             string
-	KubeCaText         string
-	KubeToken          string
-	ApiServerTLSConfig tls.Config
-	TokenLifeTime      string
+	Ldap                LdapConfig
+	PublicApiServerURL  string
+	KubeCa              string
+	KubeCaText          string
+	KubeToken           string
+	ApiServerTLSConfig  tls.Config
+	TokenLifeTime       string
+	NetworkPolicyConfig *NetworkPolicyConfig
+}
+
+type NetworkPolicyConfig struct {
+	AllowedPorts           []string
+	AllowedCidrs           []string
+	AllowedNamespaceLabels []string
 }
 
 // Note: struct fields must be public in order for unmarshal to

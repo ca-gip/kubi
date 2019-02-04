@@ -11,8 +11,9 @@ const (
 )
 
 const (
-	KubiResourcePrefix         = "kubi"
-	KubiClusterRoleBindingName = KubiResourcePrefix + "-admin"
+	KubiResourcePrefix           = "kubi"
+	KubiClusterRoleBindingName   = KubiResourcePrefix + "-admin"
+	KubiDefaultNetworkPolicyName = KubiResourcePrefix + "default"
 )
 
 var BlacklistedNamespaces = []string{

@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/rest"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -30,10 +31,10 @@ func MakeConfig() (*types.Config, error) {
 	}
 
 	kubeToken, errToken := ioutil.ReadFile(TokenFile)
-	check(errToken)
+	Check(errToken)
 
 	kubeCA, errCA := ioutil.ReadFile(TlsCaFile)
-	check(errCA)
+	Check(errCA)
 
 	caEncoded := base64.StdEncoding.EncodeToString(kubeCA)
 
@@ -55,20 +56,20 @@ func MakeConfig() (*types.Config, error) {
 
 	// LDAP validation
 	ldapPort, errLdapPort := strconv.Atoi(getEnv("LDAP_PORT", "389"))
-	checkf(errLdapPort, "Invalid LDAP_PORT, must be an integer")
+	Checkf(errLdapPort, "Invalid LDAP_PORT, must be an integer")
 
 	useSSL, errLdapSSL := strconv.ParseBool(getEnv("LDAP_USE_SSL", "false"))
-	checkf(errLdapSSL, "Invalid LDAP_USE_SSL, must be a boolean")
+	Checkf(errLdapSSL, "Invalid LDAP_USE_SSL, must be a boolean")
 
 	skipTLSVerification, errSkipTLS := strconv.ParseBool(getEnv("LDAP_SKIP_TLS_VERIFICATION", "true"))
-	checkf(errSkipTLS, "Invalid LDAP_SKIP_TLS_VERIFICATION, must be a boolean")
+	Checkf(errSkipTLS, "Invalid LDAP_SKIP_TLS_VERIFICATION, must be a boolean")
 
 	startTLS, errStartTLS := strconv.ParseBool(getEnv("LDAP_START_TLS", "false"))
-	checkf(errStartTLS, "Invalid LDAP_START_TLS, must be a boolean")
+	Checkf(errStartTLS, "Invalid LDAP_START_TLS, must be a boolean")
 
 	if len(os.Getenv("LDAP_PORT")) > 0 {
 		envLdapPort, err := strconv.Atoi(os.Getenv("LDAP_PORT"))
-		check(err)
+		Check(err)
 		ldapPort = envLdapPort
 		if ldapPort == 389 && os.Getenv("LDAP_SKIP_TLS") == "false" {
 			skipTLSVerification = false
@@ -77,6 +78,13 @@ func MakeConfig() (*types.Config, error) {
 			skipTLSVerification = false
 			useSSL = true
 		}
+	}
+
+	// Configure Network Policies
+	networkConfig, errNetworkConfig := makeNetworkConfig()
+	if errNetworkConfig != nil {
+		Log.Error().Msg(errNetworkConfig.Error())
+		return nil, errNetworkConfig
 	}
 
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
@@ -98,13 +106,14 @@ func MakeConfig() (*types.Config, error) {
 		Attributes:          []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
-		Ldap:               ldapConfig,
-		KubeCa:             caEncoded,
-		KubeCaText:         string(kubeCA),
-		KubeToken:          string(kubeToken),
-		PublicApiServerURL: getEnv("PUBLIC_APISERVER_URL", ""),
-		ApiServerTLSConfig: *tlsConfig,
-		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
+		Ldap:                ldapConfig,
+		KubeCa:              caEncoded,
+		KubeCaText:          string(kubeCA),
+		KubeToken:           string(kubeToken),
+		PublicApiServerURL:  getEnv("PUBLIC_APISERVER_URL", ""),
+		ApiServerTLSConfig:  *tlsConfig,
+		TokenLifeTime:       getEnv("TOKEN_LIFETIME", "4h"),
+		NetworkPolicyConfig: networkConfig,
 	}
 
 	err := validation.ValidateStruct(config,
@@ -129,4 +138,55 @@ func MakeConfig() (*types.Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+func makeNetworkConfig() (*types.NetworkPolicyConfig, error) {
+	if !hasEnv("PROVISIONING_NETWORK_POLICIES") || os.Getenv("PROVISIONING_NETWORK_POLICIES") != "true" {
+		return nil, nil
+	}
+	result := types.NetworkPolicyConfig{}
+
+	// Read egress ports
+	portStrings := getEnv("PROVISIONING_EGRESS_ALLOWED_PORTS", "")
+	if len(portStrings) > 0 {
+		portSplits := strings.Split(portStrings, ",")
+		for _, port := range portSplits {
+			err := validation.Validate(port, is.Port)
+			if err != nil {
+				Log.Error().Msg(err.Error())
+				return nil, err
+			}
+			result.AllowedPorts = append(result.AllowedPorts, port)
+		}
+	}
+
+	// Read egress ports
+	cidrStrings := getEnv("PROVISIONING_EGRESS_ALLOWED_CIDR", "")
+	if len(cidrStrings) > 0 {
+		cidrSplits := strings.Split(cidrStrings, ",")
+		for _, port := range cidrSplits {
+			err := validation.Validate(port, validation.Match(regexp.MustCompile("^([0-9]{1,3}\\.){3}\\.[0-9]{1,3}\\.\\/[0-9]{2}$")))
+			if err != nil {
+				Log.Error().Msg("cidr %v not valid. for example 10.0.0.0/24")
+				return nil, err
+			}
+		}
+		result.AllowedCidrs = cidrSplits
+	}
+
+	// Read namespaces ingress
+	namespaceStrings := getEnv("PROVISIONING_INGRESS_ALLOWED_NAMESPACES", "")
+	if len(namespaceStrings) > 0 {
+		namespaceSplits := strings.Split(namespaceStrings, ",")
+		for _, port := range namespaceSplits {
+			err := validation.Validate(port, is.DNSName)
+			if err != nil {
+				Log.Error().Msg(err.Error())
+				return nil, err
+			}
+		}
+		result.AllowedNamespaceLabels = namespaceSplits
+	}
+	return &result, nil
+
 }
