@@ -235,7 +235,9 @@ func GenerateNetworkPolicy(namespace string) {
 		{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
 		{NamespaceSelector: &metav1.LabelSelector{MatchLabels: nil}},
 	}
+
 	for _, cidr := range utils.Config.NetworkPolicyConfig.AllowedCidrs {
+		utils.Log.Info().Msgf("Adding cidr block %v to network policy  ns: %s, policy %s ", utils.Config.NetworkPolicyConfig.AllowedCidrs, namespace, utils.KubiDefaultNetworkPolicyName)
 		policyPeers = append(policyPeers, v1n.NetworkPolicyPeer{IPBlock: &v1n.IPBlock{CIDR: cidr}})
 	}
 
