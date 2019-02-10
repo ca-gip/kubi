@@ -138,7 +138,7 @@ kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <use
 
 ## Create a crt signed by Kubernetes CA
 
-  > Change `api.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
+  > Change `kubi.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
   that point to an existing Kubernetes Cluster node.
   **Eg: 10.56.221.4, kubernetes.<my_domain>...**
 
@@ -146,7 +146,7 @@ kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <use
 cat <<EOF | cfssl genkey - | cfssljson -bare server
 {
   "hosts": [
-    "api.devops.managed.kvm",
+    "kubi.devops.managed.kvm",
     "kubi-svc.kube-system.svc.cluster.local"
   ],
   "CN": "kubi-svc.kube-system.svc.cluster.local",
@@ -207,13 +207,13 @@ cat <<EOF | kubectl -n kube-system create -f -
 apiVersion: v1
 kind: ConfigMap
 data:
-  LDAP_USERBASE: "ou=People,dc=example,dc=org"
-  LDAP_GROUPBASE: "ou=CONTAINER,dc=example,dc=org"
+  LDAP_USERBASE: "ou=People,dc=kubi,dc=fr"
+  LDAP_GROUPBASE: "ou=local_platform,ou=Groups,dc=kubi,dc=fr"
   LDAP_SERVER: "192.168.2.1"
   LDAP_PORT: "389"
-  LDAP_BINDDN: "CN=admin,DC=example,DC=ORG"
-  LDAP_ADMIN_USERBASE: "ou=Administrator,dc=example,dc=org"
-  LDAP_ADMIN_GROUPBASE: "cn=administrator,ou=ADMIN,dc=example,dc=org"
+  LDAP_BINDDN: "cn=admin,dc=kubi,dc=fr"
+  LDAP_ADMIN_USERBASE: "ou=People,dc=kubi,dc=fr"
+  LDAP_ADMIN_GROUPBASE: "ou=Administrators,ou=Groups,dc=kubi,dc=fr"
   PUBLIC_APISERVER_URL: https://api.devops.managed.kvm
 metadata:
   name: kubi-config
@@ -304,10 +304,14 @@ The following features should be available soon.
 The server need to have memberof overlay
 ```bash
 docker run -d -p 389:389 \
-  --hostname localhost -e SLAPD_PASSWORD=password  \
-  -e SLAPD_DOMAIN=example.org  \
+  --hostname localhost \
+  -e SLAPD_PASSWORD=password  \
+  -e SLAPD_DOMAIN=kubi.fr  \
   -e SLAPD_ADDITIONAL_MODULES=memberof  \
   -e SLAPD_CONFIG_PASSWORD=config \
+  -e SLAPD_PASSWORD=password \
   --hostname localhost \
   dinkel/openldap
 ```
+
+Admin connection string: cn=admin,dc=kubi,dc=fr
