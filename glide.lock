@@ -1,8 +1,12 @@
-hash: 9119823d7af02d1b7ae9e8f71129d59cf5683cf748b901d8d56cc6a8332ecd7e
-updated: 2019-01-31T04:50:33.890701666+01:00
+hash: 4718caf8828fcde6d73a7f11a4c53ac4d292f329c65712f3eef1cf4d498a95be
+updated: 2019-02-10T07:11:55.147866051+01:00
 imports:
 - name: github.com/asaskevich/govalidator
-  version: ccb8e960c48f04d6935e72476ae4a51028f9e22f
+  version: f9ffefc3facfbe0caee3fea233cbb6e8208f4541
+- name: github.com/beorn7/perks
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  subpackages:
+  - quantile
 - name: github.com/dgrijalva/jwt-go
   version: 06ea1031745cb8b3dab3f6a236daf2b0aa468b7e
 - name: github.com/go-ozzo/ozzo-validation
@@ -42,6 +46,10 @@ imports:
   - diskcache
 - name: github.com/json-iterator/go
   version: ab8a2e0c74be9d3be70b3184d9acc634935ded82
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c182affec369e30f25d3eb8cd8a478dee585ae7d
+  subpackages:
+  - pbutil
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
@@ -50,6 +58,28 @@ imports:
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/pkg/errors
   version: ba968bfe8b2f7e042a574c888954fccecfa385b4
+- name: github.com/prometheus/client_golang
+  version: 505eaef017263e299324067d40ca2c48f6a2cf50
+  subpackages:
+  - prometheus
+  - prometheus/internal
+  - prometheus/promhttp
+- name: github.com/prometheus/client_model
+  version: fd36f4220a901265f90734c3183c5f0c91daa0b8
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: f866ba39776a736ba5d34760f5fae4ad74e63f2e
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: f8d8b3f739bd91a7c0462cb55235ef63c79c9abc
+  subpackages:
+  - internal/util
+  - nfs
+  - xfs
 - name: github.com/rs/zerolog
   version: 8747b7b3a51b5d08ee7ac50eaf4869edaf9f714a
   subpackages:
@@ -96,7 +126,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: e9657d882bb81064595ca3b56cbe2546bbabf7b1
+  version: 99bc4335fe23898c0a61f5b35afabb6d11f29094
   subpackages:
   - internal
   - internal/base
