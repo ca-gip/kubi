@@ -24,6 +24,7 @@ type LdapConfig struct {
 }
 
 type Config struct {
+	Tenant             string
 	Ldap               LdapConfig
 	PublicApiServerURL string
 	KubeCa             string

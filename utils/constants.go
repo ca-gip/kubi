@@ -15,6 +15,16 @@ const (
 	KubiClusterRoleBindingName   = KubiResourcePrefix + "-admin"
 	KubiDefaultNetworkPolicyName = KubiResourcePrefix + "-default"
 	UnauthenticatedGroup         = "system:unauthenticated"
+
+	KubiStageScratch = "scratch"
+	KubiStageStaging = "staging"
+	KubiStageStable  = "stable"
+
+	KubiEnvironmentProduction  = "production"
+	KubiEnvironmentIntegration = "integration"
+	KubiEnvironmentDevelopment = "development"
+
+	KubiTenantUndeterminable = "undeterminable"
 )
 
 var BlacklistedNamespaces = []string{

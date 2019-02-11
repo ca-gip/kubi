@@ -19,7 +19,6 @@ type NetworkPolicyConfig struct {
 
 // custom spec
 type NetworkPolicyConfigSpec struct {
-	Message string      `json:"message,omitempty"`
 	Egress  EgressType  `json:"egress,omitempty"`
 	Ingress IngressType `json:"ingress,omitempty"`
 }
@@ -63,8 +62,10 @@ type Project struct {
 }
 
 type ProjectSpec struct {
-	Name               string   `json:"name,omitempty"`
-	WhiteListAddresses []string `json:"whitelistAddresses,omitempty"`
+	Tenant      string   `json:"tenant,omitempty"`
+	Environment string   `json:"environment,omitempty"`
+	Project     string   `json:"project,omitempty"`
+	Stages      []string `json:"stages,omitempty"`
 }
 
 type ProjectSpecStatus struct {

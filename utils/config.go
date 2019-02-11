@@ -80,6 +80,7 @@ func MakeConfig() (*types.Config, error) {
 	}
 
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
+	tenant := strings.ToLower(getEnv("TENANT", KubiTenantUndeterminable))
 
 	ldapConfig := types.LdapConfig{
 		UserBase:            os.Getenv("LDAP_USERBASE"),
@@ -98,6 +99,7 @@ func MakeConfig() (*types.Config, error) {
 		Attributes:          []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
+		Tenant:             tenant,
 		Ldap:               ldapConfig,
 		KubeCa:             caEncoded,
 		KubeCaText:         string(kubeCA),

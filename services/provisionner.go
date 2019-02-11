@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -72,10 +73,16 @@ func generateProject(projectName string) {
 	clientSet, _ := versioned.NewForConfig(kconfig)
 	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectName, metav1.GetOptions{})
 
+	splits := strings.Split(projectName, "-")
+	if len(splits) < 2 {
+		utils.Log.Error().Msgf("Provisionner: The project %v Could'nt be split in two part: <namespace>-<environment>.", projectName)
+		return
+	}
+
 	project := &v12.Project{
 		Spec: v12.ProjectSpec{
-			Name:               projectName,
-			WhiteListAddresses: nil,
+			Project:     strings.TrimSuffix(projectName, "-"+splits[len(splits)-1]),
+			Environment: splits[len(splits)-1],
 		},
 		Status: v12.ProjectSpecStatus{
 			Name: "created",
@@ -87,6 +94,25 @@ func generateProject(projectName string) {
 			},
 		},
 	}
+	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
+		project.Spec.Tenant = utils.Config.Tenant
+	}
+
+	switch project.Spec.Environment {
+	case utils.KubiEnvironmentDevelopment:
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageScratch)
+	case utils.KubiEnvironmentIntegration:
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
+	case utils.KubiEnvironmentProduction:
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
+	default:
+		utils.Log.Warn().Msgf("Provisionner: Can't map stage state for project %v.", project.Spec.Environment)
+
+	}
+
+	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
+		project.Spec.Tenant = utils.Config.Tenant
+	}
 
 	if errProject != nil {
 		utils.Log.Info().Msgf("Project: %v doesn't exists, will be created", projectName)
@@ -97,9 +123,10 @@ func generateProject(projectName string) {
 		return
 	} else {
 		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectName)
-		for _, whitelistedAddress := range project.Spec.WhiteListAddresses {
-			project.Spec.WhiteListAddresses = utils.AppendIfMissing(existingProject.Spec.WhiteListAddresses, whitelistedAddress)
-		}
+		existingProject.Spec.Project = project.Spec.Project
+		existingProject.Spec.Environment = project.Spec.Environment
+		existingProject.Spec.Tenant = project.Spec.Tenant
+
 		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
 		if errUpdate != nil {
 			utils.Log.Error().Msg(errUpdate.Error())
@@ -256,26 +283,26 @@ func WatchProjects() cache.Store {
 func projectUpdate(old interface{}, new interface{}) {
 	newProject := new.(*v12.Project)
 	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", newProject.Name)
-	generateNamespace(newProject.Spec.Name)
-	generateNetworkPolicy(newProject.Spec.Name, nil)
+	generateNamespace(newProject.Name)
+	generateNetworkPolicy(newProject.Name, nil)
 
 	// TODO: Refactor with a non static list of role
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Spec.Name, Role: "admin"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Spec.Name, Role: "developper"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Spec.Name, Role: "viewer"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Name, Role: "admin"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Name, Role: "developper"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Name, Role: "viewer"})
 
 }
 
 func projectCreated(obj interface{}) {
 	project := obj.(*v12.Project)
 	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
-	generateNamespace(project.Spec.Name)
-	generateNetworkPolicy(project.Spec.Name, nil)
+	generateNamespace(project.Name)
+	generateNetworkPolicy(project.Name, nil)
 
 	// TODO: Refactor with a non static list of role
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Spec.Name, Role: "admin"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Spec.Name, Role: "developper"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Spec.Name, Role: "viewer"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Name, Role: "admin"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Name, Role: "developper"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Name, Role: "viewer"})
 }
 
 func projectDelete(obj interface{}) {
