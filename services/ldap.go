@@ -12,8 +12,8 @@ import (
 var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
 
 // Get Namespace, Role for a list of group name
-func GetUserNamespaces(groups []string) []*types.AuthJWTTupple {
-	res := make([]*types.AuthJWTTupple, 0)
+func GetUserNamespaces(groups []string) []*types.NamespaceAndRole {
+	res := make([]*types.NamespaceAndRole, 0)
 	for _, groupname := range groups {
 		tupple, err := GetUserNamespace(groupname)
 		if err == nil {
@@ -26,7 +26,7 @@ func GetUserNamespaces(groups []string) []*types.AuthJWTTupple {
 }
 
 // Get Namespace, Role for a group name
-func GetUserNamespace(group string) (*types.AuthJWTTupple, error) {
+func GetUserNamespace(group string) (*types.NamespaceAndRole, error) {
 
 	lowerGroup := strings.ToLower(group)
 	keys := DnsParser.SubexpNames()
@@ -70,7 +70,7 @@ func GetUserNamespace(group string) (*types.AuthJWTTupple, error) {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The name for role cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
 	} else {
-		return &types.AuthJWTTupple{
+		return &types.NamespaceAndRole{
 			Namespace: namespace,
 			Role:      role,
 		}, nil

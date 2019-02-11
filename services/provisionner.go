@@ -53,7 +53,7 @@ func GenerateResources() error {
 
 // A loop wrapper for GenerateRoleBinding
 // splitted for unit test !
-func GenerateRoleBindings(context []*types.AuthJWTTupple) {
+func GenerateRoleBindings(context []*types.NamespaceAndRole) {
 	for _, auth := range context {
 		GenerateRoleBinding(auth)
 	}
@@ -61,7 +61,7 @@ func GenerateRoleBindings(context []*types.AuthJWTTupple) {
 
 // A loop wrapper for GenerateRoleBinding
 // splitted for unit test !
-func GenerateProjects(context []*types.AuthJWTTupple) {
+func GenerateProjects(context []*types.NamespaceAndRole) {
 	for _, auth := range context {
 		generateProject(auth.Namespace)
 	}
@@ -139,7 +139,7 @@ func generateProject(projectName string) {
 
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
-func GenerateRoleBinding(context *types.AuthJWTTupple) {
+func GenerateRoleBinding(context *types.NamespaceAndRole) {
 	kconfig, err := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
@@ -290,9 +290,9 @@ func projectUpdate(old interface{}, new interface{}) {
 	generateNetworkPolicy(newProject.Name, nil)
 
 	// TODO: Refactor with a non static list of role
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Name, Role: "admin"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Name, Role: "developper"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Name, Role: "viewer"})
+	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "admin"})
+	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "developper"})
+	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "viewer"})
 
 }
 
@@ -303,9 +303,9 @@ func projectCreated(obj interface{}) {
 	generateNetworkPolicy(project.Name, nil)
 
 	// TODO: Refactor with a non static list of role
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Name, Role: "admin"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Name, Role: "developper"})
-	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Name, Role: "viewer"})
+	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "admin"})
+	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "developper"})
+	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "viewer"})
 }
 
 func projectDelete(obj interface{}) {

@@ -75,13 +75,13 @@ type KubeConfigUserToken struct {
 }
 
 type AuthJWTClaims struct {
-	Auths       []*AuthJWTTupple `json:"auths"`
-	User        string           `json:"user"`
-	AdminAccess bool             `json:"adminAccess"`
+	Auths       []*NamespaceAndRole `json:"auths"`
+	User        string              `json:"user"`
+	AdminAccess bool                `json:"adminAccess"`
 	jwt.StandardClaims
 }
 
-type AuthJWTTupple struct {
+type NamespaceAndRole struct {
 	Namespace string `json:"namespace"`
 	Role      string `json:"role""`
 }
