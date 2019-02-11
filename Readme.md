@@ -17,7 +17,6 @@ Kubi is a webhook for the server part and has a cli for linux and windows users.
 
 - [General](#general)
   - [Parameters](#parameters)
-  - [Provisioning Parameters](#provisioning-parameters)
 - [Client](#client)
   - [For Windows users](#for-windows-users)
   - [For Linux](#for-linux)
@@ -32,7 +31,9 @@ Kubi is a webhook for the server part and has a cli for linux and windows users.
   - [Create a secret for the deployment](#create-a-secret-for-the-deployment)
   - [Create a secret for LDAP Bind password](#create-a-secret-for-ldap-bind-password)
   - [Deploy the config map](#deploy-the-config-map)
-  - [Deploy the manifest](#deploy-the-manifest)
+  - [Deploy the Custom Resource Definitions](#deploy-the-custom-resource-definitions)
+  - [Deploy the Kubi components](#deploy-the-kubi-components)
+  - [Customize the default network policy](#customize-the-default-network-policy)
   - [Basic Webhook configuration](#basic-webhook-configuration)
   - [Advanced Webhook configuration](#advanced-webhook-configuration)
 - [Roadmap](#roadmap)
