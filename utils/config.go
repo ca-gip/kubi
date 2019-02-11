@@ -11,7 +11,6 @@ import (
 	"k8s.io/client-go/rest"
 	"log"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -80,13 +79,6 @@ func MakeConfig() (*types.Config, error) {
 		}
 	}
 
-	// Configure Network Policies
-	networkConfig, errNetworkConfig := makeNetworkConfig()
-	if errNetworkConfig != nil {
-		Log.Error().Msg(errNetworkConfig.Error())
-		return nil, errNetworkConfig
-	}
-
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 
 	ldapConfig := types.LdapConfig{
@@ -106,14 +98,13 @@ func MakeConfig() (*types.Config, error) {
 		Attributes:          []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
-		Ldap:                ldapConfig,
-		KubeCa:              caEncoded,
-		KubeCaText:          string(kubeCA),
-		KubeToken:           string(kubeToken),
-		PublicApiServerURL:  getEnv("PUBLIC_APISERVER_URL", ""),
-		ApiServerTLSConfig:  *tlsConfig,
-		TokenLifeTime:       getEnv("TOKEN_LIFETIME", "4h"),
-		NetworkPolicyConfig: networkConfig,
+		Ldap:               ldapConfig,
+		KubeCa:             caEncoded,
+		KubeCaText:         string(kubeCA),
+		KubeToken:          string(kubeToken),
+		PublicApiServerURL: getEnv("PUBLIC_APISERVER_URL", ""),
+		ApiServerTLSConfig: *tlsConfig,
+		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 	}
 
 	err := validation.ValidateStruct(config,
@@ -138,59 +129,4 @@ func MakeConfig() (*types.Config, error) {
 		return nil, err
 	}
 	return config, nil
-}
-
-func makeNetworkConfig() (*types.NetworkPolicyConfig, error) {
-	if !hasEnv("PROVISIONING_NETWORK_POLICIES") || os.Getenv("PROVISIONING_NETWORK_POLICIES") != "true" {
-
-		return nil, nil
-	}
-	result := types.NetworkPolicyConfig{}
-
-	// Read egress ports
-	portStrings := getEnv("PROVISIONING_EGRESS_ALLOWED_PORTS", "")
-	if len(portStrings) > 0 {
-		portSplits := strings.Split(portStrings, ",")
-		for _, port := range portSplits {
-			err := validation.Validate(port, is.Port)
-
-			if err != nil {
-				Log.Error().Msg(err.Error())
-				return nil, err
-			}
-			if len(port) > 0 {
-				result.AllowedPorts = append(result.AllowedPorts, port)
-			}
-		}
-	}
-
-	// Read egress ports
-	cidrStrings := getEnv("PROVISIONING_EGRESS_ALLOWED_CIDR", "")
-	if len(cidrStrings) > 0 {
-		cidrSplits := strings.Split(cidrStrings, ",")
-		for _, cidr := range cidrSplits {
-			err := validation.Validate(cidr, validation.Match(regexp.MustCompile("^([0-9]{1,3}\\.){3}[0-9]{1,3}\\/[0-9]{1,2}$")))
-			if err != nil {
-				Log.Error().Msgf("cidr %v not valid. for example 10.0.0.0/24", cidr)
-				return nil, err
-			}
-		}
-		result.AllowedCidrs = cidrSplits
-	}
-
-	// Read namespaces ingress
-	namespaceStrings := getEnv("PROVISIONING_INGRESS_ALLOWED_NAMESPACES", "")
-	if len(namespaceStrings) > 0 {
-		namespaceSplits := strings.Split(namespaceStrings, ",")
-		for _, port := range namespaceSplits {
-			err := validation.Validate(port, is.DNSName)
-			if err != nil {
-				Log.Error().Msg(err.Error())
-				return nil, err
-			}
-		}
-		result.AllowedNamespaceLabels = namespaceSplits
-	}
-	return &result, nil
-
 }

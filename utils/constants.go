@@ -13,7 +13,7 @@ const (
 const (
 	KubiResourcePrefix           = "kubi"
 	KubiClusterRoleBindingName   = KubiResourcePrefix + "-admin"
-	KubiDefaultNetworkPolicyName = KubiResourcePrefix + "default"
+	KubiDefaultNetworkPolicyName = KubiResourcePrefix + "-default"
 	UnauthenticatedGroup         = "system:unauthenticated"
 )
 

@@ -4,6 +4,7 @@ IMAGE := kubi
 TAG := dev
 
 build:
+    ./vendor/k8s.io/code-generator/generate-groups.sh all "github.com/ca-gip/kubi/pkg/client" "github.com/ca-gip/kubi/pkg/apis" ca-gip:v1
 	go build -i -o kubi $(GOPATH)/src/$(REPO)/main.go
 
 darwin:
@@ -16,8 +17,8 @@ release:
 	docker build -t "$(REPO)/$(IMAGE):$(TAG)" .
 	docker push "$(REPO)/$(IMAGE):$(TAG)"
 
-test: 
-	go test  $(shell go list ./... | grep -v fake)
+test:
+	 go test ./services ./types ./utils
 
 dep:
 	glide up

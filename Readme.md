@@ -81,17 +81,6 @@ For specific exceptions, add another network policy.
 |  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
 |  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 
-## Provisioning Parameters
-
-You can use Kubi to generate Network policy for your newly created namespaces.
-
-| Name                                            | Description                                 | Example                       | Mandatory | Default      |
-| :--------------                                 | :-----------------------------:             | ----------------------------: | ---------:| ----------:  |
-|  **PROVISIONING_NETWORK_POLICIES**              |  *Activate Network policies*                | `true`                        | `no`      | `no`         |
-|  **PROVISIONING_EGRESS_ALLOWED_PORTS**          |  *A list of opened port*                    | `53,123,636`                  | `no`      | -            |
-|  **PROVISIONING_EGRESS_ALLOWED_CIDR**           |  *A list of egress cidr port*               | `10.0.0.0/12,192.168.1.0/24`  | `no`      | -            |
-|  **PROVISIONING_INGRESS_ALLOWED_NAMESPACES**    |  *A list of allowed namespaces for ingress* | `ingress-nginx`               | `no`      | -            |
-
 # Client
 
 
@@ -219,10 +208,47 @@ metadata:
   name: kubi-config
 EOF
 ```
-## Deploy the manifest
+## Deploy the Custom Resource Definitions
 
 ```bash
-kubectl -n kube-system apply -f kube.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-crds.yml
+```
+## Deploy the Kubi components
+```bash
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube.yml
+```
+
+## Customize the default network policy
+
+You can customize the default network policy named `kubi-default`, for example:
+
+```yaml
+apiVersion: "ca-gip.github.com/v1"
+kind: NetworkPolicyConfig
+metadata:
+  name: kubi-default
+spec:
+  egress:
+    # ports allowed for egress
+    ports:
+      - 636
+      - 389
+      - 123
+      - 53
+    # cidrs allowed for egress 
+    # for ipvs, add the network used by calico, for kubernetes svc in default ns
+    cidrs:
+      - 192.168.2.0/24
+      - 172.10.0.0/24
+  ingress:
+    # namespaces allowed for ingress rules ( here only nginx )
+    namespaces:
+      - ingress-nginx
+```
+
+** Deploy the example : **
+```bash
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-example-netpolconf.yml
 ```
 
 ## Basic Webhook configuration

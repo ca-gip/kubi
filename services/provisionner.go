@@ -4,17 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ca-gip/kubi/authprovider"
+	v12 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
+	"github.com/ca-gip/kubi/pkg/client/clientset/versioned"
 	"github.com/ca-gip/kubi/types"
 	"github.com/ca-gip/kubi/utils"
 	corev1 "k8s.io/api/core/v1"
 	v1n "k8s.io/api/networking/v1"
 	"k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"net/http"
-	"strconv"
+	"time"
 )
 
 // Handler to regenerate all resources created by kubi
@@ -39,9 +44,9 @@ func GenerateResources() error {
 		return errors.New("LDAP, no ldap groups found!")
 	}
 	auths := GetUserNamespaces(groups)
-	GenerateNamespaces(auths)
-	GenerateRoleBindings(auths)
-	GenerateNetworkPolicies(auths)
+	GenerateProjects(auths)
+	WatchNetPolConfig()
+	WatchProjects()
 	return nil
 }
 
@@ -53,27 +58,53 @@ func GenerateRoleBindings(context []*types.AuthJWTTupple) {
 	}
 }
 
-// A loop wrapper for GenerateNamespace
+// A loop wrapper for GenerateRoleBinding
 // splitted for unit test !
-func GenerateNamespaces(context []*types.AuthJWTTupple) {
+func GenerateProjects(context []*types.AuthJWTTupple) {
 	for _, auth := range context {
-		GenerateNamespace(auth)
+		generateProject(auth.Namespace)
 	}
 }
 
-// A loop wrapper for GenerateNetworkPolicy
-// splitted for unit test !
-func GenerateNetworkPolicies(context []*types.AuthJWTTupple) {
-	if utils.Config.NetworkPolicyConfig == nil {
-		utils.Log.Info().Msg("Network policy generation is not enabled")
-		return
-	}
-	utils.Log.Info().Msg("Network policy generation is enabled")
-	for _, auth := range context {
-		utils.Log.Info().Msgf("Generate NetworkPolicy for %v", auth.Namespace)
-		GenerateNetworkPolicy(auth.Namespace)
+// generate a project config or update it if exists
+func generateProject(projectName string) {
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := versioned.NewForConfig(kconfig)
+	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectName, metav1.GetOptions{})
+
+	project := &v12.Project{
+		Spec: v12.ProjectSpec{
+			Name:               projectName,
+			WhiteListAddresses: nil,
+		},
+		Status: v12.ProjectSpecStatus{
+			Name: "created",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: projectName,
+			Labels: map[string]string{
+				"creator": "kubi",
+			},
+		},
 	}
 
+	if errProject != nil {
+		utils.Log.Info().Msgf("Project: %v doesn't exists, will be created", projectName)
+		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
+		if errorCreate != nil {
+			utils.Log.Error().Msg(errorCreate.Error())
+		}
+		return
+	} else {
+		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectName)
+		for _, whitelistedAddress := range project.Spec.WhiteListAddresses {
+			project.Spec.WhiteListAddresses = utils.AppendIfMissing(existingProject.Spec.WhiteListAddresses, whitelistedAddress)
+		}
+		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
+		if errUpdate != nil {
+			utils.Log.Error().Msg(errUpdate.Error())
+		}
+	}
 }
 
 // GenerateRolebinding from tupple
@@ -167,24 +198,24 @@ func GenerateAdminClusterRoleBinding() {
 
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
-func GenerateNamespace(context *types.AuthJWTTupple) {
+func generateNamespace(namespace string) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
-	_, errNs := api.Namespaces().Get(context.Namespace, metav1.GetOptions{})
+	_, errNs := api.Namespaces().Get(namespace, metav1.GetOptions{})
 
 	if errNs != nil {
-		utils.Log.Info().Msgf("Creating namespace %v", context.Namespace)
+		utils.Log.Info().Msgf("Creating namespace %v", namespace)
 		namespace := &corev1.Namespace{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
 				Kind:       "Namespace",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: context.Namespace,
+				Name: namespace,
 				Labels: map[string]string{
-					"name":    context.Namespace,
+					"name":    namespace,
 					"type":    "customer",
 					"creator": "kubi",
 				},
@@ -198,10 +229,143 @@ func GenerateNamespace(context *types.AuthJWTTupple) {
 
 }
 
+// Watch NetworkPolicyConfig, which is a config object for namespace network bubble
+// This CRD allow user to deploy global configuration for network configuration
+// for update, the default network config is update
+// for deletion, it is automatically recreated
+// for create, just create it
+func WatchProjects() cache.Store {
+	kconfig, _ := rest.InClusterConfig()
+
+	v3, _ := versioned.NewForConfig(kconfig)
+
+	watchlist := cache.NewListWatchFromClient(v3.CagipV1().RESTClient(), "projects", metav1.NamespaceAll, fields.Everything())
+	resyncPeriod := 30 * time.Minute
+
+	store, controller := cache.NewInformer(watchlist, &v12.Project{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
+		AddFunc:    projectCreated,
+		DeleteFunc: projectDelete,
+		UpdateFunc: projectUpdate,
+	})
+
+	go controller.Run(wait.NeverStop)
+
+	return store
+}
+
+func projectUpdate(old interface{}, new interface{}) {
+	newProject := new.(*v12.Project)
+	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", newProject.Name)
+	generateNamespace(newProject.Spec.Name)
+	generateNetworkPolicy(newProject.Spec.Name, nil)
+
+	// TODO: Refactor with a non static list of role
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Spec.Name, Role: "admin"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Spec.Name, Role: "developper"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: newProject.Spec.Name, Role: "viewer"})
+
+}
+
+func projectCreated(obj interface{}) {
+	project := obj.(*v12.Project)
+	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
+	generateNamespace(project.Spec.Name)
+	generateNetworkPolicy(project.Spec.Name, nil)
+
+	// TODO: Refactor with a non static list of role
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Spec.Name, Role: "admin"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Spec.Name, Role: "developper"})
+	GenerateRoleBinding(&types.AuthJWTTupple{Namespace: project.Spec.Name, Role: "viewer"})
+}
+
+func projectDelete(obj interface{}) {
+	project := obj.(*v12.Project)
+	utils.Log.Info().Msgf("Operator: the project %v has been deleted, Kubi won't delete anything, please delete the namespace %v manualy", project.Name, project.Name)
+}
+
+// Watch NetworkPolicyConfig, which is a config object for namespace network bubble
+// This CRD allow user to deploy global configuration for network configuration
+// for update, the default network config is update
+// for deletion, it is automatically recreated
+// for create, just create it
+func WatchNetPolConfig() cache.Store {
+	kconfig, _ := rest.InClusterConfig()
+
+	v3, _ := versioned.NewForConfig(kconfig)
+
+	watchlist := cache.NewListWatchFromClient(v3.CagipV1().RESTClient(), "networkpolicyconfigs", metav1.NamespaceAll, fields.Everything())
+	resyncPeriod := 30 * time.Minute
+
+	store, controller := cache.NewInformer(watchlist, &v12.NetworkPolicyConfig{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
+		AddFunc:    networkPolicyConfigCreated,
+		DeleteFunc: networkPolicyConfigDelete,
+		UpdateFunc: networkPolicyConfigUpdate,
+	})
+
+	go controller.Run(wait.NeverStop)
+
+	return store
+}
+
+func networkPolicyConfigUpdate(old interface{}, new interface{}) {
+	netpolconfig := new.(*v12.NetworkPolicyConfig)
+	utils.Log.Info().Msgf("Operator: the network config %v has changed, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
+
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := versioned.NewForConfig(kconfig)
+	projects, err := clientSet.CagipV1().Projects().List(metav1.ListOptions{})
+
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return
+	}
+
+	for _, project := range projects.Items {
+		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
+		generateNetworkPolicy(project.Name, netpolconfig)
+	}
+
+}
+
+func networkPolicyConfigCreated(obj interface{}) {
+	netpolconfig := obj.(*v12.NetworkPolicyConfig)
+	utils.Log.Info().Msgf("Operator: the network config %v has been created, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
+
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := versioned.NewForConfig(kconfig)
+	projects, err := clientSet.CagipV1().Projects().List(metav1.ListOptions{})
+
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return
+	}
+
+	for _, project := range projects.Items {
+		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
+		generateNetworkPolicy(project.Name, netpolconfig)
+	}
+}
+
+func networkPolicyConfigDelete(obj interface{}) {
+	netpolconfig := obj.(*v12.NetworkPolicyConfig)
+	utils.Log.Info().Msgf("Operator: the network config %v has been deleted, please delete networkpolicies for all kubi's namespaces. Be careful !", netpolconfig.Name)
+}
+
 // Generate a NetworkPolicy based on NetworkPolicyConfig
 // If exists, the existing netpol is updates else it is created
-func GenerateNetworkPolicy(namespace string) {
+func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPolicyConfig) {
+
 	kconfig, _ := rest.InClusterConfig()
+
+	if networkPolicyConfig == nil {
+		extendedClientSet, _ := versioned.NewForConfig(kconfig)
+		existingNetworkPolicyConfig, err := extendedClientSet.CagipV1().NetworkPolicyConfigs().Get(utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
+		networkPolicyConfig = existingNetworkPolicyConfig
+		if err != nil {
+			utils.Log.Info().Msgf("Operator: No default network policy config \"%v\" found, cannot create/update namespace security !, Error: %v", utils.KubiDefaultNetworkPolicyName, err.Error())
+		}
+
+	}
 
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.NetworkingV1()
@@ -211,22 +375,16 @@ func GenerateNetworkPolicy(namespace string) {
 	TCP := corev1.ProtocolTCP
 
 	ingressNamespaces := map[string]string{}
-	for _, namespace := range utils.Config.NetworkPolicyConfig.AllowedNamespaceLabels {
+	for _, namespace := range networkPolicyConfig.Spec.Ingress.Namespaces {
 		ingressNamespaces["name"] = namespace
 	}
 
 	netpolPorts := []v1n.NetworkPolicyPort{}
-	utils.Log.Info().Msgf("Adding port %v to network policy  ns: %s, policy %s ", utils.Config.NetworkPolicyConfig.AllowedPorts, namespace, utils.KubiDefaultNetworkPolicyName)
 
-	if len(utils.Config.NetworkPolicyConfig.AllowedPorts) > 0 {
-		for _, port := range utils.Config.NetworkPolicyConfig.AllowedPorts {
-			port32, err := strconv.Atoi(port)
-			if err != nil {
-				utils.Log.Error().Msgf("The following port %s is invalid, ignoring !", port)
-			} else {
-				netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: int32(port32)}, Protocol: &UDP})
-				netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: int32(port32)}, Protocol: &TCP})
-			}
+	if len(networkPolicyConfig.Spec.Egress.Ports) > 0 {
+		for _, port := range networkPolicyConfig.Spec.Egress.Ports {
+			netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: int32(port)}, Protocol: &UDP})
+			netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: int32(port)}, Protocol: &TCP})
 		}
 	}
 	netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: 53}, Protocol: &UDP})
@@ -236,8 +394,7 @@ func GenerateNetworkPolicy(namespace string) {
 		{NamespaceSelector: &metav1.LabelSelector{MatchLabels: nil}},
 	}
 
-	for _, cidr := range utils.Config.NetworkPolicyConfig.AllowedCidrs {
-		utils.Log.Info().Msgf("Adding cidr block %v to network policy  ns: %s, policy %s ", utils.Config.NetworkPolicyConfig.AllowedCidrs, namespace, utils.KubiDefaultNetworkPolicyName)
+	for _, cidr := range networkPolicyConfig.Spec.Egress.Cidrs {
 		policyPeers = append(policyPeers, v1n.NetworkPolicyPeer{IPBlock: &v1n.IPBlock{CIDR: cidr}})
 	}
 

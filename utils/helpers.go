@@ -30,3 +30,12 @@ func hasEnv(key string) bool {
 	_, ok := os.LookupEnv(key)
 	return ok
 }
+
+func AppendIfMissing(slice []string, i string) []string {
+	for _, ele := range slice {
+		if ele == i {
+			return slice
+		}
+	}
+	return append(slice, i)
+}

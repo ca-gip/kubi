@@ -60,7 +60,6 @@ spec:
           secret:
             secretName: kubi
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
