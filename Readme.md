@@ -216,7 +216,7 @@ kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-crds.
 ```
 ## Deploy the Kubi components
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-deployment.yml
 ```
 
 ## Customize the default network policy
