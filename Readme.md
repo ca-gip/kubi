@@ -212,11 +212,11 @@ EOF
 ## Deploy the Custom Resource Definitions
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-crds.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
 ```
 ## Deploy the Kubi components
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-deployment.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
 ```
 
 ## Customize the default network policy
@@ -249,7 +249,7 @@ spec:
 
 ** Deploy the example : **
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/kube-example-netpolconf.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-example-netpolconf.yml
 ```
 
 ## Basic Webhook configuration
