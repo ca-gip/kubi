@@ -99,7 +99,6 @@ spec:
         spec:
           required:
             - project
-            - environment
           properties:
             whitelistAddresses:
               type: array

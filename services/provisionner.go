@@ -75,15 +75,11 @@ func generateProject(projectName string) {
 
 	splits := strings.Split(projectName, "-")
 	if len(splits) < 2 {
-		utils.Log.Error().Msgf("Provisionner: The project %v Could'nt be split in two part: <namespace>-<environment>.", projectName)
-		return
+		utils.Log.Warn().Msgf("Provisionner: The project %v Could'nt be split in two part: <namespace>-<environment>.", projectName)
 	}
 
 	project := &v12.Project{
-		Spec: v12.ProjectSpec{
-			Project:     strings.TrimSuffix(projectName, "-"+splits[len(splits)-1]),
-			Environment: splits[len(splits)-1],
-		},
+		Spec: v12.ProjectSpec{},
 		Status: v12.ProjectSpecStatus{
 			Name: "created",
 		},
@@ -94,20 +90,26 @@ func generateProject(projectName string) {
 			},
 		},
 	}
+
 	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
 		project.Spec.Tenant = utils.Config.Tenant
 	}
 
-	switch project.Spec.Environment {
-	case utils.KubiEnvironmentDevelopment:
+	if strings.HasSuffix(projectName, utils.KubiEnvironmentDevelopment) {
+		project.Spec.Project = strings.TrimSuffix(projectName, "-"+utils.KubiEnvironmentDevelopment)
+		project.Spec.Environment = utils.KubiEnvironmentDevelopment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageScratch)
-	case utils.KubiEnvironmentIntegration:
+	} else if strings.HasSuffix(projectName, utils.KubiEnvironmentIntegration) {
+		project.Spec.Project = strings.TrimSuffix(projectName, "-"+utils.KubiEnvironmentIntegration)
+		project.Spec.Environment = utils.KubiEnvironmentIntegration
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
-	case utils.KubiEnvironmentProduction:
+	} else if strings.HasSuffix(projectName, utils.KubiEnvironmentProduction) {
+		project.Spec.Project = strings.TrimSuffix(projectName, "-"+utils.KubiEnvironmentProduction)
+		project.Spec.Environment = utils.KubiEnvironmentProduction
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
-	default:
-		utils.Log.Warn().Msgf("Provisionner: Can't map stage state for project %v.", project.Spec.Environment)
-
+	} else {
+		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectName)
+		project.Spec.Project = projectName
 	}
 
 	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
@@ -124,12 +126,13 @@ func generateProject(projectName string) {
 	} else {
 		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectName)
 		existingProject.Spec.Project = project.Spec.Project
-		existingProject.Spec.Environment = project.Spec.Environment
+		if len(project.Spec.Environment) > 0 {
+			existingProject.Spec.Environment = project.Spec.Environment
+		}
 		existingProject.Spec.Tenant = project.Spec.Tenant
 		for _, stage := range project.Spec.Stages {
 			existingProject.Spec.Stages = utils.AppendIfMissing(existingProject.Spec.Stages, stage)
 		}
-
 		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
 		if errUpdate != nil {
 			utils.Log.Error().Msg(errUpdate.Error())
