@@ -3,7 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/ca-gip/kubi/utils"
+	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
 )

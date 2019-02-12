@@ -83,7 +83,7 @@ type AuthJWTClaims struct {
 
 type NamespaceAndRole struct {
 	Namespace string `json:"namespace"`
-	Role      string `json:"role""`
+	Role      string `json:"role"`
 }
 
 type ResponseError struct {

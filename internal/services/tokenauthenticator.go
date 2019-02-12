@@ -3,26 +3,18 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ca-gip/kubi/utils"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/ca-gip/kubi/internal/utils"
 	"io/ioutil"
 	"k8s.io/api/authentication/v1beta1"
 	"net/http"
-	"time"
 )
 
 // Authenticate service for kubernetes Api Server
 // https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication
-func AuthenticateHandler(hist *prometheus.HistogramVec) http.HandlerFunc {
+func AuthenticateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		start := time.Now()
-
 		var code int
-		defer func() { // Make sure we record a status.
-			duration := time.Since(start)
-			hist.WithLabelValues(fmt.Sprintf("%d", code)).Observe(duration.Seconds())
-		}()
 
 		bodyString, err := ioutil.ReadAll(r.Body)
 		if err != nil {

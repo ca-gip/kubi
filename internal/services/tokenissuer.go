@@ -3,9 +3,9 @@ package services
 import (
 	"encoding/base64"
 	"errors"
-	"github.com/ca-gip/kubi/authprovider"
-	"github.com/ca-gip/kubi/types"
-	"github.com/ca-gip/kubi/utils"
+	"github.com/ca-gip/kubi/internal/authprovider"
+	"github.com/ca-gip/kubi/internal/types"
+	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/dgrijalva/jwt-go"
 	"gopkg.in/yaml.v2"
 	"io"

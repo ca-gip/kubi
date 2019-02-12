@@ -1,7 +1,7 @@
 package services_test
 
 import (
-	"github.com/ca-gip/kubi/services"
+	"github.com/ca-gip/kubi/internal/services"
 	"github.com/stretchr/testify/assert"
 	"regexp"
 	"testing"
