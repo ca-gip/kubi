@@ -1,6 +1,6 @@
 # Build
 
-Below, usefull command to build the server and the cli.
+Below, a useful command to build the server and the cli.
 
 ### Building server
 

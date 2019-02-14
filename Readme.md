@@ -44,8 +44,8 @@ Kubi is a webhook for the server part and has a cli for linux and windows users.
 
 # General
 
-Namespaces and Rolebindings are automaticaly created and managed by Kubi. Kubi parse the LDAP group and find the `namespace`and the `role`.
-The first part (from the righ) is the role, and the second is the namespace.
+Namespaces and Rolebindings are automatically created and managed by Kubi. Kubi parse the LDAP group and find the `namespace` and the `role`.
+The first part (from the right) is the role, and the second is the namespace.
 
 The `_` is used to split Role and Namespace, the pattern is `<whatever>_<namespace>_<role>`. Namespace must be DNS1123 compatible and can´t exceed 63 characters ( kubernetes constraint ).
 
@@ -57,7 +57,7 @@ If the namespace is missing, it will be automatically created at startup. You ca
 
 The network policy works like this principle:
 - Every pods can communicate inside the namespace
-- Pods cannot communicate with external resources ( outisde cluster )
+- Pods cannot communicate with external resources ( outside cluster )
 - Dns is not filtered
 
 You can customize `PROVISIONING_EGRESS_ALLOWED_PORTS`, `PROVISIONING_EGRESS_ALLOWED_CIDR`, `PROVISIONING_INGRESS_ALLOWED_NAMESPACES` to add default rules.
@@ -116,7 +116,7 @@ kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <use
   curl -v -k --user <user_cn> https://<kubi-server-fqdn-or-ip>:30003/config
 ```
 
-> It is not recommanded to use curl, because it is used with -k parameter ( insecure mode).
+> It is not recommended to use curl, because it is used with -k parameter ( insecure mode).
 
 # Installation
 
@@ -299,7 +299,7 @@ Here we use /etc/kubernetes/pki which is automatically mounted.
 1. Add these params to kubeadm config in `ClusterConfiguration`:
 
   ```bash
-  # Before, create the aditionnals folder in all master nodes
+  # Before, create the additionnals folder in all master nodes
   mkdir /etc/kubernetes/additionnals
   ```
 
@@ -320,7 +320,7 @@ Here we use /etc/kubernetes/pki which is automatically mounted.
 
 The following features should be available soon.
 
-- Allow usage of static mapping ( a json file mapping with LDAP group and Kubernetes namspaces)
+- Allow usage of static mapping ( a json file mapping with LDAP group and Kubernetes namespaces)
 - Expose /metrics
 
 
