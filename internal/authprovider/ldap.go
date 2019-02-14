@@ -12,7 +12,7 @@ type Authenticator struct {
 }
 
 // Authenticate a user through LDAP or LDS
-// return if bind was ok, the userDN for next usage, and error if occured
+// return if bind was ok, the userDN for next usage, and error if occurred
 func GetUserGroups(userDN string) ([]string, error) {
 
 	// First TCP connect
@@ -37,7 +37,7 @@ func GetUserGroups(userDN string) ([]string, error) {
 }
 
 // Authenticate a user through LDAP or LDS
-// return if bind was ok, the userDN for next usage, and error if occured
+// return if bind was ok, the userDN for next usage, and error if occurred
 func GetAllGroups() ([]string, error) {
 
 	// First TCP connect
@@ -61,8 +61,8 @@ func GetAllGroups() ([]string, error) {
 	return groups, nil
 }
 
-// Authenticate a user throug LDAP or LDS
-// return if bind was ok, the userDN for next usage, and error if occured
+// Authenticate a user through LDAP or LDS
+// return if bind was ok, the userDN for next usage, and error if occurred
 func AuthenticateUser(username string, password string) (*string, error) {
 
 	// First TCP connect
@@ -146,7 +146,7 @@ func getUserDN(conn *ldap.Conn, userBaseDN string, username string) (string, err
 // return true if it belong to AdminGroup, false otherwise
 func HasAdminAccess(userDN string) bool {
 
-	// No need to go after, there is no Admin Group Base
+	// No need to go further, there is no Admin Group Base
 	if len(utils.Config.Ldap.AdminGroupBase) == 0 {
 		return false
 	}

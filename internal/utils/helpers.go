@@ -6,7 +6,7 @@ func IsEmpty(value string) bool {
 	return len(value) == 0
 }
 
-// Print error and exit if error occured
+// Print error and exit if error occurred
 func Check(e error) {
 	if e != nil {
 		Log.Error().Msg(e.Error())

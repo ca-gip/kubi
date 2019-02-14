@@ -28,7 +28,7 @@ func Any(vs []string, f func(string) bool) bool {
 	return false
 }
 
-// All returns `true` if all of the strings in the slice
+// All returns `true` if every strings in the slice
 // satisfy the predicate `f`.
 func All(vs []string, f func(string) bool) bool {
 	for _, v := range vs {
