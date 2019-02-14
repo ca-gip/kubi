@@ -11,7 +11,7 @@ import (
 type Authenticator struct {
 }
 
-// Authenticate a user throug LDAP or LDS
+// Authenticate a user through LDAP or LDS
 // return if bind was ok, the userDN for next usage, and error if occured
 func GetUserGroups(userDN string) ([]string, error) {
 
@@ -36,7 +36,7 @@ func GetUserGroups(userDN string) ([]string, error) {
 	return groups, nil
 }
 
-// Authenticate a user throug LDAP or LDS
+// Authenticate a user through LDAP or LDS
 // return if bind was ok, the userDN for next usage, and error if occured
 func GetAllGroups() ([]string, error) {
 
