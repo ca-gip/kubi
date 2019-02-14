@@ -60,7 +60,7 @@ func GenerateRoleBindings(context []*types.NamespaceAndRole) {
 	}
 }
 
-// A loop wrapper for GenerateRoleBinding
+// A loop wrapper for generateProject
 // splitted for unit test !
 func GenerateProjects(context []*types.NamespaceAndRole) {
 	for _, auth := range context {
@@ -76,7 +76,7 @@ func generateProject(projectName string) {
 
 	splits := strings.Split(projectName, "-")
 	if len(splits) < 2 {
-		utils.Log.Warn().Msgf("Provisionner: The project %v Could'nt be split in two part: <namespace>-<environment>.", projectName)
+		utils.Log.Warn().Msgf("Provisionner: The project %v could'nt be split in two part: <namespace>-<environment>.", projectName)
 	}
 
 	project := &v12.Project{
@@ -118,7 +118,7 @@ func generateProject(projectName string) {
 	}
 
 	if errProject != nil {
-		utils.Log.Info().Msgf("Project: %v doesn't exists, will be created", projectName)
+		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectName)
 		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
 		if errorCreate != nil {
 			utils.Log.Error().Msg(errorCreate.Error())
@@ -309,7 +309,7 @@ func generateNamespace(namespace string) {
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble
 // This CRD allow user to deploy global configuration for network configuration
-// for update, the default network config is update
+// for update, the default network config is updated
 // for deletion, it is automatically recreated
 // for create, just create it
 func WatchProjects() cache.Store {
@@ -337,7 +337,7 @@ func projectUpdate(old interface{}, new interface{}) {
 	generateNamespace(newProject.Name)
 	generateNetworkPolicy(newProject.Name, nil)
 
-	// TODO: Refactor with a non static list of role
+	// TODO: Refactor with a non static list of roles
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "admin"})
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "developper"})
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "viewer"})
@@ -350,7 +350,7 @@ func projectCreated(obj interface{}) {
 	generateNamespace(project.Name)
 	generateNetworkPolicy(project.Name, nil)
 
-	// TODO: Refactor with a non static list of role
+	// TODO: Refactor with a non static list of roles
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "admin"})
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "developper"})
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "viewer"})
@@ -363,7 +363,7 @@ func projectDelete(obj interface{}) {
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble
 // This CRD allow user to deploy global configuration for network configuration
-// for update, the default network config is update
+// for update, the default network config is updated
 // for deletion, it is automatically recreated
 // for create, just create it
 func WatchNetPolConfig() cache.Store {
@@ -430,7 +430,7 @@ func networkPolicyConfigDelete(obj interface{}) {
 }
 
 // Generate a NetworkPolicy based on NetworkPolicyConfig
-// If exists, the existing netpol is updates else it is created
+// If exists, the existing netpol is updated else it is created
 func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPolicyConfig) {
 
 	kconfig, _ := rest.InClusterConfig()
