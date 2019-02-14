@@ -78,9 +78,9 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// GenerateConfig generate a config in yaml, including JWT token
+// GenerateConfig generates a config in yaml, including JWT token
 // and cluster information. It can be directly used out of the box
-// by kubectl. It return a well formatted yaml
+// by kubectl. It returns a well formatted yaml
 func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 	err, auth := basicAuth(r)
 
