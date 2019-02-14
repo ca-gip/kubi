@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"github.com/ca-gip/kubi/internal/services"
