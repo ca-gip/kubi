@@ -1,6 +1,6 @@
 
 <p align=center  style="background-color:#333333 !important;">
-  <img align="center" src="/logo.png" width="200px">
+  <img align="center" src="/docs/logo.png" width="200px">
 </p>
 
 # Kubi
