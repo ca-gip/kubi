@@ -11,10 +11,12 @@ const (
 
 const (
 	KubiResourcePrefix               = "kubi"
-	KubiClusterRoleBindingName       = KubiResourcePrefix + "-admin"
+	KubiClusterRoleAdminBindingName  = KubiResourcePrefix + "-admin"
 	KubiClusterRoleBindingReaderName = KubiResourcePrefix + "-reader"
 	KubiDefaultNetworkPolicyName     = KubiResourcePrefix + "-default"
-	UnauthenticatedGroup             = "system:unauthenticated"
+
+	KubiClusterRoleAdminName = "cluster-admin"
+	UnauthenticatedGroup     = "system:unauthenticated"
 
 	KubiStageScratch = "scratch"
 	KubiStageStaging = "staging"

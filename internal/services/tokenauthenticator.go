@@ -50,7 +50,7 @@ func AuthenticateHandler() http.HandlerFunc {
 				groups = append(groups, fmt.Sprintf("%s-%s", auth.Namespace, auth.Role))
 			}
 			if token.AdminAccess {
-				groups = append(groups, utils.KubiClusterRoleBindingName)
+				groups = append(groups, utils.KubiClusterRoleAdminBindingName)
 			}
 
 			resp := v1beta1.TokenReview{
