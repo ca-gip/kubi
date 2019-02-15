@@ -43,6 +43,7 @@ func AuthenticateHandler() http.HandlerFunc {
 
 			groups := []string{}
 			groups = append(groups, utils.UnauthenticatedGroup)
+			groups = append(groups, fmt.Sprintf(utils.KubiClusterRoleBindingReaderName))
 
 			// Other ldap group are injected
 			for _, auth := range token.Auths {

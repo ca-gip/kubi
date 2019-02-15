@@ -28,6 +28,7 @@ func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
 	GenerateAdminClusterRoleBinding()
+	GenerateReaderClusterRoleBinding()
 	err := GenerateResources()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -218,6 +219,50 @@ func GenerateAdminClusterRoleBinding() {
 			Name: utils.KubiClusterRoleBindingName,
 			Labels: map[string]string{
 				"name":    utils.KubiClusterRoleBindingName,
+				"creator": "kubi",
+			},
+		},
+	}
+	_, err = api.ClusterRoleBindings().Create(&clusterRoleBinding)
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+	}
+
+}
+
+// GenerateRolebinding from tupple
+// If exists, nothing is done, only creating !
+func GenerateReaderClusterRoleBinding() {
+	kconfig, err := rest.InClusterConfig()
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	api := clientSet.RbacV1()
+
+	_, errRB := api.ClusterRoleBindings().Get(utils.KubiClusterRoleBindingReaderName, metav1.GetOptions{})
+
+	if errRB == nil {
+		utils.Log.Info().Msgf("ClusterRolebinding: %v already exists, nothing to do.", utils.KubiClusterRoleBindingReaderName)
+		return
+	}
+
+	utils.Log.Info().Msgf("ClusterRolebinding %v doesn't exist ", utils.KubiClusterRoleBindingReaderName)
+
+	clusterRoleBinding := v1.ClusterRoleBinding{
+		RoleRef: v1.RoleRef{
+			"rbac.authorization.k8s.io",
+			"ClusterRole",
+			utils.KubiClusterRoleBindingReaderName,
+		},
+		Subjects: []v1.Subject{
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     utils.KubiClusterRoleBindingReaderName,
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: utils.KubiClusterRoleBindingReaderName,
+			Labels: map[string]string{
+				"name":    utils.KubiClusterRoleBindingReaderName,
 				"creator": "kubi",
 			},
 		},

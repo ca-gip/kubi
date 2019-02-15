@@ -75,3 +75,13 @@ spec:
       nodePort: 30003
   selector:
     app: kubi
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kubi-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "namespaces"]
+    verbs: ["get", "watch", "list"]
+---

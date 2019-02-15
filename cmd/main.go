@@ -24,6 +24,7 @@ func main() {
 
 	utils.Log.Info().Msg("Generating resources from LDAP groups")
 	services.GenerateAdminClusterRoleBinding()
+	services.GenerateReaderClusterRoleBinding()
 
 	err = services.GenerateResources()
 	if err != nil {
