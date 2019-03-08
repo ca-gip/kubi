@@ -129,7 +129,9 @@ func generateProject(projectName string) {
 		if len(project.Spec.Environment) > 0 {
 			existingProject.Spec.Environment = project.Spec.Environment
 		}
-		existingProject.Spec.Tenant = project.Spec.Tenant
+		if len(existingProject.Spec.Tenant) == 0 {
+			existingProject.Spec.Tenant = project.Spec.Tenant
+		}
 		for _, stage := range project.Spec.Stages {
 			existingProject.Spec.Stages = utils.AppendIfMissing(existingProject.Spec.Stages, stage)
 		}
