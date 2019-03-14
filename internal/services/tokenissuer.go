@@ -70,12 +70,13 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token, err := baseGenerateToken(*auth)
-
-	if token != nil {
+	if err == nil {
+		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
+	} else {
+		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
 		w.WriteHeader(http.StatusOK)
 		io.WriteString(w, *token)
 	}
-
 }
 
 // GenerateConfig generates a config in yaml, including JWT token
