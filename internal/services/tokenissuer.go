@@ -72,10 +72,11 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	token, err := baseGenerateToken(*auth)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
-	} else {
-		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
 		w.WriteHeader(http.StatusCreated)
 		io.WriteString(w, *token)
+	} else {
+		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
+		w.WriteHeader(http.StatusUnauthorized)
 	}
 }
 
