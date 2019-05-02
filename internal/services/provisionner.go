@@ -157,12 +157,14 @@ func GenerateRoleBinding(context *types.NamespaceAndRole) {
 		return
 	}
 
+	clusterRoleName := "cluster-" + context.Role
+
 	utils.Log.Info().Msgf("Rolebinding %v doesn't exist for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
 			"rbac.authorization.k8s.io",
 			"ClusterRole",
-			utils.KubiClusterRoleAdminName,
+			clusterRoleName,
 		},
 		Subjects: []v1.Subject{
 			{
