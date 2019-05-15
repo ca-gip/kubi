@@ -51,14 +51,6 @@ func GenerateResources() error {
 	return nil
 }
 
-// A loop wrapper for GenerateRoleBinding
-// splitted for unit test !
-func GenerateRoleBindings(context []*types.NamespaceAndRole) {
-	for _, auth := range context {
-		GenerateRoleBinding(auth)
-	}
-}
-
 // A loop wrapper for generateProject
 // splitted for unit test !
 func GenerateProjects(context []*types.NamespaceAndRole) {
@@ -297,8 +289,6 @@ func projectUpdate(old interface{}, new interface{}) {
 
 	// TODO: Refactor with a non static list of roles
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "admin"})
-	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "developper"})
-	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "viewer"})
 
 }
 
@@ -310,8 +300,6 @@ func projectCreated(obj interface{}) {
 
 	// TODO: Refactor with a non static list of roles
 	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "admin"})
-	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "developper"})
-	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "viewer"})
 }
 
 func projectDelete(obj interface{}) {
