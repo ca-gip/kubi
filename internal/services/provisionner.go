@@ -27,7 +27,7 @@ import (
 func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
 
 	w.WriteHeader(http.StatusAccepted)
-	GenerateClusterRoleBindings()
+
 	err := GenerateResources()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -149,7 +149,7 @@ func GenerateRoleBinding(context *types.NamespaceAndRole) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	roleBindingName := fmt.Sprintf("%s-%s", context.Namespace, context.Role)
+	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", context.Role)
 	_, errRB := api.RoleBindings(context.Namespace).Get(roleBindingName, metav1.GetOptions{})
 
 	if errRB == nil {
@@ -162,7 +162,7 @@ func GenerateRoleBinding(context *types.NamespaceAndRole) {
 		RoleRef: v1.RoleRef{
 			"rbac.authorization.k8s.io",
 			"ClusterRole",
-			utils.KubiClusterRoleAdminName,
+			roleBindingName,
 		},
 		Subjects: []v1.Subject{
 			{
@@ -177,6 +177,7 @@ func GenerateRoleBinding(context *types.NamespaceAndRole) {
 			Labels: map[string]string{
 				"name":    roleBindingName,
 				"creator": "kubi",
+				"version": "v2",
 			},
 		},
 	}
@@ -221,6 +222,7 @@ func generateClusterRoleBinding(roleRefName string, roleBindingName string) {
 			Labels: map[string]string{
 				"name":    roleBindingName,
 				"creator": "kubi",
+				"version": "v2",
 			},
 		},
 	}
@@ -228,12 +230,6 @@ func generateClusterRoleBinding(roleRefName string, roleBindingName string) {
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 	}
-}
-
-// Generate reader and cluster-admin binding in the cluster
-func GenerateClusterRoleBindings() {
-	generateClusterRoleBinding(utils.KubiClusterRoleBindingReaderName, utils.KubiClusterRoleBindingReaderName)
-	generateClusterRoleBinding(utils.KubiClusterRoleAdminName, utils.KubiClusterRoleAdminBindingName)
 }
 
 // generateNamespace from a name

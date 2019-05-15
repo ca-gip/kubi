@@ -38,8 +38,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi
-          image: cagip/kubi:latest
-          imagePullPolicy: Always
+          image: cagip/kubi:1.2.0
           ports:
             - containerPort: 8000
           volumeMounts:

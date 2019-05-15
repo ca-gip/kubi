@@ -2,7 +2,7 @@
 
 REPO= github.com/ca-gip/kubi
 IMAGE= kubi
-TAG= dev
+TAG= 1.2.0
 DOCKER_REPO= cagip
 
 
@@ -20,7 +20,7 @@ linux:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s" -v -o ./build/kubi -i $(GOPATH)/src/$(REPO)/cmd/main.go
 
 release:
-	docker build -t "$(DOCKER_REPO)/$(IMAGE):$(TAG)" .
+	docker build --build-arg https_proxy=192.168.2.1:3128 -t "$(DOCKER_REPO)/$(IMAGE):$(TAG)" .
 	docker push "$(DOCKER_REPO)/$(IMAGE):$(TAG)"
 
 test:
