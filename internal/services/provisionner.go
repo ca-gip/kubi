@@ -160,7 +160,7 @@ func GenerateRoleBinding(context *types.NamespaceAndRole) {
 			{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "Group",
-				Name:     roleBindingName,
+				Name:     fmt.Sprintf("%s-%s", context.Namespace, context.Role),
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
