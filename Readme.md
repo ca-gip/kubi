@@ -88,13 +88,15 @@ For specific exceptions, add another network policy.
 
 ## For Windows users
 
-1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.0/kubi.exe)
+1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.1/kubi.exe)
 2. Open Cmd
 ```bash
 # Get help
 .\kubi.exe --help
 # Connect and generate config file
 .\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
+# Connect with your password and generate config file
+.\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn> --password your_pwd
 ```
 
 ## For Linux
@@ -103,11 +105,13 @@ For specific exceptions, add another network policy.
 
 ```bash
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/v1.0/kubi -P /usr/local/bin
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.1/kubi -P /usr/local/bin
 sudo chmod a+x /usr/local/bin/kubi
 
 # Connect to the cluster
 kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
+# Connect with your password and generate config file
+.\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn> --password your_pwd
 ```
 
 ### With `curl`
