@@ -92,6 +92,10 @@ spec:
       type: string
       description: Stages allowed for this project, can be mapped to registry or CI/CD
       JSONPath: .spec.stages
+    - name: Source Entity
+      type: string
+      description: The refering entity ( LDAP group for the moment )
+      JSONPath: .spec.sourceEntity
   validation:
     # openAPIV3Schema is the schema for validating custom objects.
     openAPIV3Schema:
@@ -122,3 +126,5 @@ spec:
                   - scratch
                   - staging
                   - stable
+            sourceEntity:
+              type: string

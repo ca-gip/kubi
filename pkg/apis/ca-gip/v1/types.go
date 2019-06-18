@@ -62,10 +62,11 @@ type Project struct {
 }
 
 type ProjectSpec struct {
-	Tenant      string   `json:"tenant,omitempty"`
-	Environment string   `json:"environment,omitempty"`
-	Project     string   `json:"project,omitempty"`
-	Stages      []string `json:"stages,omitempty"`
+	Tenant       string   `json:"tenant,omitempty"`
+	Environment  string   `json:"environment,omitempty"`
+	Project      string   `json:"project,omitempty"`
+	SourceEntity string   `json:"sourceEntity,omitempty"`
+	Stages       []string `json:"stages,omitempty"`
 }
 
 type ProjectSpecStatus struct {

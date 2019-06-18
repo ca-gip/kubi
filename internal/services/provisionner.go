@@ -55,19 +55,19 @@ func GenerateResources() error {
 // splitted for unit test !
 func GenerateProjects(context []*types.NamespaceAndRole) {
 	for _, auth := range context {
-		generateProject(auth.Namespace)
+		generateProject(auth)
 	}
 }
 
 // generate a project config or update it if exists
-func generateProject(projectName string) {
+func generateProject(projectInfos *types.NamespaceAndRole) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
-	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectName, metav1.GetOptions{})
+	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectInfos.Namespace, metav1.GetOptions{})
 
-	splits := strings.Split(projectName, "-")
+	splits := strings.Split(projectInfos.Namespace, "-")
 	if len(splits) < 2 {
-		utils.Log.Warn().Msgf("Provisionner: The project %v could'nt be split in two part: <namespace>-<environment>.", projectName)
+		utils.Log.Warn().Msgf("Provisionner: The project %v could'nt be split in two part: <namespace>-<environment>.", projectInfos.Namespace)
 	}
 
 	project := &v12.Project{
@@ -76,7 +76,7 @@ func generateProject(projectName string) {
 			Name: "created",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: projectName,
+			Name: projectInfos.Namespace,
 			Labels: map[string]string{
 				"creator": "kubi",
 			},
@@ -87,36 +87,37 @@ func generateProject(projectName string) {
 		project.Spec.Tenant = utils.Config.Tenant
 	}
 
-	if strings.HasSuffix(projectName, utils.KubiEnvironmentDevelopment) {
-		project.Spec.Project = strings.TrimSuffix(projectName, "-"+utils.KubiEnvironmentDevelopment)
+	if strings.HasSuffix(projectInfos.Namespace, utils.KubiEnvironmentDevelopment) {
+		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentDevelopment)
 		project.Spec.Environment = utils.KubiEnvironmentDevelopment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageScratch)
-	} else if strings.HasSuffix(projectName, utils.KubiEnvironmentIntegration) {
-		project.Spec.Project = strings.TrimSuffix(projectName, "-"+utils.KubiEnvironmentIntegration)
+	} else if strings.HasSuffix(projectInfos.Namespace, utils.KubiEnvironmentIntegration) {
+		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentIntegration)
 		project.Spec.Environment = utils.KubiEnvironmentIntegration
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
-	} else if strings.HasSuffix(projectName, utils.KubiEnvironmentProduction) {
-		project.Spec.Project = strings.TrimSuffix(projectName, "-"+utils.KubiEnvironmentProduction)
+	} else if strings.HasSuffix(projectInfos.Namespace, utils.KubiEnvironmentProduction) {
+		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentProduction)
 		project.Spec.Environment = utils.KubiEnvironmentProduction
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
 	} else {
-		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectName)
-		project.Spec.Project = projectName
+		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace)
+		project.Spec.Project = projectInfos.Namespace
 	}
 
+	project.Spec.SourceEntity = projectInfos.Source
 	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
 		project.Spec.Tenant = utils.Config.Tenant
 	}
 
 	if errProject != nil {
-		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectName)
+		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectInfos.Namespace)
 		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
 		if errorCreate != nil {
 			utils.Log.Error().Msg(errorCreate.Error())
 		}
 		return
 	} else {
-		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectName)
+		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectInfos.Namespace)
 		existingProject.Spec.Project = project.Spec.Project
 		if len(project.Spec.Environment) > 0 {
 			existingProject.Spec.Environment = project.Spec.Environment

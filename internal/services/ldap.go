@@ -73,6 +73,7 @@ func GetUserNamespace(group string) (*types.NamespaceAndRole, error) {
 		return &types.NamespaceAndRole{
 			Namespace: namespace,
 			Role:      role,
+			Source:    lowerGroup,
 		}, nil
 	}
 }
