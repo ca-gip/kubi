@@ -128,6 +128,7 @@ func generateProject(projectInfos *types.NamespaceAndRole) {
 		for _, stage := range project.Spec.Stages {
 			existingProject.Spec.Stages = utils.AppendIfMissing(existingProject.Spec.Stages, stage)
 		}
+		existingProject.Spec.SourceEntity = projectInfos.Source
 		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
 		if errUpdate != nil {
 			utils.Log.Error().Msg(errUpdate.Error())
