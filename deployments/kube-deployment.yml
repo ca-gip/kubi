@@ -38,7 +38,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi
-          image: cagip/kubi:1.2.0
+          image: cagip/kubi:1.2.4
           ports:
             - containerPort: 8000
           volumeMounts:

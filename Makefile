@@ -2,7 +2,7 @@
 
 REPO= github.com/ca-gip/kubi
 IMAGE= kubi
-TAG= 1.2.0
+TAG= 1.2.4
 DOCKER_REPO= cagip
 
 
