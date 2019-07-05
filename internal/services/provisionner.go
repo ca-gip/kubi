@@ -400,7 +400,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 	UDP := corev1.ProtocolUDP
 	TCP := corev1.ProtocolTCP
 
-	ingressRules := make([]v1n.NetworkPolicyPeer, len(networkPolicyConfig.Spec.Ingress.Namespaces)+1)
+	ingressRules := []v1n.NetworkPolicyPeer{}
 
 	// Add default intra namespace communication
 	ingressRules = append(ingressRules, v1n.NetworkPolicyPeer{
