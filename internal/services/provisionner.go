@@ -400,9 +400,19 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 	UDP := corev1.ProtocolUDP
 	TCP := corev1.ProtocolTCP
 
-	ingressNamespaces := map[string]string{}
+	ingressRules := make([]v1n.NetworkPolicyPeer, len(networkPolicyConfig.Spec.Ingress.Namespaces)+1)
+
+	// Add default intra namespace communication
+	ingressRules = append(ingressRules, v1n.NetworkPolicyPeer{
+		PodSelector: &metav1.LabelSelector{MatchLabels: nil},
+	})
+
+	// Add default whitelisted namespace ingress rules
 	for _, namespace := range networkPolicyConfig.Spec.Ingress.Namespaces {
-		ingressNamespaces["name"] = namespace
+		ingressRules = append(ingressRules, v1n.NetworkPolicyPeer{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"name": namespace}},
+			PodSelector:       &metav1.LabelSelector{MatchLabels: nil},
+		})
 	}
 
 	netpolPorts := []v1n.NetworkPolicyPort{}
@@ -435,12 +445,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 			},
 			Ingress: []v1n.NetworkPolicyIngressRule{
 				{
-					From: []v1n.NetworkPolicyPeer{
-						{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
-						{
-							NamespaceSelector: &metav1.LabelSelector{MatchLabels: ingressNamespaces},
-							PodSelector:       &metav1.LabelSelector{MatchLabels: nil}},
-					},
+					From: ingressRules,
 				},
 			},
 			Egress: []v1n.NetworkPolicyEgressRule{
