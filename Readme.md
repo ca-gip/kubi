@@ -105,7 +105,7 @@ For specific exceptions, add another network policy.
 
 ```bash
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/v1.1/kubi -P /usr/local/bin
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.2.4/kubi -P /usr/local/bin
 sudo chmod a+x /usr/local/bin/kubi
 
 # Connect to the cluster
