@@ -35,11 +35,12 @@ func main() {
 		utils.Log.Warn().Msgf("%d %s %s", http.StatusNotFound, req.Method, req.URL.String())
 	})
 
-	router.Handle("/ca", utils.Middleware(services.CA)).Methods(http.MethodGet)
-	router.Handle("/refresh", utils.Middleware(services.RefreshK8SResources)).Methods(http.MethodGet) // TODO, protect from users
-	router.Handle("/config", utils.Middleware(services.GenerateConfig)).Methods(http.MethodGet)
-	router.Handle("/token", utils.Middleware(services.GenerateJWT)).Methods(http.MethodGet)
-	router.Handle("/authenticate", utils.Middleware(services.AuthenticateHandler)).Methods(http.MethodPost)
+	router.HandleFunc("/ca", services.CA).Methods(http.MethodGet)
+	router.HandleFunc("/refresh", services.RefreshK8SResources).Methods(http.MethodGet) // TODO, protect from users
+	router.HandleFunc("/config", services.GenerateConfig).Methods(http.MethodGet)
+	router.HandleFunc("/token", services.GenerateJWT).Methods(http.MethodGet)
+	router.HandleFunc("/authenticate", services.AuthenticateHandler()).Methods(http.MethodPost)
+
 	router.Handle("/metrics", promhttp.Handler())
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
