@@ -4,7 +4,6 @@ import (
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 	"net/http"
@@ -43,7 +42,6 @@ func main() {
 	router.Handle("/authenticate", utils.Middleware(services.AuthenticateHandler)).Methods(http.MethodPost)
 	router.Handle("/metrics", promhttp.Handler())
 
-	prometheus.Register(utils.Histogram)
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
 	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))
 }
