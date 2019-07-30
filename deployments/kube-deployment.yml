@@ -38,7 +38,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi
-          image: cagip/kubi:1.2.4
+          image: cagip/kubi:1.2.5
           ports:
             - containerPort: 8000
           volumeMounts:
@@ -64,6 +64,8 @@ kind: Service
 metadata:
   name: kubi-svc
   namespace: kube-system
+  labels:
+    app: kubi
 spec:
   type: NodePort
   ports:

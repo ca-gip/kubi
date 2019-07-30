@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kubi-metrics
+  namespace: kube-system
+  labels:
+    app: kubi
+spec:
+  selector:
+    matchLabels:
+      app: kubi
+  endpoints:
+    - port: https
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true

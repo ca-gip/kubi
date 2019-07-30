@@ -7,8 +7,6 @@ import (
 	"github.com/ca-gip/kubi/internal/types"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
@@ -20,16 +18,6 @@ import (
 var Config *types.Config
 
 var signingKey, _ = ioutil.ReadFile(utils.TlsKeyPath)
-
-var tokenValidCounter = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_valid_token_total",
-	Help: "Total number of tokens issued",
-})
-
-var tokenBadCounter = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_bad_token_total",
-	Help: "Total number of bad tokens issued",
-})
 
 func generateUserToken(groups []string, username string, hasAdminAccess bool) (string, error) {
 
@@ -64,15 +52,16 @@ func baseGenerateToken(auth types.Auth) (*string, error) {
 
 	groups, err := ldap.GetUserGroups(*userDN)
 	if err != nil {
+		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
 	token, err := generateUserToken(groups, auth.Username, ldap.HasAdminAccess(*userDN))
 
 	if err != nil {
-		tokenBadCounter.Inc()
+		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
-	tokenValidCounter.Inc()
+	utils.TokenCounter.WithLabelValues("token_success").Inc()
 	return &token, nil
 }
 
