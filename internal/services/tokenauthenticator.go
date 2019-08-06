@@ -37,6 +37,7 @@ func AuthenticateHandler() http.HandlerFunc {
 			code = http.StatusUnauthorized
 			w.WriteHeader(code)
 			w.Header().Set("Content-Type", "application/json")
+			utils.Log.Info().Msgf("%v", resp)
 			json.NewEncoder(w).Encode(resp)
 		} else {
 			utils.Log.Info().Msgf("Challenging token for user %v", token.User)
@@ -65,6 +66,7 @@ func AuthenticateHandler() http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			code = http.StatusOK
 			w.WriteHeader(code)
+			utils.Log.Info().Msgf("%v", resp)
 			err = json.NewEncoder(w).Encode(resp)
 			if err != nil {
 				utils.Log.Error().Msg(err.Error())
