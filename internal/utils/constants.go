@@ -15,8 +15,8 @@ const (
 	KubiClusterRoleBindingReaderName = "kubi-reader"
 	KubiDefaultNetworkPolicyName     = "kubi-default"
 
-	UnauthenticatedGroup = "system:unauthenticated"
-	AdminGroup           = "system:masters"
+	AuthenticatedGroup = "system:authenticated"
+	AdminGroup         = "system:masters"
 
 	KubiStageScratch = "scratch"
 	KubiStageStaging = "staging"

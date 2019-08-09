@@ -43,7 +43,7 @@ func AuthenticateHandler() http.HandlerFunc {
 			utils.Log.Info().Msgf("Challenging token for user %v", token.User)
 
 			groups := []string{}
-			groups = append(groups, utils.UnauthenticatedGroup)
+			groups = append(groups, utils.AuthenticatedGroup)
 			groups = append(groups, fmt.Sprintf(utils.KubiClusterRoleBindingReaderName))
 
 			// Other ldap group are injected
