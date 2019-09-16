@@ -115,6 +115,8 @@ spec:
               enum:
                 - development
                 - integration
+                - uat
+                - preproduction
                 - production
             project:
               type: string

@@ -85,4 +85,54 @@ rules:
   - apiGroups: [""]
     resources: ["nodes", "namespaces"]
     verbs: ["get", "watch", "list"]
+  - apiGroups: ["ca-gip.github.com"]
+    resources: ["projects"]
+    verbs: ["get", "watch", "list"]
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    creator: kubi
+    name: kubi-reader
+  name: kubi-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubi-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kubi-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    creator: kubi
+    name: kubi-reader-discovery
+  name: kubi-reader-discovery
+roleRef:
+  apiGroup: ""
+  kind: ClusterRole
+  name: system:discovery
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kubi-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    creator: kubi
+    name: kubi-reader-basic-user
+  name: kubi-reader-basic-user
+roleRef:
+  apiGroup: ""
+  kind: ClusterRole
+  name: system:basic-user
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: kubi-reader
