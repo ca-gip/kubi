@@ -22,9 +22,15 @@ const (
 	KubiStageStaging = "staging"
 	KubiStageStable  = "stable"
 
-	KubiEnvironmentProduction  = "production"
-	KubiEnvironmentIntegration = "integration"
-	KubiEnvironmentDevelopment = "development"
+	KubiEnvironmentProduction         = "production"
+	KubiEnvironmentShortProduction    = "prd"
+	KubiEnvironmentIntegration        = "integration"
+	KubiEnvironmentShortInt           = "int"
+	KubiEnvironmentUAT                = "uat"
+	KubiEnvironmentPreproduction      = "pre-production"
+	KubiEnvironmentShortPreproduction = "pprd"
+	KubiEnvironmentDevelopment        = "development"
+	KubiEnvironmentShortDevelopment   = "dev"
 
 	KubiTenantUndeterminable = "undeterminable"
 )
@@ -35,4 +41,12 @@ var BlacklistedNamespaces = []string{
 	"ingress-nginx",
 	"default",
 	KubiResourcePrefix,
+}
+
+var LdapNsMapping = map[string][]string{
+	KubiEnvironmentDevelopment:   []string{KubiEnvironmentDevelopment, KubiEnvironmentShortDevelopment},
+	KubiEnvironmentIntegration:   []string{KubiEnvironmentIntegration, KubiEnvironmentShortInt},
+	KubiEnvironmentUAT:           []string{KubiEnvironmentUAT},
+	KubiEnvironmentPreproduction: []string{KubiEnvironmentPreproduction, KubiEnvironmentShortPreproduction},
+	KubiEnvironmentProduction:    []string{KubiEnvironmentProduction, KubiEnvironmentShortProduction},
 }

@@ -87,15 +87,16 @@ func generateProject(projectInfos *types.NamespaceAndRole) {
 		project.Spec.Tenant = utils.Config.Tenant
 	}
 
-	if strings.HasSuffix(projectInfos.Namespace, utils.KubiEnvironmentDevelopment) {
+	// TODO, Add dynmic code to managed by a json list
+	if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentDevelopment]) {
 		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentDevelopment)
 		project.Spec.Environment = utils.KubiEnvironmentDevelopment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageScratch)
-	} else if strings.HasSuffix(projectInfos.Namespace, utils.KubiEnvironmentIntegration) {
+	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentIntegration]) {
 		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentIntegration)
 		project.Spec.Environment = utils.KubiEnvironmentIntegration
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
-	} else if strings.HasSuffix(projectInfos.Namespace, utils.KubiEnvironmentProduction) {
+	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentProduction]) {
 		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentProduction)
 		project.Spec.Environment = utils.KubiEnvironmentProduction
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
