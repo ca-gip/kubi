@@ -45,11 +45,7 @@ func main() {
 	services.WatchNetPolConfig()
 	services.WatchProjects()
 
-	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
-	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))
-
 	timerKubiRefresh := time.NewTicker(10 * time.Minute)
-
 	go func() {
 		for {
 			select {
@@ -59,5 +55,8 @@ func main() {
 			}
 		}
 	}()
+
+	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
+	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))
 
 }
