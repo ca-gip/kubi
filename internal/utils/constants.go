@@ -27,7 +27,7 @@ const (
 	KubiEnvironmentIntegration        = "integration"
 	KubiEnvironmentShortInt           = "int"
 	KubiEnvironmentUAT                = "uat"
-	KubiEnvironmentPreproduction      = "pre-production"
+	KubiEnvironmentPreproduction      = "preproduction"
 	KubiEnvironmentShortPreproduction = "pprd"
 	KubiEnvironmentDevelopment        = "development"
 	KubiEnvironmentShortDevelopment   = "dev"
