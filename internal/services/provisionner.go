@@ -18,16 +18,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"net/http"
 	"strings"
 	"time"
 )
 
 // Handler to regenerate all resources created by kubi
-func RefreshK8SResources(w http.ResponseWriter, _ *http.Request) {
-
-	w.WriteHeader(http.StatusAccepted)
-
+func RefreshK8SResources() {
 	err := GenerateResources()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -46,8 +42,6 @@ func GenerateResources() error {
 	}
 	auths := GetUserNamespaces(groups)
 	GenerateProjects(auths)
-	WatchNetPolConfig()
-	WatchProjects()
 	return nil
 }
 

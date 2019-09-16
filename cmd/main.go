@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -36,13 +37,27 @@ func main() {
 	})
 
 	router.HandleFunc("/ca", services.CA).Methods(http.MethodGet)
-	router.HandleFunc("/refresh", services.RefreshK8SResources).Methods(http.MethodGet) // TODO, protect from users
 	router.HandleFunc("/config", services.GenerateConfig).Methods(http.MethodGet)
 	router.HandleFunc("/token", services.GenerateJWT).Methods(http.MethodGet)
 	router.HandleFunc("/authenticate", services.AuthenticateHandler()).Methods(http.MethodPost)
-
 	router.Handle("/metrics", promhttp.Handler())
+
+	services.WatchNetPolConfig()
+	services.WatchProjects()
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
 	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))
+
+	timerKubiRefresh := time.NewTicker(10 * time.Minute)
+
+	go func() {
+		for {
+			select {
+			case t := <-timerKubiRefresh.C:
+				utils.Log.Info().Msgf("Refreshing Projects at ", t.String())
+				services.RefreshK8SResources()
+			}
+		}
+	}()
+
 }
