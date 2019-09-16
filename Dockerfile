@@ -7,7 +7,7 @@ RUN make linux
 RUN make test
 
 
-FROM alpine
+FROM scratch
 WORKDIR /root/
 COPY --from=0 /go/src/github.com/ca-gip/kubi/build/kubi .
 EXPOSE 8000
