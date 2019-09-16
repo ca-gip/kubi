@@ -83,16 +83,25 @@ func generateProject(projectInfos *types.NamespaceAndRole) {
 
 	// TODO, Add dynmic code to managed by a json list
 	if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentDevelopment]) {
-		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentDevelopment)
+		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentDevelopment])
 		project.Spec.Environment = utils.KubiEnvironmentDevelopment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageScratch)
 	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentIntegration]) {
-		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentIntegration)
+		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentIntegration])
 		project.Spec.Environment = utils.KubiEnvironmentIntegration
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
 	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentProduction]) {
-		project.Spec.Project = strings.TrimSuffix(projectInfos.Namespace, "-"+utils.KubiEnvironmentProduction)
+		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentProduction])
 		project.Spec.Environment = utils.KubiEnvironmentProduction
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
+	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentUAT]) {
+		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentUAT])
+		project.Spec.Environment = utils.KubiEnvironmentUAT
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
+	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentPreproduction]) {
+		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentPreproduction])
+		project.Spec.Environment = utils.KubiEnvironmentPreproduction
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
 	} else {
 		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace)
