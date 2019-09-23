@@ -8,6 +8,8 @@ import (
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
 	"log"
 	"os"
@@ -131,4 +133,10 @@ func MakeConfig() (*types.Config, error) {
 		return nil, err
 	}
 	return config, nil
+}
+
+// Modifier that Fix too old resource version issues
+var DefaultWatchOptionModifier = func(options *v1.ListOptions) {
+	options.ResourceVersion = ""
+	options.FieldSelector = fields.Everything().String()
 }

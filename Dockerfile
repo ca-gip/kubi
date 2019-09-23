@@ -8,7 +8,6 @@ RUN make test
 
 
 FROM scratch
-RUN mkdir -p /tmp
 WORKDIR /root/
 COPY --from=0 /go/src/github.com/ca-gip/kubi/build/kubi .
 EXPOSE 8000

@@ -12,7 +12,6 @@ import (
 	v1n "k8s.io/api/networking/v1"
 	"k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -276,7 +275,7 @@ func WatchProjects() cache.Store {
 
 	v3, _ := versioned.NewForConfig(kconfig)
 
-	watchlist := cache.NewListWatchFromClient(v3.CagipV1().RESTClient(), "projects", metav1.NamespaceAll, fields.Everything())
+	watchlist := cache.NewFilteredListWatchFromClient(v3.CagipV1().RESTClient(), "projects", metav1.NamespaceAll, utils.DefaultWatchOptionModifier)
 	resyncPeriod := 30 * time.Minute
 
 	store, controller := cache.NewInformer(watchlist, &v12.Project{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
@@ -326,7 +325,8 @@ func WatchNetPolConfig() cache.Store {
 
 	v3, _ := versioned.NewForConfig(kconfig)
 
-	watchlist := cache.NewListWatchFromClient(v3.CagipV1().RESTClient(), "networkpolicyconfigs", metav1.NamespaceAll, fields.Everything())
+	watchlist := cache.NewFilteredListWatchFromClient(v3.CagipV1().RESTClient(), "networkpolicyconfigs", metav1.NamespaceAll, utils.DefaultWatchOptionModifier)
+
 	resyncPeriod := 30 * time.Minute
 
 	store, controller := cache.NewInformer(watchlist, &v12.NetworkPolicyConfig{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
