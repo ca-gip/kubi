@@ -66,7 +66,6 @@ func AuthenticateHandler() http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			code = http.StatusOK
 			w.WriteHeader(code)
-			utils.Log.Info().Msgf("%v", resp)
 			err = json.NewEncoder(w).Encode(resp)
 			if err != nil {
 				utils.Log.Error().Msg(err.Error())
