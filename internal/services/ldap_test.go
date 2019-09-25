@@ -2,10 +2,101 @@ package services_test
 
 import (
 	"github.com/ca-gip/kubi/internal/services"
+	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"regexp"
 	"testing"
 )
+
+func TestEnvironmentMapping(t *testing.T) {
+	t.Run("with_valid_short_name", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-dev")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-development", result.Namespace)
+		assert.Equal(t, "development", result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_short_name-int", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-int")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-integration", result.Namespace)
+		assert.Equal(t, "integration", result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_short_name-uat", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-uat")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-uat", result.Namespace)
+		assert.Equal(t, "uat", result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_short_name-prod", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-prd")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-production", result.Namespace)
+		assert.Equal(t, "production", result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_short_name-preprod", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-pprd")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-preproduction", result.Namespace)
+		assert.Equal(t, utils.KubiEnvironmentPreproduction, result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_name", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-development")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-development", result.Namespace)
+		assert.Equal(t, "development", result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_name-int", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-integration")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-integration", result.Namespace)
+		assert.Equal(t, utils.KubiEnvironmentIntegration, result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_name-uat", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-uat")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-uat", result.Namespace)
+		assert.Equal(t, utils.KubiEnvironmentUAT, result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_name-prod", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-production")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-production", result.Namespace)
+		assert.Equal(t, utils.KubiEnvironmentProduction, result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_name-preproduction", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever-preproduction")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever-preproduction", result.Namespace)
+		assert.Equal(t, utils.KubiEnvironmentPreproduction, result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+
+	t.Run("with_valid_name-without-env", func(t *testing.T) {
+		result := services.EnvironmentParser("whatever")
+		assert.NotNil(t, result)
+		assert.Equal(t, "whatever", result.Namespace)
+		assert.Equal(t, utils.Empty, result.Environment)
+		assert.Equal(t, "whatever", result.Project)
+	})
+}
 
 func TestGetUserNamespace(t *testing.T) {
 	groups := []string{
@@ -22,6 +113,7 @@ func TestGetUserNamespace(t *testing.T) {
 		assert.Nil(t, error)
 		assert.NotNil(t, result)
 		assert.Equal(t, "group", result.Namespace)
+		assert.Equal(t, utils.Empty, result.Environment)
 		assert.Equal(t, "admin", result.Role)
 
 	})
@@ -154,6 +246,30 @@ func TestGetUserNamespace(t *testing.T) {
 		services.DnsParser = goodRegexp
 		assert.NotNil(t, error)
 		assert.Nil(t, result)
+
+	})
+
+	t.Run("with_valid_name_and_env", func(t *testing.T) {
+
+		result, error := services.GetUserNamespace("DL_NATIVE-dev_ADMIN")
+
+		assert.Nil(t, error)
+		assert.NotNil(t, result)
+		assert.Equal(t, "native-development", result.Namespace)
+		assert.Equal(t, "development", result.Environment)
+		assert.Equal(t, "admin", result.Role)
+
+	})
+
+	t.Run("with_valid_name_and_env_pprd", func(t *testing.T) {
+
+		result, error := services.GetUserNamespace("DL_NATIVE-pprd_ADMIN")
+
+		assert.Nil(t, error)
+		assert.NotNil(t, result)
+		assert.Equal(t, "native-preproduction", result.Namespace)
+		assert.Equal(t, "preproduction", result.Environment)
+		assert.Equal(t, "admin", result.Role)
 
 	})
 

@@ -10,6 +10,8 @@ const (
 )
 
 const (
+	Empty = ""
+
 	KubiResourcePrefix = "kubi"
 
 	KubiClusterRoleBindingReaderName = "kubi-reader"
@@ -43,10 +45,22 @@ var BlacklistedNamespaces = []string{
 	KubiResourcePrefix,
 }
 
-var LdapNsMapping = map[string][]string{
-	KubiEnvironmentDevelopment:   []string{KubiEnvironmentDevelopment, KubiEnvironmentShortDevelopment},
-	KubiEnvironmentIntegration:   []string{KubiEnvironmentIntegration, KubiEnvironmentShortInt},
-	KubiEnvironmentUAT:           []string{KubiEnvironmentUAT},
-	KubiEnvironmentPreproduction: []string{KubiEnvironmentPreproduction, KubiEnvironmentShortPreproduction},
-	KubiEnvironmentProduction:    []string{KubiEnvironmentProduction, KubiEnvironmentShortProduction},
+var AllEnvironments = []string{
+	KubiEnvironmentProduction,
+	KubiEnvironmentShortProduction,
+	KubiEnvironmentIntegration,
+	KubiEnvironmentShortInt,
+	KubiEnvironmentUAT,
+	KubiEnvironmentPreproduction,
+	KubiEnvironmentShortPreproduction,
+	KubiEnvironmentDevelopment,
+	KubiEnvironmentShortDevelopment,
+}
+
+var LdapMapping = map[string]string{
+	KubiEnvironmentShortDevelopment:   KubiEnvironmentDevelopment,
+	KubiEnvironmentShortInt:           KubiEnvironmentIntegration,
+	KubiEnvironmentUAT:                KubiEnvironmentUAT,
+	KubiEnvironmentShortPreproduction: KubiEnvironmentPreproduction,
+	KubiEnvironmentShortProduction:    KubiEnvironmentProduction,
 }

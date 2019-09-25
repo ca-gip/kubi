@@ -46,14 +46,14 @@ func GenerateResources() error {
 
 // A loop wrapper for generateProject
 // splitted for unit test !
-func GenerateProjects(context []*types.NamespaceAndRole) {
+func GenerateProjects(context []*types.Project) {
 	for _, auth := range context {
 		generateProject(auth)
 	}
 }
 
 // generate a project config or update it if exists
-func generateProject(projectInfos *types.NamespaceAndRole) {
+func generateProject(projectInfos *types.Project) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
 	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectInfos.Namespace, metav1.GetOptions{})
@@ -80,34 +80,30 @@ func generateProject(projectInfos *types.NamespaceAndRole) {
 		project.Spec.Tenant = utils.Config.Tenant
 	}
 
-	// TODO, Add dynmic code to managed by a json list
-	if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentDevelopment]) {
-		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentDevelopment])
-		project.Spec.Environment = utils.KubiEnvironmentDevelopment
+	project.Spec.Project = projectInfos.Project
+	project.Spec.Environment = projectInfos.Environment
+
+	switch projectInfos.Environment {
+	case utils.KubiEnvironmentDevelopment:
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageScratch)
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
-	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentIntegration]) {
-		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentIntegration])
-		project.Spec.Environment = utils.KubiEnvironmentIntegration
+	case utils.KubiEnvironmentIntegration:
+		project.Spec.Environment = projectInfos.Environment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
-	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentProduction]) {
-		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentProduction])
-		project.Spec.Environment = utils.KubiEnvironmentProduction
+	case utils.KubiEnvironmentProduction:
+		project.Spec.Environment = projectInfos.Environment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
-	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentUAT]) {
-		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentUAT])
-		project.Spec.Environment = utils.KubiEnvironmentUAT
-		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
+	case utils.KubiEnvironmentUAT:
+		project.Spec.Environment = projectInfos.Environment
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStaging)
-	} else if utils.HasSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentPreproduction]) {
-		project.Spec.Project = utils.TrimSuffixes(projectInfos.Namespace, utils.LdapNsMapping[utils.KubiEnvironmentPreproduction])
-		project.Spec.Environment = utils.KubiEnvironmentPreproduction
 		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
-	} else {
+	case utils.KubiEnvironmentPreproduction:
+		project.Spec.Environment = projectInfos.Environment
+		project.Spec.Stages = append(project.Spec.Stages, utils.KubiStageStable)
+	default:
 		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace)
-		project.Spec.Project = projectInfos.Namespace
 	}
 
 	project.Spec.SourceEntity = projectInfos.Source
@@ -144,7 +140,7 @@ func generateProject(projectInfos *types.NamespaceAndRole) {
 
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
-func GenerateRoleBinding(context *types.NamespaceAndRole) {
+func GenerateRoleBinding(context *types.Project) {
 	kconfig, err := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
@@ -296,7 +292,7 @@ func projectUpdate(old interface{}, new interface{}) {
 	generateNetworkPolicy(newProject.Name, nil)
 
 	// TODO: Refactor with a non static list of roles
-	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: newProject.Name, Role: "admin"})
+	GenerateRoleBinding(&types.Project{Namespace: newProject.Name, Role: "admin"})
 
 }
 
@@ -307,7 +303,7 @@ func projectCreated(obj interface{}) {
 	generateNetworkPolicy(project.Name, nil)
 
 	// TODO: Refactor with a non static list of roles
-	GenerateRoleBinding(&types.NamespaceAndRole{Namespace: project.Name, Role: "admin"})
+	GenerateRoleBinding(&types.Project{Namespace: project.Name, Role: "admin"})
 }
 
 func projectDelete(obj interface{}) {
