@@ -29,7 +29,7 @@ func GetUserGroups(userDN string) ([]string, error) {
 		return nil, errors.Wrapf(err, "error searching for user's group for %s", userDN)
 	}
 
-	groups := []string{}
+	var groups []string
 	for _, entry := range results.Entries {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}
@@ -54,7 +54,7 @@ func GetAllGroups() ([]string, error) {
 		return nil, errors.Wrap(err, "Error searching all groups")
 	}
 
-	groups := []string{}
+	var groups []string
 	for _, entry := range results.Entries {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}

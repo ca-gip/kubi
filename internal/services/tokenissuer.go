@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-var Config *types.Config
-
 var signingKey, _ = ioutil.ReadFile(utils.TlsKeyPath)
 
 func generateUserToken(groups []string, username string, hasAdminAccess bool) (string, error) {
@@ -24,15 +22,15 @@ func generateUserToken(groups []string, username string, hasAdminAccess bool) (s
 	var auths = GetUserNamespaces(groups)
 
 	duration, err := time.ParseDuration(utils.Config.TokenLifeTime)
-	time := time.Now().Add(duration)
+	current := time.Now().Add(duration)
 
 	// Create the Claims
 	claims := types.AuthJWTClaims{
-		auths,
-		username,
-		hasAdminAccess,
-		jwt.StandardClaims{
-			ExpiresAt: time.Unix(),
+		Auths:       auths,
+		User:        username,
+		AdminAccess: hasAdminAccess,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: current.Unix(),
 			Issuer:    "Kubi Server",
 		},
 	}

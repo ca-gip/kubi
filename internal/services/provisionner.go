@@ -148,9 +148,9 @@ func GenerateRoleBinding(context *types.Project) {
 	utils.Log.Info().Msgf("Rolebinding %v doesn't exist for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
-			"rbac.authorization.k8s.io",
-			"ClusterRole",
-			roleBindingName,
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     roleBindingName,
 		},
 		Subjects: []v1.Subject{
 			{
@@ -174,50 +174,6 @@ func GenerateRoleBinding(context *types.Project) {
 		utils.Log.Error().Msg(err.Error())
 	}
 
-}
-
-// Generate a Role Binding from a cluster role, scoped to an existing namespace
-// If exists, nothing is done, only creating !
-func generateClusterRoleBinding(roleRefName string, roleBindingName string) {
-	kconfig, err := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
-	api := clientSet.RbacV1()
-
-	_, errRB := api.ClusterRoleBindings().Get(roleBindingName, metav1.GetOptions{})
-
-	if errRB == nil {
-		utils.Log.Info().Msgf("ClusterRolebinding: %v already exists, nothing to do.", roleBindingName)
-		return
-	}
-
-	utils.Log.Info().Msgf("ClusterRolebinding %v doesn't exist ", roleBindingName)
-
-	clusterRoleBinding := v1.ClusterRoleBinding{
-		RoleRef: v1.RoleRef{
-			"rbac.authorization.k8s.io",
-			"ClusterRole",
-			roleRefName,
-		},
-		Subjects: []v1.Subject{
-			{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Group",
-				Name:     roleBindingName,
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: roleBindingName,
-			Labels: map[string]string{
-				"name":    roleBindingName,
-				"creator": "kubi",
-				"version": "v2",
-			},
-		},
-	}
-	_, err = api.ClusterRoleBindings().Create(&clusterRoleBinding)
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-	}
 }
 
 // generateNamespace from a name
@@ -395,7 +351,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 	UDP := corev1.ProtocolUDP
 	TCP := corev1.ProtocolTCP
 
-	ingressRules := []v1n.NetworkPolicyPeer{}
+	var ingressRules []v1n.NetworkPolicyPeer
 
 	// Add default intra namespace communication
 	ingressRules = append(ingressRules, v1n.NetworkPolicyPeer{
@@ -410,7 +366,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 		})
 	}
 
-	netpolPorts := []v1n.NetworkPolicyPort{}
+	var netpolPorts []v1n.NetworkPolicyPort
 
 	if len(networkPolicyConfig.Spec.Egress.Ports) > 0 {
 		for _, port := range networkPolicyConfig.Spec.Egress.Ports {

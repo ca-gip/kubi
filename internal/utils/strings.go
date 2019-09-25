@@ -11,13 +11,3 @@ func HasSuffixes(word string, suffixes []string) bool {
 	}
 	return false
 }
-
-// Remove suffix if exists in array.
-func TrimSuffixes(word string, suffixes []string) string {
-	for _, suffix := range suffixes {
-		if strings.HasSuffix(word, suffix) {
-			return strings.TrimSuffix(word, "-"+suffix)
-		}
-	}
-	return word
-}
