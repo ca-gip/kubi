@@ -9,6 +9,8 @@ import (
 type LdapConfig struct {
 	UserBase            string
 	GroupBase           string
+	AppMasterGroupBase  string
+	OpsMasterGroupBase  string
 	AdminUserBase       string
 	AdminGroupBase      string
 	Host                string
@@ -75,9 +77,11 @@ type KubeConfigUserToken struct {
 }
 
 type AuthJWTClaims struct {
-	Auths       []*Project `json:"auths"`
-	User        string     `json:"user"`
-	AdminAccess bool       `json:"adminAccess"`
+	Auths             []*Project `json:"auths"`
+	User              string     `json:"user"`
+	AdminAccess       bool       `json:"adminAccess"`
+	ApplicationAccess bool       `json:"appAccess"`
+	OpsAccess         bool       `json:"opsAccess"`
 	jwt.StandardClaims
 }
 

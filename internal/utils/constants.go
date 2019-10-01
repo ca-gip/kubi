@@ -19,6 +19,8 @@ const (
 
 	AuthenticatedGroup = "system:authenticated"
 	AdminGroup         = "system:masters"
+	ApplicationMaster  = "application:masters"
+	OPSMaster          = "ops:masters"
 
 	KubiStageScratch = "scratch"
 	KubiStageStaging = "staging"

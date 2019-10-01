@@ -87,6 +87,8 @@ func MakeConfig() (*types.Config, error) {
 	ldapConfig := types.LdapConfig{
 		UserBase:            os.Getenv("LDAP_USERBASE"),
 		GroupBase:           os.Getenv("LDAP_GROUPBASE"),
+		AppMasterGroupBase:  getEnv("LDAP_APP_GROUPBASE", ""),
+		OpsMasterGroupBase:  getEnv("LDAP_OPS_GROUPBASE", ""),
 		AdminUserBase:       getEnv("LDAP_ADMIN_USERBASE", ""),
 		AdminGroupBase:      getEnv("LDAP_ADMIN_GROUPBASE", ""),
 		Host:                os.Getenv("LDAP_SERVER"),

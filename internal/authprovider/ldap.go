@@ -164,6 +164,50 @@ func HasAdminAccess(userDN string) bool {
 	return err == nil && len(res.Entries) > 0
 }
 
+// Check if a user is in admin LDAP group
+// return true if it belong to ApplicationGroup, false otherwise
+func HasApplicationAccess(userDN string) bool {
+
+	// No need to go further, there is no Application Group Base
+	if len(utils.Config.Ldap.AppMasterGroupBase) == 0 {
+		return false
+	}
+
+	conn, err := getBindedConnection()
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return false
+	}
+
+	defer conn.Close()
+	req := newUserApplicationSearchRequest(userDN)
+	res, err := conn.Search(req)
+
+	return err == nil && len(res.Entries) > 0
+}
+
+// Check if a user is in admin LDAP group
+// return true if it belong to OpsGroup, false otherwise
+func HasOpsAccess(userDN string) bool {
+
+	// No need to go further, there is no Application Group Base
+	if len(utils.Config.Ldap.OpsMasterGroupBase) == 0 {
+		return false
+	}
+
+	conn, err := getBindedConnection()
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return false
+	}
+
+	defer conn.Close()
+	req := newUserOpsSearchRequest(userDN)
+	res, err := conn.Search(req)
+
+	return err == nil && len(res.Entries) > 0
+}
+
 // request to search user
 func newUserSearchRequest(userBaseDN string, username string) *ldap.SearchRequest {
 	userFilter := fmt.Sprintf(utils.Config.Ldap.UserFilter, username)
@@ -198,6 +242,36 @@ func newUserAdminSearchRequest(userDN string) *ldap.SearchRequest {
 	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
 	return &ldap.SearchRequest{
 		BaseDN:       utils.Config.Ldap.AdminGroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       groupFilter, // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+}
+
+// request to get user group list
+func newUserApplicationSearchRequest(userDN string) *ldap.SearchRequest {
+	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
+	return &ldap.SearchRequest{
+		BaseDN:       utils.Config.Ldap.AppMasterGroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       groupFilter, // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+}
+
+// request to get user group list
+func newUserOpsSearchRequest(userDN string) *ldap.SearchRequest {
+	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
+	return &ldap.SearchRequest{
+		BaseDN:       utils.Config.Ldap.OpsMasterGroupBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
 		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations

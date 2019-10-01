@@ -158,6 +158,16 @@ func GenerateRoleBinding(context *types.Project) {
 				Kind:     "Group",
 				Name:     fmt.Sprintf("%s-%s", context.Namespace, context.Role),
 			},
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     utils.ApplicationMaster,
+			},
+			{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "Group",
+				Name:     utils.OPSMaster,
+			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,
@@ -165,7 +175,7 @@ func GenerateRoleBinding(context *types.Project) {
 			Labels: map[string]string{
 				"name":    roleBindingName,
 				"creator": "kubi",
-				"version": "v2",
+				"version": "v3",
 			},
 		},
 	}
