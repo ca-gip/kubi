@@ -11,7 +11,7 @@ import (
 
 // Authenticate service for kubernetes Api Server
 // https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication
-func AuthenticateHandler() http.HandlerFunc {
+func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var code int
@@ -26,7 +26,10 @@ func AuthenticateHandler() http.HandlerFunc {
 			utils.Log.Error().Msg(err.Error())
 		}
 
-		token, err := CurrentJWT(tokenReview.Spec.Token)
+		token, err := issuer.CurrentJWT(tokenReview.Spec.Token)
+		if err != nil {
+			err = issuer.VerifyToken(tokenReview.Spec.Token)
+		}
 
 		if err != nil {
 			resp := v1beta1.TokenReview{

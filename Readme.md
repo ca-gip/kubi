@@ -65,11 +65,13 @@ For specific exceptions, add another network policy.
 
 ## Parameters
 
-| Name                            | Description                          | Example                       | Mandatory | Default      |
-| :--------------                 | :-----------------------------:      | ----------------------------: | ---------:| ----------:  |
+| Name                            | Description                          | Example                          | Mandatory   | Default     |
+| :--------------                 | :-----------------------------:      | ----------------------------:    | ---------:  | ----------: |
 |  **PUBLIC_APISERVER_URL**       |  *Api server url (public)*           | `https://k8s.macompany.com`      | `yes  `     | -           |
 |  **LDAP_USERBASE**              |  *BaseDn for user base search*       | `ou=People,dc=example,dc=org   ` | `yes  `     | -           |
 |  **LDAP_GROUPBASE**             |  *BaseDn for group base search*      | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
+|  **LDAP_APP_GROUPBASE**         |  *BaseDn for group base search*      | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
+|  **LDAP_OPS_GROUPBASE**         |  *BaseDn for group base search*      | `ou=CONTAINER,dc=example,dc=org` | `yes  `     | -           |
 |  **LDAP_ADMIN_USERBASE**        |  *BaseDn for admin base search*      | `ou=Admin,dc=example,dc=org   `  | `yes  `     | -           |
 |  **LDAP_ADMIN_GROUPBASE**       |  *BaseDn for admin group base search*| `ou=AdminGroup,dc=example,dc=org`| `yes  `     | -           |
 |  **LDAP_SERVER**                |  *LDAP server ip address*            | `"192.168.2.1"                 ` | `yes  `     | -           |
@@ -81,6 +83,7 @@ For specific exceptions, add another network policy.
 |  **LDAP_PASSWD**                |  *LDAP bind account password*        | `"password"                    ` | `yes  `     | -           |
 |  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
 |  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
+|  **LOCATOR**                    |  *Locator: must be internet or extranet*    | `"intranet"             ` | `no   `     | intranet    |
 
 # Client
 

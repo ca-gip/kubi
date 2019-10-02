@@ -111,6 +111,7 @@ func MakeConfig() (*types.Config, error) {
 		PublicApiServerURL: getEnv("PUBLIC_APISERVER_URL", ""),
 		ApiServerTLSConfig: *tlsConfig,
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
+		Locator:            getEnv("LOCATOR", KubiLocatorIntranet),
 	}
 
 	err := validation.ValidateStruct(config,

@@ -97,7 +97,6 @@ func GetUserNamespace(group string) (*types.Project, error) {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The name for role cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
 	} else {
-
 		return &project, nil
 	}
 }

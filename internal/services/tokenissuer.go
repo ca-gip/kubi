@@ -1,6 +1,7 @@
 package services
 
 import (
+	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
 	"github.com/ca-gip/kubi/internal/authprovider"
@@ -9,39 +10,49 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"gopkg.in/yaml.v2"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 )
 
-var signingKey, _ = ioutil.ReadFile(utils.TlsKeyPath)
+type TokenIssuer struct {
+	EcdsaPrivate  *ecdsa.PrivateKey
+	EcdsaPublic   *ecdsa.PublicKey
+	TokenDuration string
+	Locator       string
+}
 
-func generateUserToken(groups []string, username string, hasAdminAccess bool) (string, error) {
+func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, hasAdminAccess bool, HasApplicationAccess bool, HasOpsAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
-	duration, err := time.ParseDuration(utils.Config.TokenLifeTime)
+	duration, err := time.ParseDuration(issuer.TokenDuration)
 	current := time.Now().Add(duration)
 
 	// Create the Claims
 	claims := types.AuthJWTClaims{
-		Auths:       auths,
-		User:        username,
-		AdminAccess: hasAdminAccess,
+		Auths:             auths,
+		User:              username,
+		AdminAccess:       hasAdminAccess,
+		ApplicationAccess: HasApplicationAccess,
+		OpsAccess:         HasOpsAccess,
+		Locator:           issuer.Locator,
+
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: current.Unix(),
 			Issuer:    "Kubi Server",
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	signedToken, err := token.SignedString(signingKey)
-
-	return signedToken, err
+	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
+	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
+	if err != nil {
+		return nil, err
+	}
+	return &signedToken, err
 }
 
-func baseGenerateToken(auth types.Auth) (*string, error) {
+func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth) (*string, error) {
 
 	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
 	if err != nil {
@@ -53,25 +64,25 @@ func baseGenerateToken(auth types.Auth) (*string, error) {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
-	token, err := generateUserToken(groups, auth.Username, ldap.HasAdminAccess(*userDN))
+	token, err := issuer.GenerateUserToken(groups, auth.Username, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
 
 	if err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
 	utils.TokenCounter.WithLabelValues("token_success").Inc()
-	return &token, nil
+	return token, nil
 }
 
-func GenerateJWT(w http.ResponseWriter, r *http.Request) {
-	err, auth := basicAuth(r)
+func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
+	err, auth := issuer.basicAuth(r)
 	if err != nil {
 		utils.Log.Info().Err(err)
 		w.WriteHeader(http.StatusUnauthorized)
 		io.WriteString(w, "Basic Auth: Invalid credentials")
 	}
 
-	token, err := baseGenerateToken(*auth)
+	token, err := issuer.baseGenerateToken(*auth)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 		w.WriteHeader(http.StatusCreated)
@@ -85,8 +96,8 @@ func GenerateJWT(w http.ResponseWriter, r *http.Request) {
 // GenerateConfig generates a config in yaml, including JWT token
 // and cluster information. It can be directly used out of the box
 // by kubectl. It returns a well formatted yaml
-func GenerateConfig(w http.ResponseWriter, r *http.Request) {
-	err, auth := basicAuth(r)
+func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request) {
+	err, auth := issuer.basicAuth(r)
 
 	if err != nil {
 		utils.Log.Info().Err(err)
@@ -96,7 +107,7 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	token, err := baseGenerateToken(*auth)
+	token, err := issuer.baseGenerateToken(*auth)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 	} else {
@@ -147,10 +158,10 @@ func GenerateConfig(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func CurrentJWT(usertoken string) (*types.AuthJWTClaims, error) {
+func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, error) {
 
 	token, err := jwt.ParseWithClaims(usertoken, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return signingKey, nil
+		return issuer.EcdsaPublic, nil
 	})
 	if err != nil {
 		utils.Log.Info().Msgf("Bad token: %v", err.Error())
@@ -164,7 +175,13 @@ func CurrentJWT(usertoken string) (*types.AuthJWTClaims, error) {
 	}
 }
 
-func basicAuth(r *http.Request) (error, *types.Auth) {
+func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
+	method := jwt.SigningMethodES512
+	tokenSplits := strings.Split(usertoken, ".")
+	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
+}
+
+func (issuer *TokenIssuer) basicAuth(r *http.Request) (error, *types.Auth) {
 	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 
 	if len(auth) != 2 || auth[0] != "Basic" {

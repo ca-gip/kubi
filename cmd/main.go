@@ -1,11 +1,14 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -30,6 +33,31 @@ func main() {
 		log.Error().Err(err)
 	}
 
+	// TODO Move to config ( for validation )
+	ecdsaPem, err := ioutil.ReadFile(utils.ECDSAKeyPath)
+	if err != nil {
+		utils.Log.Fatal().Msgf("Unable to read ECDSA private key: %v", err)
+	}
+	ecdsaPubPem, err := ioutil.ReadFile(utils.ECDSAPublicPath)
+	if err != nil {
+		utils.Log.Fatal().Msgf("Unable to read ECDSA public key: %v", err)
+	}
+	var ecdsaKey *ecdsa.PrivateKey
+	var ecdsaPub *ecdsa.PublicKey
+	if ecdsaKey, err = jwt.ParseECPrivateKeyFromPEM(ecdsaPem); err != nil {
+		utils.Log.Fatal().Msgf("Unable to parse ECDSA private key: %v", err)
+	}
+	if ecdsaPub, err = jwt.ParseECPublicKeyFromPEM(ecdsaPubPem); err != nil {
+		utils.Log.Fatal().Msgf("Unable to parse ECDSA public key: %v", err)
+	}
+
+	tokenIssuer := &services.TokenIssuer{
+		EcdsaPrivate:  ecdsaKey,
+		EcdsaPublic:   ecdsaPub,
+		TokenDuration: utils.Config.TokenLifeTime,
+		Locator:       utils.Config.Locator,
+	}
+
 	router := mux.NewRouter()
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -37,9 +65,9 @@ func main() {
 	})
 
 	router.HandleFunc("/ca", services.CA).Methods(http.MethodGet)
-	router.HandleFunc("/config", services.GenerateConfig).Methods(http.MethodGet)
-	router.HandleFunc("/token", services.GenerateJWT).Methods(http.MethodGet)
-	router.HandleFunc("/authenticate", services.AuthenticateHandler()).Methods(http.MethodPost)
+	router.HandleFunc("/config", tokenIssuer.GenerateConfig).Methods(http.MethodGet)
+	router.HandleFunc("/token", tokenIssuer.GenerateJWT).Methods(http.MethodGet)
+	router.HandleFunc("/authenticate", services.AuthenticateHandler(tokenIssuer)).Methods(http.MethodPost)
 	router.Handle("/metrics", promhttp.Handler())
 
 	services.WatchNetPolConfig()
