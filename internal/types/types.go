@@ -35,6 +35,7 @@ type Config struct {
 	ApiServerTLSConfig tls.Config
 	TokenLifeTime      string
 	Locator            string
+	Endpoint           string
 }
 
 // Note: struct fields must be public in order for unmarshal to
@@ -80,10 +81,12 @@ type KubeConfigUserToken struct {
 type AuthJWTClaims struct {
 	Auths             []*Project `json:"auths"`
 	User              string     `json:"user"`
+	Contact           string     `json:"email"`
 	AdminAccess       bool       `json:"adminAccess"`
 	ApplicationAccess bool       `json:"appAccess"`
 	OpsAccess         bool       `json:"opsAccess"`
 	Locator           string     `json:"locator"`
+	Endpoint          string     `json:"endPoint"`
 	jwt.StandardClaims
 }
 

@@ -63,27 +63,27 @@ func GetAllGroups() ([]string, error) {
 
 // Authenticate a user through LDAP or LDS
 // return if bind was ok, the userDN for next usage, and error if occurred
-func AuthenticateUser(username string, password string) (*string, error) {
+func AuthenticateUser(username string, password string) (*string, *string, error) {
 
 	// First TCP connect
 	conn, err := getBindedConnection()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer conn.Close()
 
 	// Get User Distinguished Name for Standard User
-	userDN, err := getUserDN(conn, utils.Config.Ldap.UserBase, username)
+	userDN, mail, err := getUserDN(conn, utils.Config.Ldap.UserBase, username)
 	if err == nil {
 		err = conn.Bind(userDN, password)
-		return &userDN, err
+		return &userDN, &mail, err
 	} else if len(utils.Config.Ldap.AdminUserBase) > 0 {
-		userDN, err := getUserDN(conn, utils.Config.Ldap.AdminUserBase, username)
+		userDN, _, err := getUserDN(conn, utils.Config.Ldap.AdminUserBase, username)
 		err = conn.Bind(userDN, password)
-		return &userDN, err
+		return &userDN, &mail, err
 	} else {
 		utils.Log.Error().Msg(err.Error())
-		return nil, err
+		return nil, &mail, err
 	}
 }
 
@@ -125,21 +125,22 @@ func getBindedConnection() (*ldap.Conn, error) {
 }
 
 // Get User DN for searching in group
-func getUserDN(conn *ldap.Conn, userBaseDN string, username string) (string, error) {
+func getUserDN(conn *ldap.Conn, userBaseDN string, username string) (string, string, error) {
 	req := newUserSearchRequest(userBaseDN, username)
 
 	res, err := conn.Search(req)
 	if err != nil {
-		return "", errors.Wrapf(err, "Error searching for user %s", username)
+		return utils.Empty, utils.Empty, errors.Wrapf(err, "Error searching for user %s", username)
 	}
 
 	if len(res.Entries) == 0 {
-		return "", errors.Errorf("No result for the user search filter '%s'", req.Filter)
+		return utils.Empty, utils.Empty, errors.Errorf("No result for the user search filter '%s'", req.Filter)
 	} else if len(res.Entries) > 1 {
-		return "", errors.Errorf("Multiple entries found for the user search filter '%s'", req.Filter)
+		return utils.Empty, utils.Empty, errors.Errorf("Multiple entries found for the user search filter '%s'", req.Filter)
 	}
 	userDN := res.Entries[0].DN
-	return userDN, nil
+	mail := res.Entries[0].GetAttributeValue("mail")
+	return userDN, mail, nil
 }
 
 // Check if a user is in admin LDAP group

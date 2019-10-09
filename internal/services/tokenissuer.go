@@ -22,7 +22,7 @@ type TokenIssuer struct {
 	Locator       string
 }
 
-func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, hasAdminAccess bool, HasApplicationAccess bool, HasOpsAccess bool) (*string, error) {
+func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, HasApplicationAccess bool, HasOpsAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
@@ -33,6 +33,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, h
 	claims := types.AuthJWTClaims{
 		Auths:             auths,
 		User:              username,
+		Contact:           email,
 		AdminAccess:       hasAdminAccess,
 		ApplicationAccess: HasApplicationAccess,
 		OpsAccess:         HasOpsAccess,
@@ -54,7 +55,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, h
 
 func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth) (*string, error) {
 
-	userDN, err := ldap.AuthenticateUser(auth.Username, auth.Password)
+	userDN, mail, err := ldap.AuthenticateUser(auth.Username, auth.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth) (*string, error) {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
-	token, err := issuer.GenerateUserToken(groups, auth.Username, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
+	token, err := issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
 
 	if err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
