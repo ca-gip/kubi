@@ -56,6 +56,7 @@ func main() {
 		EcdsaPublic:   ecdsaPub,
 		TokenDuration: utils.Config.TokenLifeTime,
 		Locator:       utils.Config.Locator,
+		Endpoint:      utils.Config.Endpoint,
 	}
 
 	router := mux.NewRouter()

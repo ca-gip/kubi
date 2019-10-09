@@ -20,6 +20,7 @@ type TokenIssuer struct {
 	EcdsaPublic   *ecdsa.PublicKey
 	TokenDuration string
 	Locator       string
+	Endpoint      string
 }
 
 func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
@@ -35,10 +36,10 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		User:              username,
 		Contact:           email,
 		AdminAccess:       hasAdminAccess,
-		ApplicationAccess: HasApplicationAccess,
-		OpsAccess:         HasOpsAccess,
+		ApplicationAccess: hasApplicationAccess,
+		OpsAccess:         hasOpsAccess,
 		Locator:           issuer.Locator,
-		Endpoint:          utils.Config.Endpoint,
+		Endpoint:          issuer.Endpoint,
 
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: current.Unix(),
