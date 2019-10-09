@@ -22,7 +22,7 @@ type TokenIssuer struct {
 	Locator       string
 }
 
-func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, HasApplicationAccess bool, HasOpsAccess bool) (*string, error) {
+func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
@@ -38,6 +38,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		ApplicationAccess: HasApplicationAccess,
 		OpsAccess:         HasOpsAccess,
 		Locator:           issuer.Locator,
+		Endpoint:          utils.Config.Endpoint,
 
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: current.Unix(),
