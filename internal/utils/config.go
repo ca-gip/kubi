@@ -112,7 +112,6 @@ func MakeConfig() (*types.Config, error) {
 		ApiServerTLSConfig: *tlsConfig,
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 		Locator:            getEnv("LOCATOR", KubiLocatorIntranet),
-		Endpoint:           getEnv("ENDPOINT", "undeterminable"),
 	}
 
 	err := validation.ValidateStruct(config,
