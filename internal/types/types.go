@@ -86,6 +86,7 @@ type AuthJWTClaims struct {
 	OpsAccess         bool       `json:"opsAccess"`
 	Locator           string     `json:"locator"`
 	Endpoint          string     `json:"endPoint"`
+	Tenant            string     `json:"tenant"`
 	jwt.StandardClaims
 }
 

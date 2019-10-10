@@ -22,6 +22,7 @@ type TokenIssuer struct {
 	TokenDuration      string
 	Locator            string
 	PublicApiServerURL string
+	Tenant             string
 }
 
 func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
@@ -42,6 +43,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		OpsAccess:         hasOpsAccess,
 		Locator:           issuer.Locator,
 		Endpoint:          url.Host,
+		Tenant:            issuer.Tenant,
 
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: current.Unix(),

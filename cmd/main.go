@@ -57,6 +57,7 @@ func main() {
 		TokenDuration:      utils.Config.TokenLifeTime,
 		Locator:            utils.Config.Locator,
 		PublicApiServerURL: utils.Config.PublicApiServerURL,
+		Tenant:             utils.Config.Tenant,
 	}
 
 	router := mux.NewRouter()
