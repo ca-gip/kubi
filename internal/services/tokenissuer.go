@@ -11,16 +11,17 @@ import (
 	"gopkg.in/yaml.v2"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
 
 type TokenIssuer struct {
-	EcdsaPrivate  *ecdsa.PrivateKey
-	EcdsaPublic   *ecdsa.PublicKey
-	TokenDuration string
-	Locator       string
-	Endpoint      string
+	EcdsaPrivate       *ecdsa.PrivateKey
+	EcdsaPublic        *ecdsa.PublicKey
+	TokenDuration      string
+	Locator            string
+	PublicApiServerURL string
 }
 
 func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
@@ -29,6 +30,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 
 	duration, err := time.ParseDuration(issuer.TokenDuration)
 	current := time.Now().Add(duration)
+	url, _ := url.Parse(issuer.PublicApiServerURL)
 
 	// Create the Claims
 	claims := types.AuthJWTClaims{
@@ -39,7 +41,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		ApplicationAccess: hasApplicationAccess,
 		OpsAccess:         hasOpsAccess,
 		Locator:           issuer.Locator,
-		Endpoint:          issuer.Endpoint,
+		Endpoint:          url.Host,
 
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: current.Unix(),

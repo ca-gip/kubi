@@ -52,11 +52,11 @@ func main() {
 	}
 
 	tokenIssuer := &services.TokenIssuer{
-		EcdsaPrivate:  ecdsaKey,
-		EcdsaPublic:   ecdsaPub,
-		TokenDuration: utils.Config.TokenLifeTime,
-		Locator:       utils.Config.Locator,
-		Endpoint:      utils.Config.Endpoint,
+		EcdsaPrivate:       ecdsaKey,
+		EcdsaPublic:        ecdsaPub,
+		TokenDuration:      utils.Config.TokenLifeTime,
+		Locator:            utils.Config.Locator,
+		PublicApiServerURL: utils.Config.PublicApiServerURL,
 	}
 
 	router := mux.NewRouter()
