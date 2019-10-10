@@ -76,7 +76,7 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	project.Source = lowerGroup
 
 	isNamespaceValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace)
-	isRoleValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, role)
+	isRoleValid := utils.Index(utils.WhitelistedRoles, project.Role) != -1
 
 	if utils.Index(utils.BlacklistedNamespaces, project.Namespace) != -1 {
 		return nil, errors.New(fmt.Sprintf(`
@@ -89,7 +89,7 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	} else if !isRoleValid {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The ldap group %v, cannot be created. 
-			The role %v is not dns1123 compliant.`, group, project.Namespace))
+			The role %v is not valid.`, group, project.Namespace))
 	} else if len(project.Namespace) > utils.DNS1123LabelMaxLength {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The name for namespace cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))

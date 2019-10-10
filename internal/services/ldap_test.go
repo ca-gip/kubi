@@ -129,13 +129,22 @@ func TestGetUserNamespace(t *testing.T) {
 
 	})
 
-	t.Run("with more than 2 split", func(t *testing.T) {
+	t.Run("with more than 2 split and invalid role", func(t *testing.T) {
 
-		result, err := services.GetUserNamespace(groups[2])
+		result, err := services.GetUserNamespace("valid_group_with_a_lot_of_service")
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "split", result.Role)
+
+	})
+
+	t.Run("with more than 2 split and valid role", func(t *testing.T) {
+
+		result, err := services.GetUserNamespace("valid_group_with_a_lot_of_service")
+
+		assert.Nil(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "service", result.Role)
 		assert.Equal(t, "of", result.Namespace)
 
 	})
@@ -286,7 +295,7 @@ func TestGetUserNamespaces(t *testing.T) {
 	groups := []string{
 		"valid_group_admin",
 		"valid_GROUP_ADMIN",
-		"valid_group_with_a_lot_of_split",
+		"valid_group_with_a_lot_of_service",
 		"notvalid",
 		"____",
 		"--_--_--_",

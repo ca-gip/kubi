@@ -49,8 +49,15 @@ var BlacklistedNamespaces = []string{
 	"kube-system",
 	"kube-public",
 	"ingress-nginx",
+	"admin",
 	"default",
 	KubiResourcePrefix,
+}
+
+var WhitelistedRoles = []string{
+	"admin",
+	"service",
+	"user",
 }
 
 var AllEnvironments = []string{
