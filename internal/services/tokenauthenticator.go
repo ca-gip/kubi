@@ -86,7 +86,6 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 				utils.Log.Error().Msgf("Errot serializing json to token review: %s", marshallError.Error())
 			}
 
-			utils.Log.Info().Msgf("%v", resp.String())
 			err = json.NewEncoder(w).Encode(resp)
 			if err != nil {
 				utils.Log.Error().Msg(err.Error())
