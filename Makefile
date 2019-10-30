@@ -10,7 +10,6 @@ DOCKER_REPO= cagip
 build:
 	vendor/k8s.io/code-generator/generate-groups.sh all "$(REPO)/pkg/client" "$(REPO)/pkg/apis" ca-gip:v1
 	go build -v -o ./build/kubi -i $(GOPATH)/src/$(REPO)/cmd/main.go
-	go build -v -o ./build/kubi-key -i $(GOPATH)/src/$(REPO)/cmd/ma.go
 
 darwin:
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 vendor/k8s.io/code-generator/generate-groups.sh all "$(REPO)/pkg/client" "$(REPO)/pkg/apis" ca-gip:v1

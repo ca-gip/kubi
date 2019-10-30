@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/ca-gip/kubi/internal/authprovider"
 	"github.com/ca-gip/kubi/internal/types"
 	"github.com/ca-gip/kubi/internal/utils"
@@ -185,6 +186,9 @@ func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, e
 func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
 	method := jwt.SigningMethodES512
 	tokenSplits := strings.Split(usertoken, ".")
+	if len(tokenSplits) < 3 {
+		errors.New(fmt.Sprintf("The token %s id not a JWT token", usertoken))
+	}
 	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
 }
 
