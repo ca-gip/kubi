@@ -140,7 +140,6 @@ func GenerateRoleBinding(context *types.Project) {
 	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", context.Role)
 	_, errRB := api.RoleBindings(context.Namespace).Get(roleBindingName, metav1.GetOptions{})
 
-	utils.Log.Info().Msgf("Rolebinding %v doesn't exist for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -177,8 +176,10 @@ func GenerateRoleBinding(context *types.Project) {
 
 	if errRB != nil {
 		_, err = api.RoleBindings(context.Namespace).Create(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
 	} else {
 		_, err = api.RoleBindings(context.Namespace).Update(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
 	}
 
 	if err != nil {
