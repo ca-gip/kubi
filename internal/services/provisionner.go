@@ -140,11 +140,6 @@ func GenerateRoleBinding(context *types.Project) {
 	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", context.Role)
 	_, errRB := api.RoleBindings(context.Namespace).Get(roleBindingName, metav1.GetOptions{})
 
-	if errRB == nil {
-		utils.Log.Info().Msgf("Rolebinding: %v already exists for namespace %v", roleBindingName, context.Namespace)
-		return
-	}
-
 	utils.Log.Info().Msgf("Rolebinding %v doesn't exist for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
@@ -179,7 +174,13 @@ func GenerateRoleBinding(context *types.Project) {
 			},
 		},
 	}
-	_, err = api.RoleBindings(context.Namespace).Create(&newRoleBinding)
+
+	if errRB != nil {
+		_, err = api.RoleBindings(context.Namespace).Create(&newRoleBinding)
+	} else {
+		_, err = api.RoleBindings(context.Namespace).Update(&newRoleBinding)
+	}
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 	}
