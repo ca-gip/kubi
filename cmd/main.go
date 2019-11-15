@@ -87,6 +87,6 @@ func main() {
 	}()
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
-	utils.Log.Fatal().Err(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router))
+	utils.Log.Info().Msg(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router).Error())
 
 }

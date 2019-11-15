@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"github.com/ca-gip/argo-operator/utils"
 	"github.com/ca-gip/kubi/internal/types"
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
@@ -28,6 +29,7 @@ func MakeConfig() (*types.Config, error) {
 	// Check cluster deployment
 	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 	if len(host) == 0 || len(port) == 0 {
+		utils.Log.Fatal().Msgf("Cannot retrieve environment variable for Kubernetes service")
 		return nil, rest.ErrNotInCluster
 	}
 

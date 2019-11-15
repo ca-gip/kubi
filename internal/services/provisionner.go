@@ -108,6 +108,9 @@ func generateProject(projectInfos *types.Project) {
 		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
 		if errorCreate != nil {
 			utils.Log.Error().Msg(errorCreate.Error())
+			utils.ProjectCreationError.Inc()
+		} else {
+			utils.ProjectCreationSuccess.Inc()
 		}
 		return
 	} else {
@@ -177,6 +180,7 @@ func GenerateRoleBinding(context *types.Project) {
 	if errRB != nil {
 		_, err = api.RoleBindings(context.Namespace).Create(&newRoleBinding)
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
+		utils.RoleBindingsCreationSuccess.Inc()
 	} else {
 		_, err = api.RoleBindings(context.Namespace).Update(&newRoleBinding)
 		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
@@ -184,6 +188,7 @@ func GenerateRoleBinding(context *types.Project) {
 
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
+		utils.RoleBindingsCreationError.Inc()
 	}
 
 }
@@ -216,6 +221,9 @@ func generateNamespace(namespace string) {
 		namespace, err = api.Namespaces().Create(namespace)
 		if err != nil {
 			utils.Log.Error().Err(err)
+			utils.NamespaceCreationError.Inc()
+		} else {
+			utils.NamespaceCreationSuccess.Inc()
 		}
 	}
 
