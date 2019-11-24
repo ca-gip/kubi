@@ -32,13 +32,16 @@ Kubi is a webhook for the server part and has a cli for linux and windows users.
   - [Create a secret for LDAP Bind password](#create-a-secret-for-ldap-bind-password)
   - [Deploy the config map](#deploy-the-config-map)
   - [Deploy the Custom Resource Definitions](#deploy-the-custom-resource-definitions)
-  - [Deploy the Kubi components](#deploy-the-kubi-components)
+  - [Deploy the prerequisites](#deploy-the-prerequisites)
+  - [Deploy Kubi](#deploy Kubi)
   - [Customize the default network policy](#customize-the-default-network-policy)
   - [Basic Webhook configuration](#basic-webhook-configuration)
   - [Advanced Webhook configuration](#advanced-webhook-configuration)
+- [Development environment](#development-environment)
+    - [Deploy the local config](#deploy-the-local-config)
+    - [Copy the secret from you Kubernetes cluster](#Copy-the-secret-from-you-Kubernetes-cluster)
+    - [Running](#running)
 - [Roadmap](#roadmap)
-- [Additionnals](#additionnals)
-  - [Local LDAP Server](#local-ldap-server)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -221,7 +224,16 @@ EOF
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
 ```
-## Deploy the Kubi components
+
+## Deploy the prerequisites
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
+```
+
+
+## Deploy Kubi
+
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
 ```
@@ -331,21 +343,65 @@ The following features should be available soon.
 - Expose /metrics
 
 
-# Additionnals
+# Development environment 
 
-## Local LDAP Server
+You can easily contribute to this project by using a development environment, follow the installation step from [Installation](#installation) until the [Deploy the prerequisites](#deploy-the-prerequisites).
 
-The server need to have memberof overlay
+## Deploy the local config
+
 ```bash
-docker run -d -p 389:389 \
-  --hostname localhost \
-  -e SLAPD_PASSWORD=password  \
-  -e SLAPD_DOMAIN=kubi.fr  \
-  -e SLAPD_ADDITIONAL_MODULES=memberof  \
-  -e SLAPD_CONFIG_PASSWORD=config \
-  -e SLAPD_PASSWORD=password \
-  --hostname localhost \
-  dinkel/openldap
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
 ```
 
-Admin connection string: cn=admin,dc=kubi,dc=fr
+## Copy the secret from you Kubernetes cluster
+
+Create secret dirs on your local machine
+
+```bash
+mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
+```
+
+The mapping between the secret:key and file path 
+
+| Secret Name | Secret Key | Local Path |
+|-------------|------------|------------|
+| kubi-user-<hash> | ca.crt | /var/run/secrets/kubernetes.io/serviceaccount/ca.crt |
+| kubi-user-<hash> | token | /var/run/secrets/kubernetes.io/serviceaccount/token |
+| kubi | tls.crt |/var/run/secrets/certs/tls.crt |
+| kubi | tls.key | /var/run/secrets/certs/tls.key |
+| kubi-encryption-secret | ecdsa-key.pem | /var/run/secrets/ecdsa/ecdsa-key.pem |
+| kubi-encryption-secret | ecdsa-public.pem | /var/run/secrets/ecdsa/ecdsa-public.pem |
+
+You can execute the following commands to gather all the required secrets then decode and save them
+```bash
+kubectl -n kube-system get secrets $(kubectl get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+kubectl -n kube-system get secrets $(kubectl get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/token
+kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /var/run/secrets/certs/tls.crt
+kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /var/run/secrets/certs/tls.key
+kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-key.pem
+kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-public.pem
+```
+
+
+## Running
+
+At the base of this project execute the go run with the required variable
+
+```bash
+LDAP_ADMIN_GROUPBASE="cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com" \
+LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
+LDAP_GROUPBASE="ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+LDAP_PORT="389"   \
+LDAP_SERVER="kube-ldap.kube-system.svc.cluster.local"  \
+LDAP_USE_SSL="false"   \
+LDAP_USERBASE="ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
+LDAP_USERFILTER="(cn=%s)"   \
+LOCATOR="local"   \
+PUBLIC_APISERVER_URL="https://kubernetes.default.svc.cluster.local"  \
+TENANT="cagip" \
+KUBERNETES_SERVICE_HOST="kubernetes.default.svc.cluster.local" \
+KUBERNETES_SERVICE_PORT="443" \
+LDAP_PASSWD="password" \
+go run cmd/main.go
+```
