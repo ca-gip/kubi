@@ -257,8 +257,9 @@ func projectUpdate(old interface{}, new interface{}) {
 	newProject := new.(*v12.Project)
 	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", newProject.Name)
 	generateNamespace(newProject.Name)
-	generateNetworkPolicy(newProject.Name, nil)
-
+	if utils.Config.NetworkPolicy {
+		generateNetworkPolicy(newProject.Name, nil)
+	}
 	// TODO: Refactor with a non static list of roles
 	GenerateRoleBinding(&types.Project{Namespace: newProject.Name, Role: "admin"})
 
@@ -268,7 +269,9 @@ func projectCreated(obj interface{}) {
 	project := obj.(*v12.Project)
 	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
 	generateNamespace(project.Name)
-	generateNetworkPolicy(project.Name, nil)
+	if utils.Config.NetworkPolicy {
+		generateNetworkPolicy(project.Name, nil)
+	}
 
 	// TODO: Refactor with a non static list of roles
 	GenerateRoleBinding(&types.Project{Namespace: project.Name, Role: "admin"})
@@ -319,7 +322,9 @@ func networkPolicyConfigUpdate(old interface{}, new interface{}) {
 
 	for _, project := range projects.Items {
 		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
-		generateNetworkPolicy(project.Name, netpolconfig)
+		if utils.Config.NetworkPolicy {
+			generateNetworkPolicy(project.Name, netpolconfig)
+		}
 	}
 
 }
@@ -339,7 +344,9 @@ func networkPolicyConfigCreated(obj interface{}) {
 
 	for _, project := range projects.Items {
 		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
-		generateNetworkPolicy(project.Name, netpolconfig)
+		if utils.Config.NetworkPolicy {
+			generateNetworkPolicy(project.Name, netpolconfig)
+		}
 	}
 }
 
