@@ -87,6 +87,7 @@ For specific exceptions, add another network policy.
 |  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
 |  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 |  **LOCATOR**                    |  *Locator: must be internet or extranet*    | `"intranet"             ` | `no   `     | intranet    |
+|  **PROVISIONING_NETWORK_POLICIES** |  *Enable or disable NetPol Mgmt*  | `true                           `| `no   `     | yes    |
 
 # Client
 
@@ -94,7 +95,7 @@ For specific exceptions, add another network policy.
 
 ## For Windows users
 
-1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.2.4/kubi.exe)
+1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/1.4.1/kubi.exe)
 2. Open Cmd
 ```bash
 # Get help
@@ -109,17 +110,37 @@ For specific exceptions, add another network policy.
 
 ### With kubi cli
 
+#### For Linux
 ```bash
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/v1.2.4/kubi -P /usr/local/bin
+sudo wget https://github.com/ca-gip/kubi/releases/download/1.4.1/kubi -P /usr/local/bin
 sudo chmod a+x /usr/local/bin/kubi
 
 # Connect to the cluster
 kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
 # Connect with your password and generate config file
-.\kubi.exe --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn> --password your_pwd
+kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn> --password your_pwd
+```
+#### For Mac
+
+```bash
+# Install wget with brew
+brew install wget
+
+# Install the kubi cli
+sudo wget https://github.com/ca-gip/kubi/releases/download/1.4.1/kubi-darwin -O /usr/local/bin/kubi
+sudo chmod a+x /usr/local/bin/kubi
+
 ```
 
+#### Connection
+```bash
+
+# Connect to the cluster
+kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn>
+# Connect with your password and generate config file
+kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <user_cn> --password your_pwd
+```
 ### With `curl`
 
 ```bash
