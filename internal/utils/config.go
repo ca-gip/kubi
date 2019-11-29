@@ -82,6 +82,9 @@ func MakeConfig() (*types.Config, error) {
 		}
 	}
 
+	networkpolicyEnabled, errNetpol := strconv.ParseBool(getEnv("PROVISIONING_NETWORK_POLICIES", "true"))
+	Checkf(errNetpol, "Invalid LDAP_START_TLS, must be a boolean")
+
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 	tenant := strings.ToLower(getEnv("TENANT", KubiTenantUndeterminable))
 
@@ -113,6 +116,7 @@ func MakeConfig() (*types.Config, error) {
 		ApiServerTLSConfig: *tlsConfig,
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 		Locator:            getEnv("LOCATOR", KubiLocatorIntranet),
+		NetworkPolicy:      networkpolicyEnabled,
 	}
 
 	err := validation.ValidateStruct(config,

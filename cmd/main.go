@@ -72,7 +72,11 @@ func main() {
 	router.HandleFunc("/authenticate", services.AuthenticateHandler(tokenIssuer)).Methods(http.MethodPost)
 	router.Handle("/metrics", promhttp.Handler())
 
-	services.WatchNetPolConfig()
+	if config.NetworkPolicy {
+		services.WatchNetPolConfig()
+	} else {
+		utils.Log.Info().Msg("NetworkPolicies generation is disabled.")
+	}
 	services.WatchProjects()
 
 	timerKubiRefresh := time.NewTicker(10 * time.Minute)

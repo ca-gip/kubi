@@ -35,6 +35,7 @@ type Config struct {
 	ApiServerTLSConfig tls.Config
 	TokenLifeTime      string
 	Locator            string
+	NetworkPolicy      bool
 }
 
 // Note: struct fields must be public in order for unmarshal to
