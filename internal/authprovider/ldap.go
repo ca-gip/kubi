@@ -3,6 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
+
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
@@ -79,6 +80,9 @@ func AuthenticateUser(username string, password string) (*string, *string, error
 		return &userDN, &mail, err
 	} else if len(utils.Config.Ldap.AdminUserBase) > 0 {
 		userDN, _, err := getUserDN(conn, utils.Config.Ldap.AdminUserBase, username)
+		if err != nil {
+			return &userDN, &mail, err
+		}
 		err = conn.Bind(userDN, password)
 		return &userDN, &mail, err
 	} else {
@@ -92,7 +96,6 @@ func getBindedConnection() (*ldap.Conn, error) {
 		err  error
 		conn *ldap.Conn
 	)
-
 	tlsConfig := &tls.Config{
 		ServerName:         utils.Config.Ldap.Host,
 		InsecureSkipVerify: utils.Config.Ldap.SkipTLSVerification,
@@ -129,15 +132,18 @@ func getUserDN(conn *ldap.Conn, userBaseDN string, username string) (string, str
 	req := newUserSearchRequest(userBaseDN, username)
 
 	res, err := conn.Search(req)
+
 	if err != nil {
 		return utils.Empty, utils.Empty, errors.Wrapf(err, "Error searching for user %s", username)
 	}
 
 	if len(res.Entries) == 0 {
 		return utils.Empty, utils.Empty, errors.Errorf("No result for the user search filter '%s'", req.Filter)
+
 	} else if len(res.Entries) > 1 {
 		return utils.Empty, utils.Empty, errors.Errorf("Multiple entries found for the user search filter '%s'", req.Filter)
 	}
+
 	userDN := res.Entries[0].DN
 	mail := res.Entries[0].GetAttributeValue("mail")
 	return userDN, mail, nil
