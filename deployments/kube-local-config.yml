@@ -107,6 +107,7 @@ data:
   SLAPD_CONFIG_PASSWORD: config
 metadata:
   name: kube-ldap-config
+  namespace: kube-system
 ---
 apiVersion: apps/v1
 kind: Deployment
