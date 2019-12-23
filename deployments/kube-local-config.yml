@@ -48,6 +48,7 @@ data:
     objectClass: inetOrgPerson
     cn: mario
     sn: mario
+    mail: mario@cagip.gca
     userPassword: {SHA}rdtHKR7hafMwgBznNSC5by6vIOo=
 
     dn: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
@@ -57,6 +58,7 @@ data:
     objectClass: inetOrgPerson
     cn: luigi
     sn: luigi
+    mail: luigi@cagip.gca
     userPassword: luigi
 
     dn: cn=bowser,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
@@ -66,6 +68,7 @@ data:
     objectClass: inetOrgPerson
     cn: bowser
     sn: bowser
+    mail: bowser@cagip.gca
     userPassword: bowser
 
     dn: cn=DL_KUB_TEAM-1-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
