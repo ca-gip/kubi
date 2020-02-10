@@ -172,7 +172,7 @@ func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, e
 		return issuer.EcdsaPublic, nil
 	})
 	if err != nil {
-		utils.Log.Info().Msgf("Bad token: %v", err.Error())
+		utils.Log.Info().Msgf("Bad token: %v. The token is %s", err.Error(), usertoken)
 		return nil, err
 	}
 	if claims, ok := token.Claims.(*types.AuthJWTClaims); ok && token.Valid {
