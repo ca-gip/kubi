@@ -15,6 +15,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		var code int
+		var tokenStatus error
 
 		bodyString, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -27,11 +28,11 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		}
 
 		token, err := issuer.CurrentJWT(tokenReview.Spec.Token)
-		if err != nil {
-			err = issuer.VerifyToken(tokenReview.Spec.Token)
+		if err == nil {
+			tokenStatus = issuer.VerifyToken(tokenReview.Spec.Token)
 		}
 
-		if err != nil {
+		if err != nil || tokenStatus != nil {
 			resp := v1beta1.TokenReview{
 				Status: v1beta1.TokenReviewStatus{
 					Authenticated: false,
@@ -43,7 +44,6 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			utils.Log.Info().Msgf("%v", resp)
 			json.NewEncoder(w).Encode(resp)
 		} else {
-			utils.Log.Debug().Msgf("raw token: %s", tokenReview.Spec.Token)
 			utils.Log.Info().Msgf("Challenging token for user %v", token.User)
 
 			var groups []string
