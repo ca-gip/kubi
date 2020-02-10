@@ -43,6 +43,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			utils.Log.Info().Msgf("%v", resp)
 			json.NewEncoder(w).Encode(resp)
 		} else {
+			utils.Log.Debug().Msgf("raw token: %s", tokenReview.Spec.Token)
 			utils.Log.Info().Msgf("Challenging token for user %v", token.User)
 
 			var groups []string
