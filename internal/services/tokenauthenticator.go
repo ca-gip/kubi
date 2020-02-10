@@ -41,7 +41,6 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			code = http.StatusUnauthorized
 			w.WriteHeader(code)
 			w.Header().Set("Content-Type", "application/json")
-			utils.Log.Info().Msgf("%v", resp)
 			json.NewEncoder(w).Encode(resp)
 		} else {
 			utils.Log.Info().Msgf("Challenging token for user %v", token.User)
