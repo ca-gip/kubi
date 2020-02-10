@@ -171,10 +171,22 @@ func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, e
 	token, err := jwt.ParseWithClaims(usertoken, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return issuer.EcdsaPublic, nil
 	})
+
+	tokenSplits := strings.Split(usertoken, ".")
+	if len(tokenSplits) != 3 {
+		return nil, errors.New(fmt.Sprintf("The token %s is not a JWT token", usertoken))
+	}
+
 	if err != nil {
-		utils.Log.Info().Msgf("Bad token: %v. The token is %s", err.Error(), usertoken)
+		byteToken, errDecode := base64.StdEncoding.DecodeString(tokenSplits[1])
+		if errDecode == nil {
+			utils.Log.Info().Msgf("Bad token: %v. The public token part is %s", err.Error(), string(byteToken))
+		} else {
+			utils.Log.Info().Msgf("Bad token: %v. The public token part is unparsable !", err.Error())
+		}
 		return nil, err
 	}
+
 	if claims, ok := token.Claims.(*types.AuthJWTClaims); ok && token.Valid {
 		return claims, nil
 	} else {
