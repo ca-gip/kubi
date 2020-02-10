@@ -178,12 +178,7 @@ func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, e
 	}
 
 	if err != nil {
-		byteToken, errDecode := base64.StdEncoding.DecodeString(tokenSplits[1])
-		if errDecode == nil {
-			utils.Log.Info().Msgf("Bad token: %v. The public token part is %s", err.Error(), string(byteToken))
-		} else {
-			utils.Log.Info().Msgf("Bad token: %v. The public token part is unparsable !", err.Error())
-		}
+		utils.Log.Info().Msgf("Bad token: %v. The public token part is %s", err.Error(), tokenSplits[1])
 		return nil, err
 	}
 
