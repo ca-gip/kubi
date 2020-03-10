@@ -67,6 +67,7 @@ type ProjectSpec struct {
 	Project      string   `json:"project,omitempty"`
 	SourceEntity string   `json:"sourceEntity,omitempty"`
 	Stages       []string `json:"stages,omitempty"`
+	Contact      string   `json:"contact,omitempty"`
 }
 
 type ProjectSpecStatus struct {

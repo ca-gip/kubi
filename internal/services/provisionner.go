@@ -116,6 +116,9 @@ func generateProject(projectInfos *types.Project) {
 	} else {
 		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectInfos.Namespace)
 		existingProject.Spec.Project = project.Spec.Project
+		if len(project.Spec.Contact) > 0 {
+			existingProject.Spec.Contact = project.Spec.Contact
+		}
 		if len(project.Spec.Environment) > 0 {
 			existingProject.Spec.Environment = project.Spec.Environment
 		}

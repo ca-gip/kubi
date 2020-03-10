@@ -97,6 +97,7 @@ type Project struct {
 	Role        string `json:"role"`
 	Source      string `json:"source"`
 	Environment string `json:"environment"`
+	Contact     string `json:"contact"`
 }
 
 type ResponseError struct {

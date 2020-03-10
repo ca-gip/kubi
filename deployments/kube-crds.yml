@@ -96,6 +96,10 @@ spec:
       type: string
       description: The refering entity ( LDAP group for the moment )
       JSONPath: .spec.sourceEntity
+    - name: Contact
+      type: string
+      description: The refering contact for operation
+      JSONPath: .spec.contact
   validation:
     # openAPIV3Schema is the schema for validating custom objects.
     openAPIV3Schema:
@@ -129,4 +133,6 @@ spec:
                   - staging
                   - stable
             sourceEntity:
+              type: string
+            contact:
               type: string
