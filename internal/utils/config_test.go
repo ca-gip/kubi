@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestParseLabels(t *testing.T) {
+func TestParseCustomLabels(t *testing.T) {
 	testCases := []struct {
 		given  string
 		expect map[string]string
@@ -23,10 +23,18 @@ func TestParseLabels(t *testing.T) {
 			given:  "test123,123test",
 			expect: map[string]string{},
 		},
+		{
+			given:  "customer=ca,creator=kubi,test=123123=test",
+			expect: map[string]string{"test": "123123=test"},
+		},
+		{
+			given:  "creator=kubi",
+			expect: map[string]string{},
+		},
 	}
 
 	for index, testCase := range testCases {
-		result := parseLabels(testCase.given)
+		result := parseCustomLabels(testCase.given)
 		if !reflect.DeepEqual(testCase.expect, result) {
 			t.Errorf("Test Case %d, Unexpected result\nDiff:\n %s",
 				index,

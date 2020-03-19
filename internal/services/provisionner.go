@@ -228,7 +228,7 @@ func generateNamespace(namespace string) {
 
 }
 
-// Generate Labels that should be applied on Kubi's Namespaces
+// Generate CustomLabels that should be applied on Kubi's Namespaces
 func generateNamespaceLabels(namespace string) (labels map[string]string) {
 	defaultLabels := map[string]string{
 		"name":    namespace,
@@ -236,7 +236,7 @@ func generateNamespaceLabels(namespace string) (labels map[string]string) {
 		"creator": "kubi",
 	}
 
-	return utils.Union(defaultLabels, utils.Config.Labels)
+	return utils.Union(defaultLabels, utils.Config.CustomLabels)
 }
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble

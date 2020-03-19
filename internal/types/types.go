@@ -36,7 +36,7 @@ type Config struct {
 	TokenLifeTime      string
 	Locator            string
 	NetworkPolicy      bool
-	Labels             map[string]string
+	CustomLabels       map[string]string
 }
 
 // Note: struct fields must be public in order for unmarshal to
