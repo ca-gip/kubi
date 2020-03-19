@@ -12,7 +12,7 @@ data:
   LOCATOR: local
   PUBLIC_APISERVER_URL: https://kubernetes.default.svc.cluster.local
   TENANT: cagip
-  LABELS: managedquota=true
+  CUSTOM_LABELS: quota=managed
 kind: ConfigMap
 metadata:
   name: kubi-config

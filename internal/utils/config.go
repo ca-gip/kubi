@@ -86,7 +86,7 @@ func MakeConfig() (*types.Config, error) {
 	networkpolicyEnabled, errNetpol := strconv.ParseBool(getEnv("PROVISIONING_NETWORK_POLICIES", "true"))
 	Checkf(errNetpol, "Invalid LDAP_START_TLS, must be a boolean")
 
-	labels := parseLabels(getEnv("LABELS", ""))
+	customLabels := parseCustomLabels(getEnv("CUSTOM_LABELS", ""))
 
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 	tenant := strings.ToLower(getEnv("TENANT", KubiTenantUndeterminable))
@@ -120,7 +120,7 @@ func MakeConfig() (*types.Config, error) {
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
 		Locator:            getEnv("LOCATOR", KubiLocatorIntranet),
 		NetworkPolicy:      networkpolicyEnabled,
-		Labels:             labels,
+		CustomLabels:       customLabels,
 	}
 
 	err := validation.ValidateStruct(config,
@@ -147,8 +147,8 @@ func MakeConfig() (*types.Config, error) {
 	return config, nil
 }
 
-// Parse Labels from a string to a map holding the key value
-func parseLabels(rawLabels string) (labels map[string]string) {
+// Parse CustomLabels from a string to a map holding the key value
+func parseCustomLabels(rawLabels string) (labels map[string]string) {
 	labelsPattern := regexp.MustCompile(`(?P<key>\w+)=(?P<value>[^,]+)`)
 
 	if !labelsPattern.MatchString(rawLabels) {
@@ -158,7 +158,9 @@ func parseLabels(rawLabels string) (labels map[string]string) {
 	matches := labelsPattern.FindAllStringSubmatch(rawLabels, -1)
 	labels = make(map[string]string, len(matches))
 	for _, match := range matches {
-		labels[match[1]] = match[2]
+		if !(match[1] == "creator" || match[1] == "customer") {
+			labels[match[1]] = match[2]
+		}
 	}
 
 	return
