@@ -213,12 +213,8 @@ func generateNamespace(namespace string) {
 				Kind:       "Namespace",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: namespace,
-				Labels: map[string]string{
-					"name":    namespace,
-					"type":    "customer",
-					"creator": "kubi",
-				},
+				Name:   namespace,
+				Labels: generateNamespaceLabels(namespace),
 			},
 		}
 		namespace, err = api.Namespaces().Create(namespace)
@@ -230,6 +226,17 @@ func generateNamespace(namespace string) {
 		}
 	}
 
+}
+
+// Generate Labels that should be applied on Kubi's Namespaces
+func generateNamespaceLabels(namespace string) (labels map[string]string) {
+	defaultLabels := map[string]string{
+		"name":    namespace,
+		"type":    "customer",
+		"creator": "kubi",
+	}
+
+	return utils.Union(defaultLabels, utils.Config.Labels)
 }
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble
