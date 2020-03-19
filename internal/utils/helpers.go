@@ -39,3 +39,10 @@ func AppendIfMissing(slice []string, i string) []string {
 	}
 	return append(slice, i)
 }
+
+func Union(a map[string]string, b map[string]string) map[string]string {
+	for k, v := range b {
+		a[k] = v
+	}
+	return a
+}
