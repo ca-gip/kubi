@@ -18,5 +18,5 @@ test: codegen
 
 build: test
 	@echo "-> Building kubi operator binary"
-	GOOS=linux GOARCH=amd64 go build -v -o ./build/kubi -i $(GOPATH)/src/$(REPO)/cmd/main.go
+	GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi -i $(GOPATH)/src/$(REPO)/cmd/main.go
 
