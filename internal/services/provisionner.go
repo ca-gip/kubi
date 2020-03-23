@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1n "k8s.io/api/networking/v1"
 	"k8s.io/api/rbac/v1"
+	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -197,15 +198,15 @@ func GenerateRoleBinding(context *types.Project) {
 }
 
 // generateNamespace from a name
-// If exists, nothing is done, only creating !
+// If it doesn't exist or the number of labels is different from what it should be
 func generateNamespace(namespace string) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
-	_, errNs := api.Namespaces().Get(namespace, metav1.GetOptions{})
+	ns, errNs := api.Namespaces().Get(namespace, metav1.GetOptions{})
 
-	if errNs != nil {
+	if kerror.IsNotFound(errNs) || errNs == nil && len(ns.Labels) != len(generateNamespaceLabels(namespace)) {
 		utils.Log.Info().Msgf("Creating namespace %v", namespace)
 		namespace := &corev1.Namespace{
 			TypeMeta: metav1.TypeMeta{
