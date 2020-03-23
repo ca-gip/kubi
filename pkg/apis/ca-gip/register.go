@@ -1,5 +1,5 @@
 package ca_gip
 
 const (
-	GroupName = "cagip.github.com"
+	GroupName = "ca-gip.github.com"
 )
