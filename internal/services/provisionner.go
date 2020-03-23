@@ -206,9 +206,9 @@ func generateNamespace(namespace string) {
 
 	ns, errNs := api.Namespaces().Get(namespace, metav1.GetOptions{})
 
-	if kerror.IsNotFound(errNs) || errNs == nil && len(ns.Labels) != len(generateNamespaceLabels(namespace)) {
-		utils.Log.Info().Msgf("Creating namespace %v", namespace)
-		namespace := &corev1.Namespace{
+	if kerror.IsNotFound(errNs) {
+		utils.Log.Info().Msgf("Creating ns %v", namespace)
+		ns := &corev1.Namespace{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
 				Kind:       "Namespace",
@@ -218,13 +218,36 @@ func generateNamespace(namespace string) {
 				Labels: generateNamespaceLabels(namespace),
 			},
 		}
-		namespace, err = api.Namespaces().Create(namespace)
+		_, err = api.Namespaces().Create(ns)
 		if err != nil {
 			utils.Log.Error().Err(err)
 			utils.NamespaceCreationError.Inc()
 		} else {
 			utils.NamespaceCreationSuccess.Inc()
 		}
+	}
+
+	if errNs == nil && len(ns.Labels) != len(generateNamespaceLabels(namespace)) {
+
+		utils.Log.Info().Msgf("Updating ns %v", namespace)
+
+		ns := &corev1.Namespace{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Namespace",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   namespace,
+				Labels: generateNamespaceLabels(namespace),
+			},
+		}
+
+		_, err = api.Namespaces().Update(ns)
+
+		if err != nil {
+			utils.Log.Error().Err(err)
+		}
+
 	}
 
 }
