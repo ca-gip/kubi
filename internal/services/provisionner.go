@@ -18,6 +18,7 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -227,7 +228,7 @@ func generateNamespace(namespace string) {
 		}
 	}
 
-	if errNs == nil && len(ns.Labels) != len(generateNamespaceLabels(namespace)) {
+	if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(namespace)) {
 
 		utils.Log.Info().Msgf("Updating ns %v", namespace)
 
