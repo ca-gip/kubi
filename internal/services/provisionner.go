@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubernetes "k8s.io/client-go/kubernetes"
+	v13 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"reflect"
@@ -200,57 +201,63 @@ func GenerateRoleBinding(context *types.Project) {
 
 // generateNamespace from a name
 // If it doesn't exist or the number of labels is different from what it should be
-func generateNamespace(namespace string) {
+func generateNamespace(namespace string) (err error) {
 	kconfig, _ := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
 	ns, errNs := api.Namespaces().Get(namespace, metav1.GetOptions{})
 
 	if kerror.IsNotFound(errNs) {
-		utils.Log.Info().Msgf("Creating ns %v", namespace)
-		ns := &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Namespace",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   namespace,
-				Labels: generateNamespaceLabels(namespace),
-			},
-		}
-		_, err = api.Namespaces().Create(ns)
-		if err != nil {
-			utils.Log.Error().Err(err)
-			utils.NamespaceCreationError.Inc()
-		} else {
-			utils.NamespaceCreationSuccess.Inc()
-		}
+		err = createNamespace(namespace, api)
+	} else if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(namespace)) {
+		err = updateExistingNamespace(namespace, api)
+	}
+	return
+}
+
+func createNamespace(namespace string, api v13.CoreV1Interface) error {
+	utils.Log.Info().Msgf("Creating ns %v", namespace)
+	ns := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   namespace,
+			Labels: generateNamespaceLabels(namespace),
+		},
+	}
+	_, err := api.Namespaces().Create(ns)
+	if err != nil {
+		utils.Log.Error().Err(err)
+		utils.NamespaceCreationError.Inc()
+	} else {
+		utils.NamespaceCreationSuccess.Inc()
+	}
+	return err
+}
+
+func updateExistingNamespace(namespace string, api v13.CoreV1Interface) error {
+	utils.Log.Info().Msgf("Updating ns %v", namespace)
+
+	ns := &corev1.Namespace{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Namespace",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   namespace,
+			Labels: generateNamespaceLabels(namespace),
+		},
 	}
 
-	if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(namespace)) {
+	_, err := api.Namespaces().Update(ns)
 
-		utils.Log.Info().Msgf("Updating ns %v", namespace)
-
-		ns := &corev1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Namespace",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   namespace,
-				Labels: generateNamespaceLabels(namespace),
-			},
-		}
-
-		_, err = api.Namespaces().Update(ns)
-
-		if err != nil {
-			utils.Log.Error().Err(err)
-		}
-
+	if err != nil {
+		utils.Log.Error().Err(err)
 	}
-
+	return err
 }
 
 // Generate CustomLabels that should be applied on Kubi's Namespaces

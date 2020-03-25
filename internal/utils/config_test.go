@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// Please, one func per test for readability
+
 func TestParseCustomLabels(t *testing.T) {
 	testCases := []struct {
 		given  string
@@ -14,6 +16,8 @@ func TestParseCustomLabels(t *testing.T) {
 		{
 			given:  "test=123,123=test",
 			expect: map[string]string{"test": "123", "123": "test"},
+			//description: "",
+
 		},
 		{
 			given:  "test=123123=test",
@@ -44,3 +48,10 @@ func TestParseCustomLabels(t *testing.T) {
 	}
 
 }
+
+// Use more combination of failure
+//given:  "customer==ca",
+//given:  "cust=omer=ca",
+//given:  "customer=",
+//given:  "customer=,",
+//given:  "=ca",
