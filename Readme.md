@@ -87,7 +87,8 @@ For specific exceptions, add another network policy.
 |  **LDAP_USERFILTER**            |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no  `      | `(cn=%s)`   |
 |  **TOKEN_LIFETIME**             |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 |  **LOCATOR**                    |  *Locator: must be internet or extranet*    | `"intranet"             ` | `no   `     | intranet    |
-|  **PROVISIONING_NETWORK_POLICIES** |  *Enable or disable NetPol Mgmt*  | `true                           `| `no   `     | yes    |
+|  **PROVISIONING_NETWORK_POLICIES** |  *Enable or disable NetPol Mgmt*  | `true                           `| `no   `     | yes         |
+|  **CUSTOM_LABELS**              | *Add custom labels to namespaces*    | `quota=managed,monitoring=true`  | `no   `     | -           |
 
 # Client
 
