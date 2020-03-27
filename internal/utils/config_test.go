@@ -1,57 +1,60 @@
 package utils
 
 import (
-	"k8s.io/utils/diff"
-	"reflect"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-// Please, one func per test for readability
-
 func TestParseCustomLabels(t *testing.T) {
-	testCases := []struct {
-		given  string
-		expect map[string]string
-	}{
-		{
-			given:  "test=123,123=test",
-			expect: map[string]string{"test": "123", "123": "test"},
-			//description: "",
 
-		},
-		{
-			given:  "test=123123=test",
-			expect: map[string]string{"test": "123123=test"},
-		},
-		{
-			given:  "test123,123test",
-			expect: map[string]string{},
-		},
-		{
-			given:  "customer=ca,creator=kubi,test=123123=test",
-			expect: map[string]string{"test": "123123=test"},
-		},
-		{
-			given:  "creator=kubi",
-			expect: map[string]string{},
-		},
-	}
+	t.Run("properly formatted k/v string should return two labels", func(t *testing.T) {
+		result := parseCustomLabels("test=123,123=test")
+		assert.Equal(t, result, map[string]string{"test": "123", "123": "test"})
+	})
 
-	for index, testCase := range testCases {
-		result := parseCustomLabels(testCase.given)
-		if !reflect.DeepEqual(testCase.expect, result) {
-			t.Errorf("Test Case %d, Unexpected result\nDiff:\n %s",
-				index,
-				diff.ObjectGoPrintSideBySide(testCase.expect, result))
-		}
+	t.Run("two equal without a coma should return a single label containing an equal", func(t *testing.T) {
+		result := parseCustomLabels("test=123123=test")
+		assert.Equal(t, result, map[string]string{"test": "123123=test"})
+	})
 
-	}
+	t.Run("two separated strings without equals should not return labels", func(t *testing.T) {
+		result := parseCustomLabels("test123,123test")
+		assert.Equal(t, result, map[string]string{})
+	})
+
+	t.Run("three k/v containing two illegals key should return a single label", func(t *testing.T) {
+		result := parseCustomLabels("customer=ca,creator=kubi,test=123123")
+		assert.Equal(t, result, map[string]string{"test": "123123"})
+	})
+
+	t.Run("a single illegal label should not return label", func(t *testing.T) {
+		result := parseCustomLabels("creator=kubi")
+		assert.Equal(t, result, map[string]string{})
+	})
+
+	t.Run("a single illegal label should not return label", func(t *testing.T) {
+		result := parseCustomLabels("creator=kubi")
+		assert.Equal(t, result, map[string]string{})
+	})
+
+	t.Run("an illegal key should not return label", func(t *testing.T) {
+		result := parseCustomLabels("creator=")
+		assert.Equal(t, result, map[string]string{})
+	})
+
+	t.Run("a single key should not return label", func(t *testing.T) {
+		result := parseCustomLabels("test=")
+		assert.Equal(t, result, map[string]string{})
+	})
+
+	t.Run("a value should not return label", func(t *testing.T) {
+		result := parseCustomLabels("=test")
+		assert.Equal(t, result, map[string]string{})
+	})
+
+	t.Run("a string should not return label", func(t *testing.T) {
+		result := parseCustomLabels("test")
+		assert.Equal(t, result, map[string]string{})
+	})
 
 }
-
-// Use more combination of failure
-//given:  "customer==ca",
-//given:  "cust=omer=ca",
-//given:  "customer=",
-//given:  "customer=,",
-//given:  "=ca",
