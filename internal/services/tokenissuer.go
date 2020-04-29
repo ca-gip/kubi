@@ -194,7 +194,7 @@ func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
 	method := jwt.SigningMethodES512
 	tokenSplits := strings.Split(usertoken, ".")
 	if len(tokenSplits) != 3 {
-		errors.New(fmt.Sprintf("The token %s is not a JWT token", usertoken))
+		return errors.New(fmt.Sprintf("The token %s is not a JWT token", usertoken))
 	}
 	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
 }
