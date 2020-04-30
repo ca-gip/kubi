@@ -34,7 +34,6 @@ func NamespaceParser(namespace string) types.Project {
 	var project = types.Project{}
 
 	if !utils.HasSuffixes(namespace, utils.AllEnvironments) {
-		project.Namespace = namespace
 		project.Project = namespace
 		return project
 	}
@@ -46,7 +45,6 @@ func NamespaceParser(namespace string) types.Project {
 	}
 	project.Environment = environment
 	project.Project = strings.Join(splits[:len(splits)-1], "-")
-	project.Namespace = fmt.Sprintf("%s-%s", project.Project, project.Environment)
 	return project
 }
 
@@ -75,22 +73,22 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	project.Role = role
 	project.Source = lowerGroup
 
-	isNamespaceValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace)
+	isNamespaceValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace())
 	isRoleValid := utils.Index(utils.WhitelistedRoles, project.Role) != -1
 
-	if utils.Index(utils.BlacklistedNamespaces, project.Namespace) != -1 {
+	if utils.Index(utils.BlacklistedNamespaces, project.Namespace()) != -1 {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The ldap group %v, cannot be created. 
-			The namespace %v is protected.`, group, project.Namespace))
+			The namespace %v is protected.`, group, project.Namespace()))
 	} else if !isNamespaceValid {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The ldap group %v, cannot be created. 
-			The namespace %v is not dns1123 compliant.`, group, project.Namespace))
+			The namespace %v is not dns1123 compliant.`, group, project.Namespace()))
 	} else if !isRoleValid {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The ldap group %v, cannot be created. 
-			The role %v is not valid.`, group, project.Namespace))
-	} else if len(project.Namespace) > utils.DNS1123LabelMaxLength {
+			The role %v is not valid.`, group, project.Namespace()))
+	} else if len(project.Namespace()) > utils.DNS1123LabelMaxLength {
 		return nil, errors.New(fmt.Sprintf(`
 			LDAP: The name for namespace cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
 	} else if len(role) > utils.DNS1123LabelMaxLength {

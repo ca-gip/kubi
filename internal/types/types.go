@@ -2,6 +2,7 @@ package types
 
 import (
 	"crypto/tls"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -93,12 +94,20 @@ type AuthJWTClaims struct {
 }
 
 type Project struct {
-	Namespace   string `json:"namespace"`
 	Project     string `json:"project"`
 	Role        string `json:"role"`
-	Source      string `json:"source"`
-	Environment string `json:"environment"`
-	Contact     string `json:"contact"`
+	Source      string `json:"-"`
+	Environment string `json:"env"`
+	Contact     string `json:"-"`
+}
+
+func (project *Project) Namespace() (ns string) {
+	if len(project.Environment) > 0 {
+		ns = fmt.Sprintf("%s-%s", project.Project, project.Environment)
+	} else {
+		ns = fmt.Sprintf("%s", project.Project)
+	}
+	return
 }
 
 type ResponseError struct {

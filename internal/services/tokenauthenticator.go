@@ -51,7 +51,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 
 			// Other ldap group are injected
 			for _, auth := range token.Auths {
-				groups = append(groups, fmt.Sprintf("%s-%s", auth.Namespace, auth.Role))
+				groups = append(groups, fmt.Sprintf("%s-%s", auth.Namespace(), auth.Role))
 			}
 
 			if token.AdminAccess {

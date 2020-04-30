@@ -12,7 +12,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_short_name", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-dev")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-development", result.Namespace)
+		assert.Equal(t, "whatever-development", result.Namespace())
 		assert.Equal(t, "development", result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -20,7 +20,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_short_name-int", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-int")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-integration", result.Namespace)
+		assert.Equal(t, "whatever-integration", result.Namespace())
 		assert.Equal(t, "integration", result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -28,7 +28,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_short_name-uat", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-uat")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-uat", result.Namespace)
+		assert.Equal(t, "whatever-uat", result.Namespace())
 		assert.Equal(t, "uat", result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -36,7 +36,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_short_name-prod", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-prd")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-production", result.Namespace)
+		assert.Equal(t, "whatever-production", result.Namespace())
 		assert.Equal(t, "production", result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -44,7 +44,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_short_name-preprod", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-pprd")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-preproduction", result.Namespace)
+		assert.Equal(t, "whatever-preproduction", result.Namespace())
 		assert.Equal(t, utils.KubiEnvironmentPreproduction, result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -52,7 +52,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_name", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-development")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-development", result.Namespace)
+		assert.Equal(t, "whatever-development", result.Namespace())
 		assert.Equal(t, "development", result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -60,7 +60,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_name-int", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-integration")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-integration", result.Namespace)
+		assert.Equal(t, "whatever-integration", result.Namespace())
 		assert.Equal(t, utils.KubiEnvironmentIntegration, result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -68,7 +68,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_name-uat", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-uat")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-uat", result.Namespace)
+		assert.Equal(t, "whatever-uat", result.Namespace())
 		assert.Equal(t, utils.KubiEnvironmentUAT, result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -76,7 +76,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_name-prod", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-production")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-production", result.Namespace)
+		assert.Equal(t, "whatever-production", result.Namespace())
 		assert.Equal(t, utils.KubiEnvironmentProduction, result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -84,7 +84,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_name-preproduction", func(t *testing.T) {
 		result := services.NamespaceParser("whatever-preproduction")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever-preproduction", result.Namespace)
+		assert.Equal(t, "whatever-preproduction", result.Namespace())
 		assert.Equal(t, utils.KubiEnvironmentPreproduction, result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -92,7 +92,7 @@ func TestEnvironmentMapping(t *testing.T) {
 	t.Run("with_valid_name-without-env", func(t *testing.T) {
 		result := services.NamespaceParser("whatever")
 		assert.NotNil(t, result)
-		assert.Equal(t, "whatever", result.Namespace)
+		assert.Equal(t, "whatever", result.Namespace())
 		assert.Equal(t, utils.Empty, result.Environment)
 		assert.Equal(t, "whatever", result.Project)
 	})
@@ -112,7 +112,7 @@ func TestGetUserNamespace(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "group", result.Namespace)
+		assert.Equal(t, "group", result.Namespace())
 		assert.Equal(t, utils.Empty, result.Environment)
 		assert.Equal(t, "admin", result.Role)
 
@@ -124,7 +124,7 @@ func TestGetUserNamespace(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "group", result.Namespace)
+		assert.Equal(t, "group", result.Namespace())
 		assert.Equal(t, "admin", result.Role)
 
 	})
@@ -145,7 +145,7 @@ func TestGetUserNamespace(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, "service", result.Role)
-		assert.Equal(t, "of", result.Namespace)
+		assert.Equal(t, "of", result.Namespace())
 
 	})
 
@@ -264,7 +264,7 @@ func TestGetUserNamespace(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "native-development", result.Namespace)
+		assert.Equal(t, "native-development", result.Namespace())
 		assert.Equal(t, "development", result.Environment)
 		assert.Equal(t, "admin", result.Role)
 
@@ -276,7 +276,7 @@ func TestGetUserNamespace(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "native-preproduction", result.Namespace)
+		assert.Equal(t, "native-preproduction", result.Namespace())
 		assert.Equal(t, "preproduction", result.Environment)
 		assert.Equal(t, "admin", result.Role)
 

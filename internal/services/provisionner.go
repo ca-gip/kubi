@@ -59,11 +59,11 @@ func GenerateProjects(context []*types.Project) {
 func generateProject(projectInfos *types.Project) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
-	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectInfos.Namespace, metav1.GetOptions{})
+	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectInfos.Namespace(), metav1.GetOptions{})
 
-	splits := strings.Split(projectInfos.Namespace, "-")
+	splits := strings.Split(projectInfos.Namespace(), "-")
 	if len(splits) < 2 {
-		utils.Log.Warn().Msgf("Provisionner: The project %v could'nt be split in two part: <namespace>-<environment>.", projectInfos.Namespace)
+		utils.Log.Warn().Msgf("Provisionner: The project %v could'nt be split in two part: <namespace>-<environment>.", projectInfos.Namespace())
 	}
 
 	project := &v12.Project{
@@ -72,7 +72,7 @@ func generateProject(projectInfos *types.Project) {
 			Name: "created",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: projectInfos.Namespace,
+			Name: projectInfos.Namespace(),
 			Labels: map[string]string{
 				"creator": "kubi",
 			},
@@ -98,7 +98,7 @@ func generateProject(projectInfos *types.Project) {
 	case utils.KubiEnvironmentProduction:
 		project.Spec.Stages = []string{utils.KubiStageStable}
 	default:
-		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace)
+		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace())
 	}
 
 	project.Spec.SourceEntity = projectInfos.Source
@@ -107,7 +107,7 @@ func generateProject(projectInfos *types.Project) {
 	}
 
 	if errProject != nil {
-		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectInfos.Namespace)
+		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectInfos.Namespace())
 		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
 		if errorCreate != nil {
 			utils.Log.Error().Msg(errorCreate.Error())
@@ -117,7 +117,7 @@ func generateProject(projectInfos *types.Project) {
 		}
 		return
 	} else {
-		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectInfos.Namespace)
+		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectInfos.Namespace())
 		existingProject.Spec.Project = project.Spec.Project
 		if len(project.Spec.Contact) > 0 {
 			existingProject.Spec.Contact = project.Spec.Contact
@@ -141,13 +141,13 @@ func generateProject(projectInfos *types.Project) {
 
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
-func GenerateRoleBinding(context *types.Project) {
+func GenerateRoleBinding(namespace string, role string) {
 	kconfig, err := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", context.Role)
-	_, errRB := api.RoleBindings(context.Namespace).Get(roleBindingName, metav1.GetOptions{})
+	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", role)
+	_, errRB := api.RoleBindings(namespace).Get(roleBindingName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
@@ -159,7 +159,7 @@ func GenerateRoleBinding(context *types.Project) {
 			{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "Group",
-				Name:     fmt.Sprintf("%s-%s", context.Namespace, context.Role),
+				Name:     fmt.Sprintf("%s-%s", namespace, role),
 			},
 			{
 				APIGroup: "rbac.authorization.k8s.io",
@@ -174,7 +174,7 @@ func GenerateRoleBinding(context *types.Project) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,
-			Namespace: context.Namespace,
+			Namespace: namespace,
 			Labels: map[string]string{
 				"name":    roleBindingName,
 				"creator": "kubi",
@@ -184,12 +184,12 @@ func GenerateRoleBinding(context *types.Project) {
 	}
 
 	if errRB != nil {
-		_, err = api.RoleBindings(context.Namespace).Create(&newRoleBinding)
-		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
+		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and role %v", roleBindingName, namespace, role)
 		utils.RoleBindingsCreationSuccess.Inc()
 	} else {
-		_, err = api.RoleBindings(context.Namespace).Update(&newRoleBinding)
-		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and role %v", roleBindingName, context.Namespace, context.Role)
+		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and role %v", roleBindingName, namespace, role)
 	}
 
 	if err != nil {
@@ -303,7 +303,7 @@ func projectUpdate(old interface{}, new interface{}) {
 		generateNetworkPolicy(newProject.Name, nil)
 	}
 	// TODO: Refactor with a non static list of roles
-	GenerateRoleBinding(&types.Project{Namespace: newProject.Name, Role: "admin"})
+	GenerateRoleBinding(newProject.Name, "admin")
 
 }
 
@@ -316,7 +316,7 @@ func projectCreated(obj interface{}) {
 	}
 
 	// TODO: Refactor with a non static list of roles
-	GenerateRoleBinding(&types.Project{Namespace: project.Name, Role: "admin"})
+	GenerateRoleBinding(project.Name, "admin")
 }
 
 func projectDelete(obj interface{}) {
