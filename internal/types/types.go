@@ -97,7 +97,7 @@ type Project struct {
 	Project     string `json:"project"`
 	Role        string `json:"role"`
 	Source      string `json:"-"`
-	Environment string `json:"env"`
+	Environment string `json:"environment"`
 	Contact     string `json:"-"`
 }
 
