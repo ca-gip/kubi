@@ -144,7 +144,7 @@ func generateProject(projectInfos *types.Project) {
 
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
-func GenerateRoleBinding(namespace string, role string) {
+func GenerateUserRoleBinding(namespace string, role string) {
 	kconfig, err := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
@@ -199,6 +199,89 @@ func GenerateRoleBinding(namespace string, role string) {
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
+	}
+
+}
+
+func GenerateAppRoleBinding(namespace string) {
+	kconfig, err := rest.InClusterConfig()
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	api := clientSet.RbacV1()
+
+	_, errRB := api.RoleBindings(namespace).Get(utils.KubiClusterRoleBindingAppName, metav1.GetOptions{})
+
+	newRoleBinding := v1.RoleBinding{
+		RoleRef: v1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     utils.KubiClusterRoleBindingAppName,
+		},
+		Subjects: []v1.Subject{
+			{
+				Kind: "ServiceAccount",
+				Name: utils.KubiServiceAccountAppName,
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.KubiClusterRoleBindingAppName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"name":    utils.KubiClusterRoleBindingAppName,
+				"creator": "kubi",
+				"version": "v3",
+			},
+		},
+	}
+
+	if errRB != nil {
+		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
+	} else {
+		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
+	}
+
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+	}
+
+}
+
+func GenerateAppServiceAccount(namespace string) {
+	kconfig, err := rest.InClusterConfig()
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	api := clientSet.CoreV1()
+
+	_, errRB := api.ServiceAccounts(namespace).Get(utils.KubiServiceAccountAppName, metav1.GetOptions{})
+
+	newServiceAccount := corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.KubiServiceAccountAppName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"name":    utils.KubiServiceAccountAppName,
+				"creator": "kubi",
+				"version": "v3",
+			},
+		},
+	}
+
+	if errRB != nil {
+		_, err = api.ServiceAccounts(namespace).Create(&newServiceAccount)
+		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
+	} else {
+		_, err = api.ServiceAccounts(namespace).Update(&newServiceAccount)
+		utils.Log.Info().Msgf("Service Account %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		utils.ServiceAccountCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
+	}
+
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		utils.ServiceAccountCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
 	}
 
 }
@@ -310,7 +393,9 @@ func projectUpdate(old interface{}, new interface{}) {
 		generateNetworkPolicy(newProject.Name, nil)
 	}
 	// TODO: Refactor with a non static list of roles
-	GenerateRoleBinding(newProject.Name, "admin")
+	GenerateUserRoleBinding(newProject.Name, "admin")
+	GenerateAppRoleBinding(newProject.Name)
+	GenerateAppServiceAccount(newProject.Name)
 
 }
 
@@ -323,7 +408,9 @@ func projectCreated(obj interface{}) {
 	}
 
 	// TODO: Refactor with a non static list of roles
-	GenerateRoleBinding(project.Name, "admin")
+	GenerateUserRoleBinding(project.Name, "admin")
+	GenerateAppRoleBinding(project.Name)
+	GenerateAppServiceAccount(project.Name)
 }
 
 func projectDelete(obj interface{}) {

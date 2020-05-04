@@ -20,5 +20,5 @@ require (
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
 	k8s.io/code-generator v0.0.0-20190612205613-18da4a14b22b
-	k8s.io/utils v0.0.0-20200229041039-0a110f9eb7ab
+	k8s.io/utils v0.0.0-20200229041039-0a110f9eb7ab // indirect
 )

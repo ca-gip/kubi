@@ -84,7 +84,7 @@ func main() {
 		for {
 			select {
 			case t := <-timerKubiRefresh.C:
-				utils.Log.Info().Msgf("Refreshing Projects at ", t.String())
+				utils.Log.Info().Msgf("Refreshing Projects at %s", t.String())
 				services.RefreshK8SResources()
 			}
 		}
