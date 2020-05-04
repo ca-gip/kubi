@@ -111,9 +111,9 @@ func generateProject(projectInfos *types.Project) {
 		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
 		if errorCreate != nil {
 			utils.Log.Error().Msg(errorCreate.Error())
-			utils.ProjectCreationError.Inc()
+			utils.ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
 		} else {
-			utils.ProjectCreationSuccess.Inc()
+			utils.ProjectCreation.WithLabelValues("created", projectInfos.Project).Inc()
 		}
 		return
 	} else {
@@ -135,6 +135,9 @@ func generateProject(projectInfos *types.Project) {
 		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
 		if errUpdate != nil {
 			utils.Log.Error().Msg(errUpdate.Error())
+			utils.ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
+		} else {
+			utils.ProjectCreation.WithLabelValues("updated", projectInfos.Project).Inc()
 		}
 	}
 }
@@ -186,15 +189,16 @@ func GenerateRoleBinding(namespace string, role string) {
 	if errRB != nil {
 		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and role %v", roleBindingName, namespace, role)
-		utils.RoleBindingsCreationSuccess.Inc()
+		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
 	} else {
 		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
 		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and role %v", roleBindingName, namespace, role)
+		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
 	}
 
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
-		utils.RoleBindingsCreationError.Inc()
+		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
 	}
 
 }
@@ -231,9 +235,9 @@ func createNamespace(namespace string, api v13.CoreV1Interface) error {
 	_, err := api.Namespaces().Create(ns)
 	if err != nil {
 		utils.Log.Error().Err(err)
-		utils.NamespaceCreationError.Inc()
+		utils.NamespaceCreation.WithLabelValues("error", namespace).Inc()
 	} else {
-		utils.NamespaceCreationSuccess.Inc()
+		utils.NamespaceCreation.WithLabelValues("created", namespace).Inc()
 	}
 	return err
 }
@@ -256,6 +260,9 @@ func updateExistingNamespace(namespace string, api v13.CoreV1Interface) error {
 
 	if err != nil {
 		utils.Log.Error().Err(err)
+		utils.NamespaceCreation.WithLabelValues("error", namespace).Inc()
+	} else {
+		utils.NamespaceCreation.WithLabelValues("updated", namespace).Inc()
 	}
 	return err
 }
@@ -409,6 +416,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 		networkPolicyConfig = existingNetworkPolicyConfig
 		if err != nil {
 			utils.Log.Info().Msgf("Operator: No default network policy config \"%v\" found, cannot create/update namespace security !, Error: %v", utils.KubiDefaultNetworkPolicyName, err.Error())
+			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
 		}
 
 	}
@@ -481,10 +489,20 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 	}
 	if errNetpol != nil {
 		_, err := api.NetworkPolicies(namespace).Create(networkpolicy)
+		if err != nil {
+			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
+		} else {
+			utils.NetworkPolicyCreation.WithLabelValues("created", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
+		}
 		utils.Check(err)
 		return
 	} else {
 		_, err := api.NetworkPolicies(namespace).Update(networkpolicy)
+		if err != nil {
+			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
+		} else {
+			utils.NetworkPolicyCreation.WithLabelValues("updated", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
+		}
 		utils.Check(err)
 		return
 	}

@@ -16,32 +16,27 @@ var Histogram = promauto.NewHistogramVec(prometheus.HistogramOpts{
 	Buckets: []float64{1, 2, 5, 6, 10}, //defining small buckets as this app should not take more than 1 sec to respond
 }, []string{"path"}) // this will be partitioned by the HTTP code.
 
-var ProjectCreationSuccess = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_project_creation_success",
-	Help: "Number of project created with success",
-})
+var ProjectCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_project_creation",
+	Help: "Number of project created",
+}, []string{"status", "name"})
 
-var ProjectCreationError = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_project_creation_error",
-	Help: "Number of project creation with an error",
-})
+var NamespaceCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_namespace_creation",
+	Help: "Number of namespace created",
+}, []string{"status", "name"})
 
-var RoleBindingsCreationSuccess = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_rolebindings_creation_success",
-	Help: "Number of role bindings created with success",
-})
+var RoleBindingsCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_rolebindings_creation",
+	Help: "Number of role bindings created",
+}, []string{"status", "target_namespace", "name"})
 
-var RoleBindingsCreationError = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_rolebindings_creation_error",
-	Help: "Number of role bindings creation with an error",
-})
+var ServiceAccountCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_service_account_creation",
+	Help: "Number of service account created",
+}, []string{"status", "target_namespace", "name"})
 
-var NamespaceCreationSuccess = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_namespace_creation_success",
-	Help: "Number of namespace created with success",
-})
-
-var NamespaceCreationError = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "kubi_namespace_creation_error",
-	Help: "Number of namespace creation with an error",
-})
+var NetworkPolicyCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_network_policy_creation",
+	Help: "Number of network policy created",
+}, []string{"status", "target_namespace", "name"})
