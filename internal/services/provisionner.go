@@ -218,8 +218,9 @@ func GenerateAppRoleBinding(namespace string) {
 		},
 		Subjects: []v1.Subject{
 			{
-				Kind: "ServiceAccount",
-				Name: utils.KubiServiceAccountAppName,
+				Kind:      "ServiceAccount",
+				Name:      utils.KubiServiceAccountAppName,
+				Namespace: namespace,
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -250,6 +251,7 @@ func GenerateAppRoleBinding(namespace string) {
 
 }
 
+// Generate
 func GenerateAppServiceAccount(namespace string) {
 	kconfig, err := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
@@ -273,10 +275,6 @@ func GenerateAppServiceAccount(namespace string) {
 		_, err = api.ServiceAccounts(namespace).Create(&newServiceAccount)
 		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-	} else {
-		_, err = api.ServiceAccounts(namespace).Update(&newServiceAccount)
-		utils.Log.Info().Msgf("Service Account %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
-		utils.ServiceAccountCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
 	}
 
 	if err != nil {
@@ -394,8 +392,8 @@ func projectUpdate(old interface{}, new interface{}) {
 	}
 	// TODO: Refactor with a non static list of roles
 	GenerateUserRoleBinding(newProject.Name, "admin")
-	GenerateAppRoleBinding(newProject.Name)
 	GenerateAppServiceAccount(newProject.Name)
+	GenerateAppRoleBinding(newProject.Name)
 
 }
 
@@ -409,8 +407,9 @@ func projectCreated(obj interface{}) {
 
 	// TODO: Refactor with a non static list of roles
 	GenerateUserRoleBinding(project.Name, "admin")
-	GenerateAppRoleBinding(project.Name)
 	GenerateAppServiceAccount(project.Name)
+	GenerateAppRoleBinding(project.Name)
+
 }
 
 func projectDelete(obj interface{}) {
