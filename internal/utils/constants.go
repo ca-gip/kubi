@@ -20,8 +20,9 @@ const (
 	KubiClusterRoleBindingReaderName = "kubi-reader"
 	KubiDefaultNetworkPolicyName     = "kubi-default"
 
-	KubiClusterRoleBindingAppName = "namespaced-service-binding"
-	KubiServiceAccountAppName     = "service"
+	KubiClusterRoleAppName    = "namespaced-service"
+	KubiRoleBindingAppName    = "namespaced-service-binding"
+	KubiServiceAccountAppName = "service"
 
 	AuthenticatedGroup = "system:authenticated"
 	AdminGroup         = "system:masters"

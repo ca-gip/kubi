@@ -208,13 +208,13 @@ func GenerateAppRoleBinding(namespace string) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	_, errRB := api.RoleBindings(namespace).Get(utils.KubiClusterRoleBindingAppName, metav1.GetOptions{})
+	_, errRB := api.RoleBindings(namespace).Get(utils.KubiRoleBindingAppName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     utils.KubiClusterRoleBindingAppName,
+			Name:     utils.KubiClusterRoleAppName,
 		},
 		Subjects: []v1.Subject{
 			{
@@ -224,10 +224,10 @@ func GenerateAppRoleBinding(namespace string) {
 			},
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.KubiClusterRoleBindingAppName,
+			Name:      utils.KubiRoleBindingAppName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"name":    utils.KubiClusterRoleBindingAppName,
+				"name":    utils.KubiRoleBindingAppName,
 				"creator": "kubi",
 				"version": "v3",
 			},
