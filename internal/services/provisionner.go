@@ -275,11 +275,11 @@ func GenerateAppServiceAccount(namespace string) {
 		_, err = api.ServiceAccounts(namespace).Create(&newServiceAccount)
 		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-	}
-
-	if err != nil {
+	} else if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		utils.ServiceAccountCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+	} else {
+		utils.ServiceAccountCreation.WithLabelValues("ok", namespace, utils.KubiServiceAccountAppName).Inc()
 	}
 
 }
@@ -297,6 +297,8 @@ func generateNamespace(namespace string) (err error) {
 		err = createNamespace(namespace, api)
 	} else if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(namespace)) {
 		err = updateExistingNamespace(namespace, api)
+	} else {
+		utils.NamespaceCreation.WithLabelValues("ok", namespace).Inc()
 	}
 	return
 }
