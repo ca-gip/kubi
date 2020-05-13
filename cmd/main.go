@@ -61,6 +61,7 @@ func main() {
 	}
 
 	router := mux.NewRouter()
+	router.Use(utils.PrometheusMiddleware)
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		utils.Log.Warn().Msgf("%d %s %s", http.StatusNotFound, req.Method, req.URL.String())
