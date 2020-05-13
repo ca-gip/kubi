@@ -1,19 +1,17 @@
 package utils
 
 import (
-	"fmt"
+	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
-	"time"
 )
 
-func Middleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		defer func() {
-			httpDuration := time.Since(start)
-			Histogram.WithLabelValues(fmt.Sprintf("%s", r.RequestURI)).Observe(httpDuration.Seconds())
-		}()
+func PrometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		route := mux.CurrentRoute(r)
+		path, _ := route.GetPathTemplate()
+		timer := prometheus.NewTimer(Histogram.WithLabelValues(path))
 		next.ServeHTTP(w, r)
-	}
+		timer.ObserveDuration()
+	})
 }
