@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 28,
+  "id": 30,
   "links": [],
   "panels": [
     {
@@ -42,7 +42,8 @@
         "#d44a3a"
       ],
       "datasource": "prometheus",
-      "format": "none",
+      "decimals": 0,
+      "format": "short",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -755,18 +756,20 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 7,
         "w": 12,
         "x": 0,
         "y": 19
       },
-      "id": 5,
+      "id": 27,
       "legend": {
         "avg": false,
         "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -782,126 +785,15 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "error",
+          "alias": "/error/",
           "color": "#FF7383"
         },
         {
-          "alias": "created",
+          "alias": "/created/",
           "color": "#8AB8FF"
         },
         {
-          "alias": "updated",
-          "color": "#96D98D"
-        }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "count(count by (name) (kubi_project_creation{status=\"created\"}))",
-          "legendFormat": "created",
-          "refId": "A"
-        },
-        {
-          "expr": "count(count by (name) (kubi_project_creation{status=\"updated\"}))",
-          "legendFormat": "updated",
-          "refId": "B"
-        },
-        {
-          "expr": "count(count by (name) (kubi_project_creation{status=\"error\"}))",
-          "legendFormat": "error",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Project State",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "decimals": 0,
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "decimals": null,
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "prometheus",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 19
-      },
-      "id": 6,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "error",
-          "color": "#FF7383"
-        },
-        {
-          "alias": "created",
-          "color": "#8AB8FF"
-        },
-        {
-          "alias": "updated",
+          "alias": "/updated/",
           "color": "#96D98D"
         }
       ],
@@ -910,35 +802,30 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count by (name) (kubi_namespace_creation{status=\"created\"}))",
-          "legendFormat": "created",
-          "refId": "A"
-        },
-        {
-          "expr": "count(count by (name) (kubi_namespace_creation{status=\"updated\"}))",
-          "legendFormat": "updated",
-          "refId": "B"
-        },
-        {
-          "expr": "count(count by (name) (kubi_namespace_creation{status=\"error\"}))",
-          "legendFormat": "error",
+          "expr": "increase(kubi_project_creation{status=\"error\"}[30m])",
+          "legendFormat": "error - {{ name }}",
           "refId": "C"
         },
         {
-          "expr": "count(count by (name) (kubi_namespace_creation{status=\"ok\"}))",
-          "legendFormat": "ok",
-          "refId": "D"
+          "expr": "increase(kubi_project_creation{status=\"created\"}[30m])",
+          "legendFormat": "created - {{ name }}",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(kubi_project_creation{status=\"updated\"}[30m])",
+          "legendFormat": "updated - {{ name }}",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Namespace State",
+      "title": "Project Status",
       "tooltip": {
-        "shared": true,
+        "shared": false,
         "sort": 0,
-        "value_type": "individual"
+        "value_type": "cumulative"
       },
       "type": "graph",
       "xaxis": {
@@ -981,18 +868,141 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "id": 28,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "/error/",
+          "color": "#FF7383"
+        },
+        {
+          "alias": "/created/",
+          "color": "#8AB8FF"
+        },
+        {
+          "alias": "/updated/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/ok/",
+          "color": "#96D98D"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "increase(kubi_namespace_creation{status=\"error\"}[20m])",
+          "legendFormat": "error - {{ name }}",
+          "refId": "C"
+        },
+        {
+          "expr": "increase(kubi_namespace_creation{status=\"created\"}[20m])",
+          "legendFormat": "created - {{ name }}",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(kubi_namespace_creation{status=\"updated\"}[30m])",
+          "legendFormat": "updated - {{ name }}",
+          "refId": "B"
+        },
+        {
+          "expr": "increase(kubi_namespace_creation{status=\"ok\"}[30m])",
+          "legendFormat": "ok - {{ name }}",
+          "refId": "D"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Namespace Status",
+      "tooltip": {
+        "shared": false,
+        "sort": 0,
+        "value_type": "cumulative"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 26
       },
       "id": 3,
       "legend": {
         "avg": false,
         "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -1008,15 +1018,15 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "error",
+          "alias": "/error/",
           "color": "#FF7383"
         },
         {
-          "alias": "created",
+          "alias": "/created/",
           "color": "#8AB8FF"
         },
         {
-          "alias": "updated",
+          "alias": "/updated/",
           "color": "#96D98D"
         }
       ],
@@ -1025,30 +1035,30 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count by (name) (kubi_rolebindings_creation{status=\"created\"}))",
-          "legendFormat": "created",
+          "expr": "increase(kubi_rolebindings_creation{status=\"error\"}[30m])",
+          "legendFormat": "error {{ target_namespace }} - {{ name }}",
+          "refId": "C"
+        },
+        {
+          "expr": "increase(kubi_rolebindings_creation{status=\"created\"}[30m])",
+          "legendFormat": "created {{ target_namespace }} - {{ name }}",
           "refId": "A"
         },
         {
-          "expr": "count(count by (name) (kubi_rolebindings_creation{status=\"updated\"}))",
-          "legendFormat": "updated",
+          "expr": "increase(kubi_rolebindings_creation{status=\"updated\"}[30m])",
+          "legendFormat": "updated {{ target_namespace }} - {{ name }}",
           "refId": "B"
-        },
-        {
-          "expr": "count(count by (name) (kubi_rolebindings_creation{status=\"error\"}))",
-          "legendFormat": "error",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Rolebindings State",
+      "title": "Rolebindings Status",
       "tooltip": {
-        "shared": true,
+        "shared": false,
         "sort": 0,
-        "value_type": "individual"
+        "value_type": "cumulative"
       },
       "type": "graph",
       "xaxis": {
@@ -1091,18 +1101,20 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 7,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 26
       },
-      "id": 7,
+      "id": 30,
       "legend": {
         "avg": false,
         "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -1118,15 +1130,19 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "error",
+          "alias": "/error/",
           "color": "#FF7383"
         },
         {
-          "alias": "created",
+          "alias": "/created/",
           "color": "#8AB8FF"
         },
         {
-          "alias": "updated",
+          "alias": "/updated/",
+          "color": "#96D98D"
+        },
+        {
+          "alias": "/ok/",
           "color": "#96D98D"
         }
       ],
@@ -1135,23 +1151,23 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count by (name) (kubi_service_account_creation{status=\"created\"}))",
-          "legendFormat": "created",
-          "refId": "A"
-        },
-        {
-          "expr": "count(count by (name) (kubi_service_account_creation{status=\"updated\"}))",
-          "legendFormat": "updated",
-          "refId": "B"
-        },
-        {
-          "expr": "count(count by (name) (kubi_service_account_creation{status=\"error\"}))",
-          "legendFormat": "error",
+          "expr": "increase(kubi_service_account_creation{status=\"error\"}[20m])",
+          "legendFormat": "error  {{ target_namespace }} {{ name }}",
           "refId": "C"
         },
         {
-          "expr": "count(count by (name) (kubi_service_account_creation{status=\"ok\"}))",
-          "legendFormat": "ok",
+          "expr": "increase(kubi_service_account_creation{status=\"created\"}[20m])",
+          "legendFormat": "created  {{ target_namespace }} - {{ name }}",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(kubi_service_account_creation{status=\"updated\"}[30m])",
+          "legendFormat": "updated  {{ target_namespace }} - {{ name }}",
+          "refId": "B"
+        },
+        {
+          "expr": "increase(kubi_service_account_creation{status=\"ok\"}[30m])",
+          "legendFormat": "ok  {{ target_namespace }} - {{ name }}",
           "refId": "D"
         }
       ],
@@ -1159,11 +1175,11 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Service Account State",
+      "title": "Service Account Status",
       "tooltip": {
-        "shared": true,
+        "shared": false,
         "sort": 0,
-        "value_type": "individual"
+        "value_type": "cumulative"
       },
       "type": "graph",
       "xaxis": {
@@ -1206,18 +1222,20 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 7,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 33
       },
-      "id": 4,
+      "id": 29,
       "legend": {
         "avg": false,
         "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -1233,47 +1251,47 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "error",
+          "alias": "/error/",
           "color": "#FF7383"
         },
         {
-          "alias": "created",
+          "alias": "/created/",
           "color": "#8AB8FF"
         },
         {
-          "alias": "updated",
+          "alias": "/updated/",
           "color": "#96D98D"
         }
       ],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(count by (name) (kubi_network_policy_creation{status=\"created\"}))",
-          "legendFormat": "created",
+          "expr": "increase(kubi_network_policy_creation{status=\"error\"}[30m])",
+          "legendFormat": "error {{ target_namespace }} - {{ name }}",
+          "refId": "C"
+        },
+        {
+          "expr": "increase(kubi_network_policy_creation{status=\"created\"}[30m])",
+          "legendFormat": "created {{ target_namespace }} - {{ name }}",
           "refId": "A"
         },
         {
-          "expr": "count(count by (name) (kubi_network_policy_creation{status=\"updated\"}))",
-          "legendFormat": "updated",
+          "expr": "increase(kubi_network_policy_creation{status=\"updated\"}[30m])",
+          "legendFormat": "updated {{ target_namespace }} - {{ name }}",
           "refId": "B"
-        },
-        {
-          "expr": "count(count by (name) (kubi_network_policy_creation{status=\"error\"}))",
-          "legendFormat": "error",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Network Policy State",
+      "title": "Network Policy Status",
       "tooltip": {
-        "shared": true,
+        "shared": false,
         "sort": 0,
-        "value_type": "individual"
+        "value_type": "cumulative"
       },
       "type": "graph",
       "xaxis": {
@@ -1308,7 +1326,7 @@
       }
     }
   ],
-  "refresh": "5s",
+  "refresh": "30s",
   "schemaVersion": 20,
   "style": "dark",
   "tags": [],
@@ -1316,7 +1334,7 @@
     "list": []
   },
   "time": {
-    "from": "now-2d",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
@@ -1335,6 +1353,6 @@
   },
   "timezone": "",
   "title": "Kubi",
-  "uid": "FqRmANeZk",
+  "uid": "FqRmANeZa",
   "version": 1
 }
