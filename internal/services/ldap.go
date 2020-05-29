@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"fmt"
-	"github.com/ca-gip/kubi/internal/types"
 	"github.com/ca-gip/kubi/internal/utils"
+	"github.com/ca-gip/kubi/pkg/types"
 	"regexp"
 	"strings"
 )
