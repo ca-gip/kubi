@@ -38,7 +38,7 @@ func TestECDSA(t *testing.T) {
 
 	t.Run("Generate a valid User token", func(t *testing.T) {
 
-		token, err := issuer.GenerateUserToken([]string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin"}, "unit", "noreply@demo.com", true, true, false, false)
+		token, err := issuer.GenerateUserToken([]string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin"}, "unit", "noreply@demo.com", true, true, false)
 		assert.Nil(t, err)
 		assert.NotNil(t, token)
 		utils.Log.Info().Msgf("The token is %s", *token)

@@ -26,7 +26,7 @@ type TokenIssuer struct {
 	Tenant             string
 }
 
-func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, beta bool) (*string, error) {
+func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
@@ -34,7 +34,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	current := time.Now().Add(duration)
 	url, _ := url.Parse(issuer.PublicApiServerURL)
 
-	if beta && (hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
+	if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
 		utils.Log.Info().Msgf("The user %s will have transversal access ( admin: %v, application: %v, ops: %v )", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
 		auths = []*types.Project{}
 	}
@@ -65,7 +65,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	return &signedToken, err
 }
 
-func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, beta bool) (*string, error) {
+func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth) (*string, error) {
 
 	userDN, mail, err := ldap.AuthenticateUser(auth.Username, auth.Password)
 	if err != nil {
@@ -77,7 +77,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, beta bool) (*strin
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
-	token, err := issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), beta)
+	token, err := issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
 
 	if err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
@@ -95,12 +95,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "Basic Auth: Invalid credentials")
 	}
 
-	betaMode := false
-	if r.Header.Get("X-API-MODE") == "beta" {
-		betaMode = true
-	}
-
-	token, err := issuer.baseGenerateToken(*auth, betaMode)
+	token, err := issuer.baseGenerateToken(*auth)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 		w.WriteHeader(http.StatusCreated)
@@ -117,11 +112,6 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request) {
 	err, auth := issuer.basicAuth(r)
 
-	betaMode := false
-	if r.Header.Get("X-API-MODE") == "beta" {
-		betaMode = true
-	}
-
 	if err != nil {
 		utils.Log.Info().Err(err)
 		utils.Log.Info().Msg(err.Error())
@@ -130,7 +120,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 
 	}
 
-	token, err := issuer.baseGenerateToken(*auth, betaMode)
+	token, err := issuer.baseGenerateToken(*auth)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 	} else {
