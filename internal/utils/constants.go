@@ -24,6 +24,9 @@ const (
 	KubiRoleBindingAppName    = "namespaced-service-binding"
 	KubiServiceAccountAppName = "service"
 
+	KubiRoleBindingDefaultName    = "default-sa"
+	KubiServiceAccountDefaultName = "default"
+
 	AuthenticatedGroup = "system:authenticated"
 	AdminGroup         = "system:masters"
 	ApplicationMaster  = "application:masters"

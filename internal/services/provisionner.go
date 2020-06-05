@@ -251,6 +251,54 @@ func GenerateAppRoleBinding(namespace string) {
 
 }
 
+func GenerateDefaultRoleBinding(namespace string) {
+	kconfig, err := rest.InClusterConfig()
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	api := clientSet.RbacV1()
+
+	_, errRB := api.RoleBindings(namespace).Get(utils.KubiRoleBindingDefaultName, metav1.GetOptions{})
+
+	newRoleBinding := v1.RoleBinding{
+		RoleRef: v1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     utils.Config.DefaultPermission,
+		},
+		Subjects: []v1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      utils.KubiServiceAccountDefaultName,
+				Namespace: namespace,
+			},
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      utils.KubiRoleBindingDefaultName,
+			Namespace: namespace,
+			Labels: map[string]string{
+				"name":    utils.KubiRoleBindingDefaultName,
+				"creator": "kubi",
+				"version": "v3",
+			},
+		},
+	}
+
+	if errRB != nil {
+		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
+	} else {
+		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
+		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
+	}
+
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+	}
+
+}
+
 // Generate
 func GenerateAppServiceAccount(namespace string) {
 	kconfig, err := rest.InClusterConfig()
@@ -396,6 +444,9 @@ func projectUpdate(old interface{}, new interface{}) {
 	GenerateUserRoleBinding(newProject.Name, "admin")
 	GenerateAppServiceAccount(newProject.Name)
 	GenerateAppRoleBinding(newProject.Name)
+	if !strings.EqualFold(utils.Config.DefaultPermission, "") {
+		GenerateDefaultRoleBinding(newProject.Name)
+	}
 
 }
 
@@ -411,6 +462,9 @@ func projectCreated(obj interface{}) {
 	GenerateUserRoleBinding(project.Name, "admin")
 	GenerateAppServiceAccount(project.Name)
 	GenerateAppRoleBinding(project.Name)
+	if !strings.EqualFold(utils.Config.DefaultPermission, "") {
+		GenerateDefaultRoleBinding(project.Name)
+	}
 
 }
 

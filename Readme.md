@@ -92,6 +92,7 @@ For specific exceptions, add another network policy.
 |  **LOCATOR**                    |  *Locator: must be internet or extranet*    | `"intranet"             ` | `no   `     | intranet    |
 |  **PROVISIONING_NETWORK_POLICIES** |  *Enable or disable NetPol Mgmt*  | `true                           `| `no   `     | yes         |
 |  **CUSTOM_LABELS**              | *Add custom labels to namespaces*    | `quota=managed,monitoring=true`  | `no   `     | -           |
+|  **DEFAULT_PERMISSION**         | *ClusterRole associated with default service account*    | `view`  | `no   `     | -           |
 
 # Client
 

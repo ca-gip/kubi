@@ -121,6 +121,7 @@ func MakeConfig() (*types.Config, error) {
 		Locator:            getEnv("LOCATOR", KubiLocatorIntranet),
 		NetworkPolicy:      networkpolicyEnabled,
 		CustomLabels:       customLabels,
+		DefaultPermission:  getEnv("DEFAULT_PERMISSION", ""),
 	}
 
 	err := validation.ValidateStruct(config,

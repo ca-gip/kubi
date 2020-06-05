@@ -38,6 +38,7 @@ type Config struct {
 	Locator            string
 	NetworkPolicy      bool
 	CustomLabels       map[string]string
+	DefaultPermission  string
 }
 
 // Note: struct fields must be public in order for unmarshal to
