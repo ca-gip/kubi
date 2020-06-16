@@ -3,3 +3,4 @@ vendor
 coverage.*
 kubi
 bin
+build/*

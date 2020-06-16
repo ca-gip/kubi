@@ -173,7 +173,11 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
 {
   "hosts": [
     "kubi.devops.managed.kvm",
-    "kubi-svc.kube-system.svc.cluster.local"
+    "kubi-svc",
+    "kubi-svc.kube-system",
+    "kubi-svc.kube-system.svc",
+    "kubi-svc.kube-system.svc.cluster.local",
+    "kubi.devops.managed.kvm"
   ],
   "CN": "kubi-svc.kube-system.svc.cluster.local",
   "key": {
@@ -281,7 +285,7 @@ spec:
       - 389
       - 123
       - 53
-    # cidrs allowed for egress 
+    # cidrs allowed for egress
     # for ipvs, add the network used by calico, for kubernetes svc in default ns
     cidrs:
       - 192.168.2.0/24
@@ -315,7 +319,7 @@ clusters:
   - name: kubi
     cluster:
       certificate-authority: /etc/kubernetes/pki/ca.crt
-      server: https://api.devops.managed.kvm:30003/authenticate   
+      server: https://kube-svc:8001/authenticate   
 users:
   - name: apiserver
     user:
@@ -369,7 +373,7 @@ The following features should be available soon.
 - Expose /metrics
 
 
-# Development environment 
+# Development environment
 
 You can easily contribute to this project by using a development environment, follow the installation step from [Installation](#installation) until the [Deploy the prerequisites](#deploy-the-prerequisites).
 
@@ -387,7 +391,7 @@ Create secret dirs on your local machine
 mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
 ```
 
-The mapping between the secret:key and file path 
+The mapping between the secret:key and file path
 
 | Secret Name | Secret Key | Local Path |
 |-------------|------------|------------|
