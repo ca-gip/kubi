@@ -157,11 +157,10 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	err, auth := issuer.basicAuth(r)
 
 	if err != nil {
-		utils.Log.Info().Err(err)
 		utils.Log.Info().Msg(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		io.WriteString(w, "Basic Auth: Invalid credentials")
-
+		return
 	}
 
 	token, err := issuer.baseGenerateToken(*auth, utils.Empty)

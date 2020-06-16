@@ -21,6 +21,13 @@ spec:
           image: cagip/kubi-api:1.7.0
           ports:
             - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /ca
+              port: 8000
+              scheme: HTTPS
+            initialDelaySeconds: 3
+            periodSeconds: 1
           volumeMounts:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
