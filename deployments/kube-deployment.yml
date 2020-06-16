@@ -6,7 +6,7 @@ metadata:
   labels:
     app: kubi
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: kubi
@@ -17,10 +17,85 @@ spec:
     spec:
       serviceAccountName: kubi-user
       containers:
-        - name: kubi
-          image: cagip/kubi:1.4.2
+        - name: kubi-api
+          image: cagip/kubi-api:1.7.0
           ports:
             - containerPort: 8000
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+        - name: kubi-webhook
+          image: cagip/kubi-webhook:1.7.0
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+        - name: kubi-operator
+          image: cagip/kubi-operator:1.7.0
+          ports:
+            - containerPort: 8002
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+      volumes:
+        - name: kubi-tls
+          secret:
+            secretName: kubi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubi-operator
+  namespace: kube-system
+  labels:
+    app: kubi-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubi-operator
+  template:
+    metadata:
+      labels:
+        app: kubi-operator
+    spec:
+      serviceAccountName: kubi-user
+      containers:
+        - name: kubi-operator
+          image: cagip/kubi-operator:1.7.0
+          ports:
+            - containerPort: 8002
           volumeMounts:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"

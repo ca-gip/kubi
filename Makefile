@@ -5,7 +5,7 @@ IMAGE= kubi
 DOCKER_REPO= cagip
 
 clean:
-	rm -rf vendor build/kubi
+	rm -rf vendor build/*
 
 dependency:
 	go mod vendor
@@ -20,7 +20,22 @@ test-only:
 	@echo "-> Test only kubi operator binary"
 	GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils
 
-build: test
-	@echo "-> Building kubi operator binary"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi -i $(GOPATH)/src/$(REPO)/cmd/main.go
+build-operator: test
+	@echo "-> Building kubi operator"
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-operator -i $(GOPATH)/src/$(REPO)/cmd/operator/main.go
+
+build-api: test
+	@echo "-> Building kubi api"
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-api -i $(GOPATH)/src/$(REPO)/cmd/api/main.go
+
+build-cli:
+	@echo "-> Building kubi client"
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-cli -i $(GOPATH)/src/$(REPO)/cmd/cli/main.go
+
+build-webhook: test
+	@echo "-> Building kubi authorization webhook"
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-webhook -i $(GOPATH)/src/$(REPO)/cmd/authorization-webhook/main.go
+
+build: build-webhook build-operator build-cli build-api
+
 

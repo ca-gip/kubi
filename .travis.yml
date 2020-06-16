@@ -1,6 +1,6 @@
 language: go
 go:
-  - "1.10"
+  - "1.13"
 
 branches:
   only:
@@ -12,10 +12,16 @@ env:
     - REPO=cagip/kubi
 
 script:
-  - docker build -f Dockerfile -t $REPO:$COMMIT .
+  - docker build -f Dockerfile.webhook -t $REPO-webhook:$COMMIT .
+  - docker build -f Dockerfile.operator -t $REPO-operator:$COMMIT .
+  - docker build -f Dockerfile.api -t $REPO-api:$COMMIT .
 
 after_success:
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then cat Version; else (echo $TRAVIS_BRANCH) ; fi`
-  - docker tag $REPO:$COMMIT $REPO:$TAG
-  - docker push $REPO:$TAG
+  - docker tag $REPO-operator:$COMMIT $REPO-operator:$TAG
+  - docker tag $REPO-api:$COMMIT $REPO-api:$TAG
+  - docker tag $REPO-webhook:$COMMIT $REPO-webhook:$TAG
+  - docker push $REPO-operator:$TAG
+  - docker push $REPO-api:$TAG
+  - docker push $REPO-webhook:$TAG
