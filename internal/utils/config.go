@@ -118,6 +118,7 @@ func MakeConfig() (*types.Config, error) {
 		PublicApiServerURL: getEnv("PUBLIC_APISERVER_URL", ""),
 		ApiServerTLSConfig: *tlsConfig,
 		TokenLifeTime:      getEnv("TOKEN_LIFETIME", "4h"),
+		ExtraTokenLifeTime: getEnv("EXTRA_TOKEN_LIFETIME", "30d"),
 		Locator:            getEnv("LOCATOR", KubiLocatorIntranet),
 		NetworkPolicy:      networkpolicyEnabled,
 		CustomLabels:       customLabels,

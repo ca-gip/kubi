@@ -35,6 +35,7 @@ type Config struct {
 	KubeToken          string
 	ApiServerTLSConfig tls.Config
 	TokenLifeTime      string
+	ExtraTokenLifeTime string
 	Locator            string
 	NetworkPolicy      bool
 	CustomLabels       map[string]string

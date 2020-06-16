@@ -55,6 +55,7 @@ func main() {
 		EcdsaPrivate:       ecdsaKey,
 		EcdsaPublic:        ecdsaPub,
 		TokenDuration:      utils.Config.TokenLifeTime,
+		ExtraTokenDuration: utils.Config.ExtraTokenLifeTime,
 		Locator:            utils.Config.Locator,
 		PublicApiServerURL: utils.Config.PublicApiServerURL,
 		Tenant:             utils.Config.Tenant,
