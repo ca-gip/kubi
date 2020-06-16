@@ -36,19 +36,4 @@ func TestECDSA(t *testing.T) {
 		Locator:       utils.KubiLocatorIntranet,
 	}
 
-	t.Run("Generate a valid User token", func(t *testing.T) {
-
-		token, err := issuer.GenerateUserToken([]string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin"}, "unit", "noreply@demo.com", true, true, false)
-		assert.Nil(t, err)
-		assert.NotNil(t, token)
-		utils.Log.Info().Msgf("The token is %s", *token)
-
-		method := jwt.SigningMethodES512
-
-		tokenSplits := strings.Split(*token, ".")
-
-		err = method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], ecdsaPub)
-		assert.Nil(t, err)
-
-	})
 }

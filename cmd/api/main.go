@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"time"
 )
 
 func main() {
@@ -22,16 +21,6 @@ func main() {
 		os.Exit(1)
 	}
 	utils.Config = config
-
-	// Generate namespace and role binding for ldap groups
-	// no need to wait here
-
-	utils.Log.Info().Msg("Generating resources from LDAP groups")
-
-	err = services.GenerateResources()
-	if err != nil {
-		log.Error().Err(err)
-	}
 
 	// TODO Move to config ( for validation )
 	ecdsaPem, err := ioutil.ReadFile(utils.ECDSAKeyPath)
@@ -73,24 +62,6 @@ func main() {
 	router.HandleFunc("/token", tokenIssuer.GenerateJWT).Methods(http.MethodGet)
 	router.HandleFunc("/authenticate", services.AuthenticateHandler(tokenIssuer)).Methods(http.MethodPost)
 	router.Handle("/metrics", promhttp.Handler())
-
-	if config.NetworkPolicy {
-		services.WatchNetPolConfig()
-	} else {
-		utils.Log.Info().Msg("NetworkPolicies generation is disabled.")
-	}
-	services.WatchProjects()
-
-	timerKubiRefresh := time.NewTicker(10 * time.Minute)
-	go func() {
-		for {
-			select {
-			case t := <-timerKubiRefresh.C:
-				utils.Log.Info().Msgf("Refreshing Projects at %s", t.String())
-				services.RefreshK8SResources()
-			}
-		}
-	}()
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
 	utils.Log.Info().Msg(http.ListenAndServeTLS(":8000", utils.TlsCertPath, utils.TlsKeyPath, router).Error())
