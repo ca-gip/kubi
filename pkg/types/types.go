@@ -91,6 +91,7 @@ type AuthJWTClaims struct {
 	Locator           string     `json:"locator"`
 	Endpoint          string     `json:"endPoint"`
 	Tenant            string     `json:"tenant"`
+	Scopes            string     `json:"scopes"`
 	jwt.StandardClaims
 }
 

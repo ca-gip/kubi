@@ -21,9 +21,46 @@ type TokenIssuer struct {
 	EcdsaPrivate       *ecdsa.PrivateKey
 	EcdsaPublic        *ecdsa.PublicKey
 	TokenDuration      string
+	ExtraTokenDuration string
 	Locator            string
 	PublicApiServerURL string
 	Tenant             string
+}
+
+// Generate an service token from a user account
+// The semantic of this token should be hold by the target backend, ex: service api, promotion api...
+// Only user with transversal access can generate extra tokens
+func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, scopes string) (*string, error) {
+
+	duration, err := time.ParseDuration(issuer.ExtraTokenDuration)
+	current := time.Now().Add(duration)
+	url, _ := url.Parse(issuer.PublicApiServerURL)
+
+	if !(hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
+		utils.Log.Info().Msgf("The user %s don't have transversal access ( admin: %v, application: %v, ops: %v ).", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
+	}
+
+	// Create the Claims
+	claims := types.AuthJWTClaims{
+		Auths:    []*types.Project{},
+		User:     username,
+		Contact:  email,
+		Locator:  issuer.Locator,
+		Endpoint: url.Host,
+		Tenant:   issuer.Tenant,
+		Scopes:   scopes,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: current.Unix(),
+			Issuer:    "Kubi Server",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
+	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
+	if err != nil {
+		return nil, err
+	}
+	return &signedToken, err
 }
 
 func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
@@ -65,7 +102,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	return &signedToken, err
 }
 
-func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth) (*string, error) {
+func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*string, error) {
 
 	userDN, mail, err := ldap.AuthenticateUser(auth.Username, auth.Password)
 	if err != nil {
@@ -77,7 +114,13 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth) (*string, error) {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
-	token, err := issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
+
+	var token *string = nil
+	if len(scopes) > 0 {
+		token, err = issuer.GenerateExtraToken(auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), scopes)
+	} else {
+		token, err = issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
+	}
 
 	if err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
@@ -95,7 +138,8 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "Basic Auth: Invalid credentials")
 	}
 
-	token, err := issuer.baseGenerateToken(*auth)
+	scopes := r.URL.Query().Get("scopes")
+	token, err := issuer.baseGenerateToken(*auth, scopes)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 		w.WriteHeader(http.StatusCreated)
@@ -120,7 +164,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 
 	}
 
-	token, err := issuer.baseGenerateToken(*auth)
+	token, err := issuer.baseGenerateToken(*auth, utils.Empty)
 	if err == nil {
 		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 	} else {
