@@ -28,10 +28,6 @@ build-api: test
 	@echo "-> Building kubi api"
 	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-api -i $(GOPATH)/src/$(REPO)/cmd/api/main.go
 
-build-cli:
-	@echo "-> Building kubi client"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-cli -i $(GOPATH)/src/$(REPO)/cmd/cli/main.go
-
 build-webhook: test
 	@echo "-> Building kubi authorization webhook"
 	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-webhook -i $(GOPATH)/src/$(REPO)/cmd/authorization-webhook/main.go
