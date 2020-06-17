@@ -118,7 +118,7 @@ For specific exceptions, add another network policy.
 #### For Linux
 ```bash
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/1.4.1/kubi -P /usr/local/bin
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.7.0/kubi -P /usr/local/bin
 sudo chmod a+x /usr/local/bin/kubi
 
 # Connect to the cluster
@@ -133,7 +133,7 @@ kubi --kubi-url <kubi-server-fqdn-or-ip>:30003 --generate-config --username <use
 brew install wget
 
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/1.4.1/kubi-darwin -O /usr/local/bin/kubi
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.7.0/kubi-darwin -O /usr/local/bin/kubi
 sudo chmod a+x /usr/local/bin/kubi
 
 ```
