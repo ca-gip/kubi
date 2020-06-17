@@ -32,6 +32,6 @@ build-webhook: test
 	@echo "-> Building kubi authorization webhook"
 	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-webhook -i $(GOPATH)/src/$(REPO)/cmd/authorization-webhook/main.go
 
-build: build-webhook build-operator build-cli build-api
+build: build-webhook build-operator build-api
 
 
