@@ -38,6 +38,8 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 
 	if !(hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
 		utils.Log.Info().Msgf("The user %s don't have transversal access ( admin: %v, application: %v, ops: %v ).", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
+	} else {
+		utils.Log.Info().Msgf("Generating extra token with scope %s ", scopes)
 	}
 
 	// Create the Claims
