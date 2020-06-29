@@ -8,22 +8,23 @@ import (
 )
 
 type LdapConfig struct {
-	UserBase            string
-	GroupBase           string
-	AppMasterGroupBase  string
-	OpsMasterGroupBase  string
-	AdminUserBase       string
-	AdminGroupBase      string
-	Host                string
-	Port                int
-	UseSSL              bool
-	StartTLS            bool
-	SkipTLSVerification bool
-	BindDN              string
-	BindPassword        string
-	UserFilter          string
-	GroupFilter         string
-	Attributes          []string
+	UserBase             string
+	GroupBase            string
+	AppMasterGroupBase   string
+	CustomerOpsGroupBase string
+	OpsMasterGroupBase   string
+	AdminUserBase        string
+	AdminGroupBase       string
+	Host                 string
+	Port                 int
+	UseSSL               bool
+	StartTLS             bool
+	SkipTLSVerification  bool
+	BindDN               string
+	BindPassword         string
+	UserFilter           string
+	GroupFilter          string
+	Attributes           []string
 }
 
 type Config struct {
