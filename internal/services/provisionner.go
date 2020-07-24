@@ -597,7 +597,6 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 
 	policyPeers := []v1n.NetworkPolicyPeer{
 		{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
-		//{NamespaceSelector: &metav1.LabelSelector{MatchLabels: nil}},
 	}
 
 	for _, cidr := range networkPolicyConfig.Spec.Egress.Cidrs {
