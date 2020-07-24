@@ -596,8 +596,8 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 	netpolPorts = append(netpolPorts, v1n.NetworkPolicyPort{Port: &intstr.IntOrString{IntVal: 53}, Protocol: &UDP})
 
 	policyPeers := []v1n.NetworkPolicyPeer{
-		{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
-		{NamespaceSelector: &metav1.LabelSelector{MatchLabels: nil}},
+		//{PodSelector: &metav1.LabelSelector{MatchLabels: nil}},
+		//{NamespaceSelector: &metav1.LabelSelector{MatchLabels: nil}},
 	}
 
 	for _, cidr := range networkPolicyConfig.Spec.Egress.Cidrs {
@@ -621,7 +621,9 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 			Egress: []v1n.NetworkPolicyEgressRule{
 				{
 					Ports: netpolPorts,
-					To:    policyPeers,
+				},
+				{
+					To: policyPeers,
 				},
 			},
 			PolicyTypes: []v1n.PolicyType{
