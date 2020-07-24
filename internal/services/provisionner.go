@@ -619,9 +619,9 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 				},
 			},
 			Egress: []v1n.NetworkPolicyEgressRule{
-				{Ports: netpolPorts},
 				{
-					To: policyPeers,
+					Ports: netpolPorts,
+					To:    policyPeers,
 				},
 			},
 			PolicyTypes: []v1n.PolicyType{
