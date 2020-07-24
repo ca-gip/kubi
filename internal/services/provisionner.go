@@ -625,7 +625,6 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 				{
 					To: policyPeers,
 				},
-				{: &metav1.LabelSelector{MatchLabels: nil}},
 			},
 			PolicyTypes: []v1n.PolicyType{
 				v1n.PolicyTypeIngress, v1n.PolicyTypeEgress,
