@@ -73,11 +73,10 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	current := time.Now().Add(duration)
 	url, _ := url.Parse(issuer.PublicApiServerURL)
 
-	/*
-		if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
-			utils.Log.Info().Msgf("The user %s will have transversal access ( admin: %v, application: %v, ops: %v )", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
-			auths = []*types.Project{}
-		}*/
+	if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
+		utils.Log.Info().Msgf("The user %s will have transversal access ( admin: %v, application: %v, ops: %v )", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
+		auths = []*types.Project{}
+	}
 
 	// Create the Claims
 	claims := types.AuthJWTClaims{
