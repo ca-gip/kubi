@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	kubernetes "k8s.io/client-go/kubernetes"
 	v13 "k8s.io/client-go/kubernetes/typed/core/v1"
+	v14 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"reflect"
@@ -149,6 +150,43 @@ func GenerateUserRoleBinding(namespace string, role string) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
+	roleBinding(role, api, namespace, subjectAdmin(namespace, role), err)
+	roleBinding("view", api, namespace, subjectView(namespace), err)
+}
+
+func subjectView(namespace string) []v1.Subject {
+	subjectView := []v1.Subject{
+		{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Group",
+			Name:     fmt.Sprintf("%s-%s", namespace, utils.ApplicationViewer),
+		},
+	}
+	return subjectView
+}
+
+func subjectAdmin(namespace string, role string) []v1.Subject {
+	subjectAdmin := []v1.Subject{
+		{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Group",
+			Name:     fmt.Sprintf("%s-%s", namespace, role),
+		},
+		{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Group",
+			Name:     utils.ApplicationMaster,
+		},
+		{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Group",
+			Name:     utils.OPSMaster,
+		},
+	}
+	return subjectAdmin
+}
+
+func roleBinding(role string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject, err error) {
 	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", role)
 	_, errRB := api.RoleBindings(namespace).Get(roleBindingName, metav1.GetOptions{})
 
@@ -158,23 +196,7 @@ func GenerateUserRoleBinding(namespace string, role string) {
 			Kind:     "ClusterRole",
 			Name:     roleBindingName,
 		},
-		Subjects: []v1.Subject{
-			{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Group",
-				Name:     fmt.Sprintf("%s-%s", namespace, role),
-			},
-			{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Group",
-				Name:     utils.ApplicationMaster,
-			},
-			{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Group",
-				Name:     utils.OPSMaster,
-			},
-		},
+		Subjects: subjectAdmin,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      roleBindingName,
 			Namespace: namespace,
@@ -200,7 +222,6 @@ func GenerateUserRoleBinding(namespace string, role string) {
 		utils.Log.Error().Msg(err.Error())
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
 	}
-
 }
 
 func GenerateAppRoleBinding(namespace string) {
