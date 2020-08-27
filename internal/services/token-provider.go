@@ -65,7 +65,7 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 	return &signedToken, err
 }
 
-func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool) (*string, error) {
+func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
@@ -86,6 +86,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		AdminAccess:       hasAdminAccess,
 		ApplicationAccess: hasApplicationAccess,
 		OpsAccess:         hasOpsAccess,
+		ViewerAccess:      hasViewerAccess,
 		Locator:           issuer.Locator,
 		Endpoint:          url.Host,
 		Tenant:            issuer.Tenant,
@@ -121,7 +122,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 	if len(scopes) > 0 {
 		token, err = issuer.GenerateExtraToken(auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), scopes)
 	} else {
-		token, err = issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN))
+		token, err = issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), ldap.HasViewerAccess(*userDN))
 	}
 
 	if err != nil {

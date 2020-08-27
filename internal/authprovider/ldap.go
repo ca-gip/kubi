@@ -198,6 +198,27 @@ func hasApplicationAccess(userDN string) bool {
 	return err == nil && len(res.Entries) > 0
 }
 
+// Check if a user is in viewer LDAP group
+// return true if it belong to viewerGroup, false otherwise
+func HasViewerAccess(userDN string) bool {
+
+	// No need to go further, there is no Application Group Base
+	if len(utils.Config.Ldap.ViewerGroupBase) == 0 {
+		return false
+	}
+
+	conn, err := getBindedConnection()
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return false
+	}
+
+	defer conn.Close()
+	req := newUserViewerSearchRequest(userDN)
+	res, err := conn.Search(req)
+
+	return err == nil && len(res.Entries) > 0
+}
 // Check if a user is in customer ops LDAP group
 // return true if it belong to CustomerOpsGroup, false otherwise
 func hasCustomerOpsAccess(userDN string) bool {
@@ -291,6 +312,21 @@ func newUserApplicationSearchRequest(userDN string) *ldap.SearchRequest {
 	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
 	return &ldap.SearchRequest{
 		BaseDN:       utils.Config.Ldap.AppMasterGroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       groupFilter, // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+}
+
+// request to get user group list
+func newUserViewerSearchRequest(userDN string) *ldap.SearchRequest {
+	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
+	return &ldap.SearchRequest{
+		BaseDN:       utils.Config.Ldap.ViewerGroupBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
 		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations
