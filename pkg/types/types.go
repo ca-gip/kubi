@@ -13,6 +13,7 @@ type LdapConfig struct {
 	AppMasterGroupBase   string
 	CustomerOpsGroupBase string
 	OpsMasterGroupBase   string
+	ViewerGroupBase      string
 	AdminUserBase        string
 	AdminGroupBase       string
 	Host                 string
@@ -90,6 +91,7 @@ type AuthJWTClaims struct {
 	AdminAccess       bool       `json:"adminAccess"`
 	ApplicationAccess bool       `json:"appAccess"`
 	OpsAccess         bool       `json:"opsAccess"`
+	ViewerAccess      bool       `json:"viewerAccess"`
 	Locator           string     `json:"locator"`
 	Endpoint          string     `json:"endPoint"`
 	Tenant            string     `json:"tenant"`

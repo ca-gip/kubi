@@ -1,0 +1,19 @@
+apiVersion: ca-gip.github.com/v1
+kind: Project
+metadata:
+  labels:
+    creator: kubi
+  name: team-1-development-viewer
+  selfLink: /apis/ca-gip.github.com/v1/projects/team-1-development
+  uid: 82c6f673-f443-4bb2-a4f3-b4bb3f65a839
+spec:
+  environment: development
+  project: team-1
+  sourceEntity: dl_kub_team-1-dev_viewer
+  stages:
+    - scratch
+    - staging
+    - stable
+  tenant: cagip
+status:
+  Name: created
