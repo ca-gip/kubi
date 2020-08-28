@@ -2,9 +2,10 @@ package v1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// +genclient
 // +genclient:nonNamespaced
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient
 type NetworkPolicyConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -46,9 +47,10 @@ type NetworkPolicyConfigList struct {
 	Items []NetworkPolicyConfig `json:"items"`
 }
 
-// +genclient
 // +genclient:nonNamespaced
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient
 type Project struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional

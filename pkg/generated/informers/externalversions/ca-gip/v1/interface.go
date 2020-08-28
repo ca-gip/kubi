@@ -27,10 +27,10 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // NetworkPolicyConfigs returns a NetworkPolicyConfigInformer.
 func (v *version) NetworkPolicyConfigs() NetworkPolicyConfigInformer {
-	return &networkPolicyConfigInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &networkPolicyConfigInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Projects returns a ProjectInformer.
 func (v *version) Projects() ProjectInformer {
-	return &projectInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &projectInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
