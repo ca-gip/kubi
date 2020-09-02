@@ -179,8 +179,8 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	}
 
 	// Create a DNS 1123 cluster name and user name
-	clusterName := strings.ReplaceAll(strings.TrimPrefix(utils.Config.PublicApiServerURL, "https://"), ".", "-")
-	username := fmt.Sprintf("%s@%s", auth.Username, clusterName)
+	clusterName := strings.TrimPrefix(utils.Config.PublicApiServerURL, "https://api.")
+	username := fmt.Sprintf("%s_%s", auth.Username, clusterName)
 
 	config := &types.KubeConfig{
 		ApiVersion: "v1",
