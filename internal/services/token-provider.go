@@ -184,32 +184,36 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Create a DNS 1123 cluster name and user name
+	clusterName := strings.TrimPrefix(utils.Config.PublicApiServerURL, "https://api.")
+	username := fmt.Sprintf("%s_%s", auth.Username, clusterName)
+
 	config := &types.KubeConfig{
 		ApiVersion: "v1",
 		Kind:       "Config",
 		Clusters: []types.KubeConfigCluster{
 			{
-				Name: "kubernetes",
+				Name: clusterName,
 				Cluster: types.KubeConfigClusterData{
 					Server:          utils.Config.PublicApiServerURL,
 					CertificateData: utils.Config.KubeCa,
 				},
 			},
 		},
-		CurrentContext: "kubernetes" + "-" + auth.Username,
+		CurrentContext: username,
 		Contexts: []types.KubeConfigContext{
 			{
-				Name: "kubernetes" + "-" + auth.Username,
+				Name: username,
 				Context: types.KubeConfigContextData{
-					Cluster: "kubernetes",
-					User:    auth.Username,
+					Cluster: clusterName,
+					User:    username,
 				},
 			},
 		},
 		Users: []types.KubeConfigUser{
 			{
 				User: types.KubeConfigUserToken{Token: *token},
-				Name: auth.Username},
+				Name: username},
 		},
 	}
 
