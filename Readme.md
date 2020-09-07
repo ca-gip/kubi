@@ -81,6 +81,7 @@ For specific exceptions, add another network policy.
 |  **LDAP_CUSTOMER_OPS_GROUPBASE**   |  *BaseDn for customer group base *   | `ou=CONTAINER,dc=example,dc=org` | `no  `      | -           |
 |  **LDAP_ADMIN_USERBASE**           |  *BaseDn for admin base search*      | `ou=Admin,dc=example,dc=org   `  | `yes  `     | -           |
 |  **LDAP_ADMIN_GROUPBASE**          |  *BaseDn for admin group base search*| `ou=AdminGroup,dc=example,dc=org`| `yes  `     | -           |
+|  **LDAP_VIEWER_GROUPBASE**         |  *BaseDn for viewer group base search*| `ou=ViewerGroup,dc=example,dc=org`| `no  `     | -           |
 |  **LDAP_SERVER**                   |  *LDAP server ip address*            | `"192.168.2.1"                 ` | `yes  `     | -           |
 |  **LDAP_PORT**                     |  *LDAP server port 389, 636...*      | `389                           ` | `no   `     | `389  `     |
 |  **LDAP_USE_SSL**                  |  *Use SSL or no*                     | `true                          ` | `no   `     | `false`     |

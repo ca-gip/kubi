@@ -99,6 +99,7 @@ func MakeConfig() (*types.Config, error) {
 		OpsMasterGroupBase:   getEnv("LDAP_OPS_GROUPBASE", ""),
 		AdminUserBase:        getEnv("LDAP_ADMIN_USERBASE", ""),
 		AdminGroupBase:       getEnv("LDAP_ADMIN_GROUPBASE", ""),
+		ViewerGroupBase:	  getEnv("LDAP_VIEWER_GROUPBASE", ""),
 		Host:                 os.Getenv("LDAP_SERVER"),
 		Port:                 ldapPort,
 		UseSSL:               useSSL,
