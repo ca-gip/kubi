@@ -64,7 +64,7 @@ var BlacklistedNamespaces = []string{
 
 var WhitelistedRoles = []string{
 	"admin",
-	"service",
+	"viewer",
 	"user",
 }
 
