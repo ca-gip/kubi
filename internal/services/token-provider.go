@@ -78,11 +78,6 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		auths = []*types.Project{}
 	}
 
-	if hasViewerAccess {
-		utils.Log.Info().Msgf("The user %s will have viewer access ( viewer: %v )", username, hasViewerAccess)
-		auths = []*types.Project{}
-	}
-
 	// Create the Claims
 	claims := types.AuthJWTClaims{
 		Auths:             auths,

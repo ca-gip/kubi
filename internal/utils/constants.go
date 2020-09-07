@@ -30,6 +30,7 @@ const (
 	AuthenticatedGroup = "system:authenticated"
 	AdminGroup         = "system:masters"
 	ApplicationMaster  = "application:masters"
+	ApplicationViewer  = "application:view"
 	OPSMaster          = "ops:masters"
 
 	KubiStageScratch = "scratch"
