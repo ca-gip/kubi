@@ -134,6 +134,7 @@ func generateProject(projectInfos *types.Project) {
 			existingProject.Spec.Stages = utils.AppendIfMissing(existingProject.Spec.Stages, stage)
 		}
 		existingProject.Spec.SourceEntity = projectInfos.Source
+		existingProject.Spec.SourceDN = fmt.Sprintf("CN=%s,%s", projectInfos.Source, utils.Config.Ldap.GroupBase)
 		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
 		if errUpdate != nil {
 			utils.Log.Error().Msg(errUpdate.Error())
