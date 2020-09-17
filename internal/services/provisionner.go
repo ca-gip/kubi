@@ -103,6 +103,7 @@ func generateProject(projectInfos *types.Project) {
 	}
 
 	project.Spec.SourceEntity = projectInfos.Source
+	project.Spec.SourceDN = fmt.Sprintf("CN=%s,%s", projectInfos.Source, utils.Config.Ldap.GroupBase)
 	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
 		project.Spec.Tenant = utils.Config.Tenant
 	}
