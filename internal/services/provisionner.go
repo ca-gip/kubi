@@ -161,7 +161,7 @@ func subjectView(namespace string) []v1.Subject {
 		{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Group",
-			Name:     fmt.Sprintf("%s-%s", namespace, utils.ApplicationViewer),
+			Name:     fmt.Sprintf("%s", utils.ApplicationViewer),
 		},
 	}
 	return subjectView

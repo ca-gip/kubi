@@ -66,6 +66,10 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 				groups = append(groups, utils.ApplicationMaster)
 			}
 
+			if token.ViewerAccess {
+				groups = append(groups, utils.ApplicationViewer)
+			}
+
 			resp := v1beta1.TokenReview{
 				Status: v1beta1.TokenReviewStatus{
 					Authenticated: true,
