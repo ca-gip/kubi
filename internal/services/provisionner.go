@@ -152,7 +152,7 @@ func GenerateUserRoleBinding(namespace string, role string) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	roleBinding(role, api, namespace, subjectAdmin(namespace, role), err)
+	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role), err)
 	roleBinding("view", api, namespace, subjectView(namespace), err)
 }
 
@@ -188,8 +188,7 @@ func subjectAdmin(namespace string, role string) []v1.Subject {
 	return subjectAdmin
 }
 
-func roleBinding(role string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject, err error) {
-	roleBindingName := fmt.Sprintf("%s-%s", "namespaced", role)
+func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject, err error) {
 	_, errRB := api.RoleBindings(namespace).Get(roleBindingName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
@@ -212,11 +211,11 @@ func roleBinding(role string, api v14.RbacV1Interface, namespace string, subject
 
 	if errRB != nil {
 		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
-		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and role %v", roleBindingName, namespace, role)
+		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
 	} else {
 		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
-		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and role %v", roleBindingName, namespace, role)
+		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
 	}
 
