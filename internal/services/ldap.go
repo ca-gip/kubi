@@ -71,7 +71,7 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	rawNamespace, role := DnsParser.ReplaceAllString(lowerGroup, "${namespace}"), DnsParser.ReplaceAllString(lowerGroup, "${role}")
 	project := NamespaceParser(rawNamespace)
 	project.Role = role
-	project.Source = lowerGroup
+	project.Source = group
 
 	isNamespaceValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace())
 	isRoleValid := utils.Index(utils.WhitelistedRoles, project.Role) != -1
