@@ -102,7 +102,7 @@ For specific exceptions, add another network policy.
 
 ## For Windows users
 
-1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.8.3/kubi.exe)
+1. Download the cli: [download here](https://github.com/ca-gip/kubi/releases/download/v1.8.5/kubi.exe)
 2. Open Cmd
 ```bash
 # Get help
@@ -120,7 +120,7 @@ For specific exceptions, add another network policy.
 #### For Linux
 ```bash
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/v1.8.3/kubi -P /usr/local/bin
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.8.5/kubi -P /usr/local/bin
 sudo chmod a+x /usr/local/bin/kubi
 
 # Connect to the cluster
@@ -135,7 +135,7 @@ kubi config --kubi-url <kubi-server-fqdn-or-ip>:30003 --username <user_cn> --pas
 brew install wget
 
 # Install the kubi cli
-sudo wget https://github.com/ca-gip/kubi/releases/download/v1.8.3/kubi-darwin -O /usr/local/bin/kubi
+sudo wget https://github.com/ca-gip/kubi/releases/download/v1.8.5/kubi-darwin -O /usr/local/bin/kubi
 sudo chmod a+x /usr/local/bin/kubi
 
 ```
