@@ -87,6 +87,7 @@ func checkAuthenticate(userDN string, password string) error {
 		err  error
 		conn *ldap.Conn
 	)
+	defer conn.Close()
 	tlsConfig := &tls.Config{
 		ServerName:         utils.Config.Ldap.Host,
 		InsecureSkipVerify: utils.Config.Ldap.SkipTLSVerification,
