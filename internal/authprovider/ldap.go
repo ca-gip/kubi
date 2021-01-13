@@ -73,6 +73,10 @@ func AuthenticateUser(username string, password string) (*string, *string, error
 	}
 	defer conn.Close()
 
+	if len(password) == 0 {
+		return nil, nil, errors.New("Empty password, you must give a password.")
+	}
+
 	// Get User Distinguished Name for Standard User
 	userDN, mail, err := getUserDN(conn, utils.Config.Ldap.UserBase, username)
 	if err == nil {
@@ -219,6 +223,7 @@ func HasViewerAccess(userDN string) bool {
 
 	return err == nil && len(res.Entries) > 0
 }
+
 // Check if a user is in customer ops LDAP group
 // return true if it belong to CustomerOpsGroup, false otherwise
 func hasCustomerOpsAccess(userDN string) bool {
