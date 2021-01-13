@@ -3,7 +3,6 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
-
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
@@ -66,33 +65,55 @@ func GetAllGroups() ([]string, error) {
 // return if bind was ok, the userDN for next usage, and error if occurred
 func AuthenticateUser(username string, password string) (*string, *string, error) {
 
-	// First TCP connect
-	conn, err := getBindedConnection()
-	if err != nil {
-		return nil, nil, err
-	}
-	defer conn.Close()
-
-	if len(password) == 0 {
-		return nil, nil, errors.New("Empty password, you must give a password.")
-	}
-
 	// Get User Distinguished Name for Standard User
-	userDN, mail, err := getUserDN(conn, utils.Config.Ldap.UserBase, username)
+	userDN, mail, err := getUserDN(utils.Config.Ldap.UserBase, username)
+
 	if err == nil {
-		err = conn.Bind(userDN, password)
-		return &userDN, &mail, err
+		return &userDN, &mail, checkAuthenticate(userDN, password)
 	} else if len(utils.Config.Ldap.AdminUserBase) > 0 {
-		userDN, _, err := getUserDN(conn, utils.Config.Ldap.AdminUserBase, username)
+		userDN, _, err := getUserDN(utils.Config.Ldap.AdminUserBase, username)
 		if err != nil {
 			return &userDN, &mail, err
 		}
-		err = conn.Bind(userDN, password)
-		return &userDN, &mail, err
+		return &userDN, &mail, checkAuthenticate(userDN, password)
 	} else {
 		utils.Log.Error().Msg(err.Error())
 		return nil, &mail, err
 	}
+}
+
+func checkAuthenticate(userDN string, password string) error {
+	var (
+		err  error
+		conn *ldap.Conn
+	)
+	tlsConfig := &tls.Config{
+		ServerName:         utils.Config.Ldap.Host,
+		InsecureSkipVerify: utils.Config.Ldap.SkipTLSVerification,
+	}
+
+	if utils.Config.Ldap.UseSSL {
+		conn, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", utils.Config.Ldap.Host, utils.Config.Ldap.Port), tlsConfig)
+	} else {
+		conn, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", utils.Config.Ldap.Host, utils.Config.Ldap.Port))
+	}
+
+	if utils.Config.Ldap.StartTLS {
+		err = conn.StartTLS(tlsConfig)
+		if err != nil {
+			utils.Log.Error().Err(errors.Wrapf(err, "unable to setup TLS connection"))
+			return err
+		}
+	}
+
+	if err != nil {
+		utils.Log.Error().Err(errors.Wrapf(err, "unable to create ldap connector for %s:%d", utils.Config.Ldap.Host, utils.Config.Ldap.Port))
+		return err
+	}
+
+	// Bind with BindAccount
+	err = conn.Bind(userDN, password)
+	return err
 }
 
 func getBindedConnection() (*ldap.Conn, error) {
@@ -132,7 +153,14 @@ func getBindedConnection() (*ldap.Conn, error) {
 }
 
 // Get User DN for searching in group
-func getUserDN(conn *ldap.Conn, userBaseDN string, username string) (string, string, error) {
+func getUserDN(userBaseDN string, username string) (string, string, error) {
+	// First TCP connect
+	conn, err := getBindedConnection()
+	if err != nil {
+		return utils.Empty, utils.Empty, err
+	}
+	defer conn.Close()
+
 	req := newUserSearchRequest(userBaseDN, username)
 
 	res, err := conn.Search(req)
