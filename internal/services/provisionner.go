@@ -356,47 +356,51 @@ func GenerateAppServiceAccount(namespace string) {
 
 // generateNamespace from a name
 // If it doesn't exist or the number of labels is different from what it should be
-func generateNamespace(namespace string) (err error) {
+func generateNamespace(project *v12.Project) (err error) {
+	if project == nil {
+		return errors.New("project reference is empty")
+	}
+
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
-	ns, errNs := api.Namespaces().Get(namespace, metav1.GetOptions{})
+	ns, errNs := api.Namespaces().Get(project.Name, metav1.GetOptions{})
 
 	if kerror.IsNotFound(errNs) {
-		err = createNamespace(namespace, api)
-	} else if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(namespace)) {
-		err = updateExistingNamespace(namespace, api)
+		err = createNamespace(project, api)
+	} else if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(project)) {
+		err = updateExistingNamespace(project, api)
 	} else {
-		utils.NamespaceCreation.WithLabelValues("ok", namespace).Inc()
+		utils.NamespaceCreation.WithLabelValues("ok", project.Name).Inc()
 	}
 	return
 }
 
-func createNamespace(namespace string, api v13.CoreV1Interface) error {
-	utils.Log.Info().Msgf("Creating ns %v", namespace)
+func createNamespace(project *v12.Project, api v13.CoreV1Interface) error {
+	utils.Log.Info().Msgf("Creating ns %v", project.Name)
 	ns := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   namespace,
-			Labels: generateNamespaceLabels(namespace),
+			Name:   project.Name,
+			Labels: generateNamespaceLabels(project),
 		},
 	}
 	_, err := api.Namespaces().Create(ns)
 	if err != nil {
 		utils.Log.Error().Err(err)
-		utils.NamespaceCreation.WithLabelValues("error", namespace).Inc()
+		utils.NamespaceCreation.WithLabelValues("error", project.Name).Inc()
 	} else {
-		utils.NamespaceCreation.WithLabelValues("created", namespace).Inc()
+		utils.NamespaceCreation.WithLabelValues("created", project.Name).Inc()
 	}
 	return err
 }
 
-func updateExistingNamespace(namespace string, api v13.CoreV1Interface) error {
-	utils.Log.Info().Msgf("Updating ns %v", namespace)
+func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) error {
+	utils.Log.Info().Msgf("Updating ns %v", project.Name)
 
 	ns := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
@@ -404,8 +408,8 @@ func updateExistingNamespace(namespace string, api v13.CoreV1Interface) error {
 			Kind:       "Namespace",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   namespace,
-			Labels: generateNamespaceLabels(namespace),
+			Name:   project.Name,
+			Labels: generateNamespaceLabels(project),
 		},
 	}
 
@@ -413,19 +417,21 @@ func updateExistingNamespace(namespace string, api v13.CoreV1Interface) error {
 
 	if err != nil {
 		utils.Log.Error().Err(err)
-		utils.NamespaceCreation.WithLabelValues("error", namespace).Inc()
+		utils.NamespaceCreation.WithLabelValues("error", project.Name).Inc()
 	} else {
-		utils.NamespaceCreation.WithLabelValues("updated", namespace).Inc()
+		utils.NamespaceCreation.WithLabelValues("updated", project.Name).Inc()
 	}
 	return err
 }
 
 // Generate CustomLabels that should be applied on Kubi's Namespaces
-func generateNamespaceLabels(namespace string) (labels map[string]string) {
+func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
+
 	defaultLabels := map[string]string{
-		"name":    namespace,
-		"type":    "customer",
-		"creator": "kubi",
+		"name":        project.Name,
+		"type":        "customer",
+		"creator":     "kubi",
+		"environment": project.Spec.Environment,
 	}
 
 	return utils.Union(defaultLabels, utils.Config.CustomLabels)
@@ -458,7 +464,13 @@ func WatchProjects() cache.Store {
 func projectUpdate(old interface{}, new interface{}) {
 	newProject := new.(*v12.Project)
 	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", newProject.Name)
-	generateNamespace(newProject.Name)
+
+	err := generateNamespace(newProject)
+	if err != nil {
+		utils.Log.Warn().Msgf("Unexpected error %s", err)
+		return
+	}
+
 	if utils.Config.NetworkPolicy {
 		generateNetworkPolicy(newProject.Name, nil)
 	}
@@ -475,7 +487,13 @@ func projectUpdate(old interface{}, new interface{}) {
 func projectCreated(obj interface{}) {
 	project := obj.(*v12.Project)
 	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
-	generateNamespace(project.Name)
+
+	err := generateNamespace(project)
+	if err != nil {
+		utils.Log.Warn().Msgf("Unexpected error %s", err)
+		return
+	}
+
 	if utils.Config.NetworkPolicy {
 		generateNetworkPolicy(project.Name, nil)
 	}
