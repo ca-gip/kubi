@@ -274,6 +274,30 @@ func hasCustomerOpsAccess(userDN string) bool {
 	return err == nil && len(res.Entries) > 0
 }
 
+// Check if a user is in service LDAP group
+// return true if it belong to ServiceGroup, false otherwise
+// Service is map to a service cluster role ( which must be deploy beside )
+// Service user must be in LDAP_ADMIN_USERBASE or LDAP_USERBASE
+func HasServiceAccess(userDN string) bool {
+
+	// No need to go further, there is no Application Group Base
+	if len(utils.Config.Ldap.ServiceGroupBase) == 0 {
+		return false
+	}
+
+	conn, err := getBindedConnection()
+	defer conn.Close()
+	if err != nil {
+		utils.Log.Error().Msg(err.Error())
+		return false
+	}
+
+	req := newServiceSearchRequest(userDN)
+	res, err := conn.Search(req)
+
+	return err == nil && len(res.Entries) > 0
+}
+
 // Check if a user is in admin LDAP group
 // return true if it belong to OpsGroup, false otherwise
 func HasOpsAccess(userDN string) bool {
@@ -375,6 +399,21 @@ func newCustomerOpsSearchRequest(userDN string) *ldap.SearchRequest {
 	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
 	return &ldap.SearchRequest{
 		BaseDN:       utils.Config.Ldap.CustomerOpsGroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       groupFilter, // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+}
+
+// request to get user group list
+func newServiceSearchRequest(userDN string) *ldap.SearchRequest {
+	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
+	return &ldap.SearchRequest{
+		BaseDN:       utils.Config.Ldap.ServiceGroupBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
 		SizeLimit:    1, // limit number of entries in result, 0 values means no limitations

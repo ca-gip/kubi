@@ -65,7 +65,7 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 	return &signedToken, err
 }
 
-func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool) (*string, error) {
+func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
 
@@ -78,6 +78,11 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		auths = []*types.Project{}
 	}
 
+	if hasServiceAccess {
+		utils.Log.Info().Msgf("The user %s will have transversal service access ( service: %v )", username, hasServiceAccess)
+		auths = []*types.Project{}
+	}
+
 	// Create the Claims
 	claims := types.AuthJWTClaims{
 		Auths:             auths,
@@ -86,6 +91,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		AdminAccess:       hasAdminAccess,
 		ApplicationAccess: hasApplicationAccess,
 		OpsAccess:         hasOpsAccess,
+		ServiceAccess:     hasServiceAccess,
 		ViewerAccess:      hasViewerAccess,
 		Locator:           issuer.Locator,
 		Endpoint:          url.Host,
@@ -122,7 +128,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 	if len(scopes) > 0 {
 		token, err = issuer.GenerateExtraToken(auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), scopes)
 	} else {
-		token, err = issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), ldap.HasViewerAccess(*userDN))
+		token, err = issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), ldap.HasViewerAccess(*userDN), ldap.HasServiceAccess(*userDN))
 	}
 
 	if err != nil {

@@ -66,6 +66,10 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 				groups = append(groups, utils.ApplicationMaster)
 			}
 
+			if token.ServiceAccess {
+				groups = append(groups, utils.ServiceMaster)
+			}
+
 			if token.ViewerAccess {
 				groups = append(groups, utils.ApplicationViewer)
 			}

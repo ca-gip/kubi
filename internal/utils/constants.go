@@ -30,6 +30,7 @@ const (
 	AuthenticatedGroup = "system:authenticated"
 	AdminGroup         = "system:masters"
 	ApplicationMaster  = "application:masters"
+	ServiceMaster      = "service:masters"
 	ApplicationViewer  = "application:view"
 	OPSMaster          = "ops:masters"
 
