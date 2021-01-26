@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/ldap.v2"
 )
 
@@ -282,6 +283,7 @@ func HasServiceAccess(userDN string) bool {
 
 	// No need to go further, there is no Application Group Base
 	if len(utils.Config.Ldap.ServiceGroupBase) == 0 {
+		log.Debug().Msgf("Using ldap groupbase %s", utils.Config.Ldap.ServiceGroupBase)
 		return false
 	}
 
