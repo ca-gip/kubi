@@ -411,7 +411,7 @@ func newCustomerOpsSearchRequest(userDN string) *ldap.SearchRequest {
 
 // request to get user group list
 func newServiceSearchRequest(userDN string) *ldap.SearchRequest {
-	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
+	groupFilter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s)(cn=%s))", userDN, utils.Config.Ldap.ServiceGroupBase)
 	return &ldap.SearchRequest{
 		BaseDN:       utils.Config.Ldap.ServiceGroupBase,
 		Scope:        ldap.ScopeWholeSubtree,
