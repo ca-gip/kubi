@@ -65,6 +65,10 @@ func GetAllGroups() ([]string, error) {
 // return if bind was ok, the userDN for next usage, and error if occurred
 func AuthenticateUser(username string, password string) (*string, *string, error) {
 
+	if len(password) == 0 {
+		return nil, nil, errors.New("Empty password, you must give a password.")
+	}
+
 	// Get User Distinguished Name for Standard User
 	userDN, mail, err := getUserDN(utils.Config.Ldap.UserBase, username)
 
