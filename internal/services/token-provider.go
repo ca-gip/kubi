@@ -33,7 +33,7 @@ type TokenIssuer struct {
 func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, scopes string) (*string, error) {
 
 	duration, err := time.ParseDuration(issuer.ExtraTokenDuration)
-	current := time.Now().Add(duration)
+	expiration := time.Now().Add(duration)
 	url, _ := url.Parse(issuer.PublicApiServerURL)
 
 	if !(hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
@@ -52,7 +52,7 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 		Tenant:   issuer.Tenant,
 		Scopes:   scopes,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: current.Unix(),
+			ExpiresAt: expiration.Unix(),
 			Issuer:    "Kubi Server",
 		},
 	}
@@ -70,7 +70,8 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	var auths = GetUserNamespaces(groups)
 
 	duration, err := time.ParseDuration(issuer.TokenDuration)
-	current := time.Now().Add(duration)
+	expirationTime := time.Now().Add(duration)
+
 	url, _ := url.Parse(issuer.PublicApiServerURL)
 
 	if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
@@ -81,6 +82,9 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	if hasServiceAccess {
 		utils.Log.Info().Msgf("The user %s will have transversal service access ( service: %v )", username, hasServiceAccess)
 		auths = []*types.Project{}
+		duration, err = time.ParseDuration(issuer.ExtraTokenDuration)
+		expirationTime = time.Now().Add(duration)
+		utils.Log.Info().Msgf("A specific token with duration %v would be issued.", duration.String())
 	}
 
 	// Create the Claims
@@ -98,7 +102,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		Tenant:            issuer.Tenant,
 
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: current.Unix(),
+			ExpiresAt: expirationTime.Unix(),
 			Issuer:    "Kubi Server",
 		},
 	}
