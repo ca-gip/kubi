@@ -70,7 +70,7 @@ func generateProject(projectInfos *types.Project) {
 	project := &v12.Project{
 		Spec: v12.ProjectSpec{},
 		Status: v12.ProjectSpecStatus{
-			Name: "created",
+			Name: v12.ProjectStatusCreated,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: projectInfos.Namespace(),

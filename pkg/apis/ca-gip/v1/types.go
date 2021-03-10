@@ -73,6 +73,10 @@ type ProjectSpec struct {
 	SourceDN     string   `json:"sourceDN,omitempty"`
 }
 
+const (
+	ProjectStatusCreated = "created"
+)
+
 type ProjectSpecStatus struct {
 	Name string
 }
