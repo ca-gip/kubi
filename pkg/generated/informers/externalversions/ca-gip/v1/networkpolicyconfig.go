@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"context"
 	time "time"
 
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
@@ -44,13 +45,13 @@ func NewFilteredNetworkPolicyConfigInformer(client versioned.Interface, resyncPe
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CagipV1().NetworkPolicyConfigs().List(options)
+				return client.CagipV1().NetworkPolicyConfigs().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CagipV1().NetworkPolicyConfigs().Watch(options)
+				return client.CagipV1().NetworkPolicyConfigs().Watch(context.TODO(), options)
 			},
 		},
 		&cagipv1.NetworkPolicyConfig{},

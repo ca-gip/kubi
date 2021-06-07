@@ -3,6 +3,7 @@
 package v1
 
 import (
+	"context"
 	time "time"
 
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
@@ -44,13 +45,13 @@ func NewFilteredProjectInformer(client versioned.Interface, resyncPeriod time.Du
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CagipV1().Projects().List(options)
+				return client.CagipV1().Projects().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CagipV1().Projects().Watch(options)
+				return client.CagipV1().Projects().Watch(context.TODO(), options)
 			},
 		},
 		&cagipv1.Project{},

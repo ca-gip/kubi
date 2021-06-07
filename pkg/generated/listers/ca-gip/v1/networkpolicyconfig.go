@@ -10,10 +10,13 @@ import (
 )
 
 // NetworkPolicyConfigLister helps list NetworkPolicyConfigs.
+// All objects returned here must be treated as read-only.
 type NetworkPolicyConfigLister interface {
 	// List lists all NetworkPolicyConfigs in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.NetworkPolicyConfig, err error)
 	// Get retrieves the NetworkPolicyConfig from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.NetworkPolicyConfig, error)
 	NetworkPolicyConfigListerExpansion
 }
