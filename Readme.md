@@ -442,3 +442,4 @@ KUBERNETES_SERVICE_PORT="443" \
 LDAP_PASSWD="password" \
 go run cmd/main.go
 ```
+
