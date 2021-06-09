@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/ca-gip/kubi/internal/authprovider"
@@ -60,7 +61,8 @@ func GenerateProjects(context []*types.Project) {
 func generateProject(projectInfos *types.Project) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
-	existingProject, errProject := clientSet.CagipV1().Projects().Get(projectInfos.Namespace(), metav1.GetOptions{})
+
+	existingProject, errProject := clientSet.CagipV1().Projects().Get(context.TODO(), projectInfos.Namespace(), metav1.GetOptions{})
 
 	splits := strings.Split(projectInfos.Namespace(), "-")
 	if len(splits) < 2 {
@@ -110,7 +112,7 @@ func generateProject(projectInfos *types.Project) {
 
 	if errProject != nil {
 		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectInfos.Namespace())
-		_, errorCreate := clientSet.CagipV1().Projects().Create(project)
+		_, errorCreate := clientSet.CagipV1().Projects().Create(context.TODO(), project, metav1.CreateOptions{})
 		if errorCreate != nil {
 			utils.Log.Error().Msg(errorCreate.Error())
 			utils.ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
@@ -135,7 +137,7 @@ func generateProject(projectInfos *types.Project) {
 		}
 		existingProject.Spec.SourceEntity = projectInfos.Source
 		existingProject.Spec.SourceDN = fmt.Sprintf("CN=%s,%s", projectInfos.Source, utils.Config.Ldap.GroupBase)
-		_, errUpdate := clientSet.CagipV1().Projects().Update(existingProject)
+		_, errUpdate := clientSet.CagipV1().Projects().Update(context.TODO(), existingProject, metav1.UpdateOptions{})
 		if errUpdate != nil {
 			utils.Log.Error().Msg(errUpdate.Error())
 			utils.ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
@@ -189,7 +191,7 @@ func subjectAdmin(namespace string, role string) []v1.Subject {
 }
 
 func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject, err error) {
-	_, errRB := api.RoleBindings(namespace).Get(roleBindingName, metav1.GetOptions{})
+	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
@@ -210,11 +212,11 @@ func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace stri
 	}
 
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
+		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
 	} else {
-		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
+		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
 	}
@@ -230,7 +232,7 @@ func GenerateAppRoleBinding(namespace string) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	_, errRB := api.RoleBindings(namespace).Get(utils.KubiRoleBindingAppName, metav1.GetOptions{})
+	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingAppName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
@@ -257,11 +259,11 @@ func GenerateAppRoleBinding(namespace string) {
 	}
 
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
+		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
 	} else {
-		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
+		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
 	}
@@ -278,7 +280,7 @@ func GenerateDefaultRoleBinding(namespace string) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	_, errRB := api.RoleBindings(namespace).Get(utils.KubiRoleBindingDefaultName, metav1.GetOptions{})
+	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingDefaultName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
@@ -305,11 +307,11 @@ func GenerateDefaultRoleBinding(namespace string) {
 	}
 
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(&newRoleBinding)
+		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
 	} else {
-		_, err = api.RoleBindings(namespace).Update(&newRoleBinding)
+		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
 	}
@@ -327,7 +329,7 @@ func GenerateAppServiceAccount(namespace string) {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
-	_, errRB := api.ServiceAccounts(namespace).Get(utils.KubiServiceAccountAppName, metav1.GetOptions{})
+	_, errRB := api.ServiceAccounts(namespace).Get(context.TODO(), utils.KubiServiceAccountAppName, metav1.GetOptions{})
 
 	newServiceAccount := corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -342,7 +344,7 @@ func GenerateAppServiceAccount(namespace string) {
 	}
 
 	if errRB != nil {
-		_, err = api.ServiceAccounts(namespace).Create(&newServiceAccount)
+		_, err = api.ServiceAccounts(namespace).Create(context.TODO(), &newServiceAccount, metav1.CreateOptions{})
 		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
 	} else if err != nil {
@@ -365,7 +367,7 @@ func generateNamespace(project *v12.Project) (err error) {
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
-	ns, errNs := api.Namespaces().Get(project.Name, metav1.GetOptions{})
+	ns, errNs := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
 
 	if kerror.IsNotFound(errNs) {
 		err = createNamespace(project, api)
@@ -389,7 +391,7 @@ func createNamespace(project *v12.Project, api v13.CoreV1Interface) error {
 			Labels: generateNamespaceLabels(project),
 		},
 	}
-	_, err := api.Namespaces().Create(ns)
+	_, err := api.Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 	if err != nil {
 		utils.Log.Error().Err(err)
 		utils.NamespaceCreation.WithLabelValues("error", project.Name).Inc()
@@ -413,7 +415,7 @@ func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) erro
 		},
 	}
 
-	_, err := api.Namespaces().Update(ns)
+	_, err := api.Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 
 	if err != nil {
 		utils.Log.Error().Err(err)
@@ -544,7 +546,7 @@ func networkPolicyConfigUpdate(old interface{}, new interface{}) {
 
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
-	projects, err := clientSet.CagipV1().Projects().List(metav1.ListOptions{})
+	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -566,7 +568,7 @@ func networkPolicyConfigCreated(obj interface{}) {
 
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
-	projects, err := clientSet.CagipV1().Projects().List(metav1.ListOptions{})
+	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -594,7 +596,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 
 	if networkPolicyConfig == nil {
 		extendedClientSet, _ := versioned.NewForConfig(kconfig)
-		existingNetworkPolicyConfig, err := extendedClientSet.CagipV1().NetworkPolicyConfigs().Get(utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
+		existingNetworkPolicyConfig, err := extendedClientSet.CagipV1().NetworkPolicyConfigs().Get(context.TODO(), utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
 		networkPolicyConfig = existingNetworkPolicyConfig
 		if err != nil {
 			utils.Log.Info().Msgf("Operator: No default network policy config \"%v\" found, cannot create/update namespace security !, Error: %v", utils.KubiDefaultNetworkPolicyName, err.Error())
@@ -605,7 +607,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.NetworkingV1()
-	_, errNetpol := api.NetworkPolicies(namespace).Get(utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
+	_, errNetpol := api.NetworkPolicies(namespace).Get(context.TODO(), utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
 
 	UDP := corev1.ProtocolUDP
 	TCP := corev1.ProtocolTCP
@@ -681,7 +683,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 		},
 	}
 	if errNetpol != nil {
-		_, err := api.NetworkPolicies(namespace).Create(networkpolicy)
+		_, err := api.NetworkPolicies(namespace).Create(context.TODO(), networkpolicy, metav1.CreateOptions{})
 		if err != nil {
 			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
 		} else {
@@ -690,7 +692,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 		utils.Check(err)
 		return
 	} else {
-		_, err := api.NetworkPolicies(namespace).Update(networkpolicy)
+		_, err := api.NetworkPolicies(namespace).Update(context.TODO(), networkpolicy, metav1.UpdateOptions{})
 		if err != nil {
 			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
 		} else {

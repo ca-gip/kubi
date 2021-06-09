@@ -3,6 +3,8 @@
 package fake
 
 import (
+	"context"
+
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -22,7 +24,7 @@ var projectsResource = schema.GroupVersionResource{Group: "cagip.github.com", Ve
 var projectsKind = schema.GroupVersionKind{Group: "cagip.github.com", Version: "v1", Kind: "Project"}
 
 // Get takes name of the project, and returns the corresponding project object, and an error if there is any.
-func (c *FakeProjects) Get(name string, options v1.GetOptions) (result *cagipv1.Project, err error) {
+func (c *FakeProjects) Get(ctx context.Context, name string, options v1.GetOptions) (result *cagipv1.Project, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(projectsResource, name), &cagipv1.Project{})
 	if obj == nil {
@@ -32,7 +34,7 @@ func (c *FakeProjects) Get(name string, options v1.GetOptions) (result *cagipv1.
 }
 
 // List takes label and field selectors, and returns the list of Projects that match those selectors.
-func (c *FakeProjects) List(opts v1.ListOptions) (result *cagipv1.ProjectList, err error) {
+func (c *FakeProjects) List(ctx context.Context, opts v1.ListOptions) (result *cagipv1.ProjectList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(projectsResource, projectsKind, opts), &cagipv1.ProjectList{})
 	if obj == nil {
@@ -53,13 +55,13 @@ func (c *FakeProjects) List(opts v1.ListOptions) (result *cagipv1.ProjectList, e
 }
 
 // Watch returns a watch.Interface that watches the requested projects.
-func (c *FakeProjects) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeProjects) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(projectsResource, opts))
 }
 
 // Create takes the representation of a project and creates it.  Returns the server's representation of the project, and an error, if there is any.
-func (c *FakeProjects) Create(project *cagipv1.Project) (result *cagipv1.Project, err error) {
+func (c *FakeProjects) Create(ctx context.Context, project *cagipv1.Project, opts v1.CreateOptions) (result *cagipv1.Project, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(projectsResource, project), &cagipv1.Project{})
 	if obj == nil {
@@ -69,7 +71,7 @@ func (c *FakeProjects) Create(project *cagipv1.Project) (result *cagipv1.Project
 }
 
 // Update takes the representation of a project and updates it. Returns the server's representation of the project, and an error, if there is any.
-func (c *FakeProjects) Update(project *cagipv1.Project) (result *cagipv1.Project, err error) {
+func (c *FakeProjects) Update(ctx context.Context, project *cagipv1.Project, opts v1.UpdateOptions) (result *cagipv1.Project, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(projectsResource, project), &cagipv1.Project{})
 	if obj == nil {
@@ -80,7 +82,7 @@ func (c *FakeProjects) Update(project *cagipv1.Project) (result *cagipv1.Project
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeProjects) UpdateStatus(project *cagipv1.Project) (*cagipv1.Project, error) {
+func (c *FakeProjects) UpdateStatus(ctx context.Context, project *cagipv1.Project, opts v1.UpdateOptions) (*cagipv1.Project, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(projectsResource, "status", project), &cagipv1.Project{})
 	if obj == nil {
@@ -90,22 +92,22 @@ func (c *FakeProjects) UpdateStatus(project *cagipv1.Project) (*cagipv1.Project,
 }
 
 // Delete takes name of the project and deletes it. Returns an error if one occurs.
-func (c *FakeProjects) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeProjects) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(projectsResource, name), &cagipv1.Project{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeProjects) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(projectsResource, listOptions)
+func (c *FakeProjects) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(projectsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &cagipv1.ProjectList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched project.
-func (c *FakeProjects) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *cagipv1.Project, err error) {
+func (c *FakeProjects) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *cagipv1.Project, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(projectsResource, name, pt, data, subresources...), &cagipv1.Project{})
 	if obj == nil {
