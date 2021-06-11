@@ -38,6 +38,7 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 
 	if !(hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
 		utils.Log.Info().Msgf("The user %s don't have transversal access ( admin: %v, application: %v, ops: %v ).", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
+		return nil, nil
 	} else {
 		utils.Log.Info().Msgf("Generating extra token with scope %s ", scopes)
 	}
@@ -139,7 +140,11 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
-	utils.TokenCounter.WithLabelValues("token_success").Inc()
+
+	if token != nil {
+		utils.TokenCounter.WithLabelValues("token_success").Inc()
+	}
+
 	return token, nil
 }
 
@@ -153,14 +158,23 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
 	scopes := r.URL.Query().Get("scopes")
 	token, err := issuer.baseGenerateToken(*auth, scopes)
-	if err == nil {
-		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
-		w.WriteHeader(http.StatusCreated)
-		io.WriteString(w, *token)
-	} else {
+
+	if err != nil {
 		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
 		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
+
+	if token == nil {
+		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
+	w.WriteHeader(http.StatusCreated)
+	io.WriteString(w, *token)
+	return
 }
 
 // GenerateConfig generates a config in yaml, including JWT token
