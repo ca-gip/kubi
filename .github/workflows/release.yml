@@ -2,46 +2,40 @@ name: release
 
 on:
   push:
+    branches: [ '*' ]
     tags: [ 'v*' ]
 
 jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [webhook, api, operator]
     steps:
-      - name: Checkout code
+      -
+        name: Checkout code
         uses: actions/checkout@v2
-      - name: Build and push Kubi Webhook
-        uses: docker/build-push-action@v1
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          dockerfile: Dockerfile.webhook
-          repository: cagip/kubi-webhook
-          tag_with_ref: true
-      - name: Build and push Kubi API
-        uses: docker/build-push-action@v1
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Create Meta
+        id: meta
+        uses: crazy-max/ghaction-docker-meta@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          dockerfile: Dockerfile.api
-          repository: cagip/kubi-api
-          tag_with_ref: true
-      - name: Build and push Kubi Operator
-        uses: docker/build-push-action@v1
+          images: cagip/kubi-${{ matrix.component }}
+          tags: |
+            type=raw,value=latest,enable=${{ endsWith(GitHub.ref, ‘master’) }}
+            type=ref,event=tag
+      -
+        name: Build and push
+        uses: docker/build-push-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          dockerfile: Dockerfile.operator
-          repository: cagip/kubi-operator
-          tag_with_ref: true
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: false
-          prerelease: false
+          context: .
+          push: ${{ GitHub.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
