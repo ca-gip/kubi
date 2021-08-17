@@ -43,6 +43,7 @@ type Config struct {
 	NetworkPolicy      bool
 	CustomLabels       map[string]string
 	DefaultPermission  string
+	Blacklist          []string
 }
 
 // Note: struct fields must be public in order for unmarshal to

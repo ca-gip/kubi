@@ -126,6 +126,7 @@ func MakeConfig() (*types.Config, error) {
 		NetworkPolicy:      networkpolicyEnabled,
 		CustomLabels:       customLabels,
 		DefaultPermission:  getEnv("DEFAULT_PERMISSION", ""),
+		Blacklist:          strings.Split(getEnv("BLACKLIST", ""), ","),
 	}
 
 	err := validation.ValidateStruct(config,
