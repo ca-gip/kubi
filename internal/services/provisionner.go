@@ -53,6 +53,9 @@ func GenerateResources() error {
 // splitted for unit test !
 func GenerateProjects(context []*types.Project) {
 	for _, auth := range context {
+		if utils.Include(utils.Config.Blacklist, auth.Namespace()) {
+			return
+		}
 		generateProject(auth)
 	}
 }
