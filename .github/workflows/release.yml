@@ -16,7 +16,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          file: Dockerfile.webhook
+          dockerfile: Dockerfile.webhook
           repository: cagip/kubi-webhook
           tag_with_ref: true
       - name: Build and push Kubi API
@@ -24,7 +24,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          file: Dockerfile.api
+          dockerfile: Dockerfile.api
           repository: cagip/kubi-api
           tag_with_ref: true
       - name: Build and push Kubi Operator
@@ -32,7 +32,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          file: Dockerfile.operator
+          dockerfile: Dockerfile.operator
           repository: cagip/kubi-operator
           tag_with_ref: true
       - name: Create Release
