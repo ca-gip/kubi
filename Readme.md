@@ -4,7 +4,11 @@
 </p>
 
 # Kubi
-[![Build Status](https://travis-ci.com/ca-gip/kubi.svg?branch=master)](https://travis-ci.com/ca-gip/kubi)
+![build](https://github.com/ca-gip/kubi/workflows/build/badge.svg)
+![release](https://github.com/ca-gip/kubi/workflows/release/badge.svg)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/ca-gip/kubi)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ca-gip/kubi)](https://goreportcard.com/report/github.com/ca-gip/kubi)
+![Docker Pulls](https://img.shields.io/docker/pulls/cagip/kubi-operator)
 
 Kubi is the missing tool for Active Directory or LDAP driven company. It handles OpenLDAP or Active Directory LDS authentication for Kubernetes clusters. It acts as a Kubernetes Token Server, authenticating user through LDAP, AD LDS and assigns permissions dynamically using a predefined naming convention (LDAP Group).
 
@@ -96,6 +100,7 @@ For specific exceptions, add another network policy.
 |  **PROVISIONING_NETWORK_POLICIES** |  *Enable or disable NetPol Mgmt*     | `true                           `   | `no   `     | yes         |
 |  **CUSTOM_LABELS**                 | *Add custom labels to namespaces*    | `quota=managed,monitoring=true`  | `no   `     | -           |
 |  **DEFAULT_PERMISSION**            | *ClusterRole associated with default service account*    | `view`       | `no   `     | -           |
+|  **BLACKLIST**                     | *Ignore Project*                     | `my-project-dev`                 | `no   `     | -           |
 
 # Client
 
