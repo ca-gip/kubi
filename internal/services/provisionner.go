@@ -55,9 +55,9 @@ func GenerateProjects(context []*types.Project) {
 	for _, auth := range context {
 		if utils.Include(utils.Config.Blacklist, auth.Namespace()) {
 			utils.Log.Info().Msgf("Project %s is blacklisted", auth.Namespace())
-			return
+		} else {
+			generateProject(auth)
 		}
-		generateProject(auth)
 	}
 }
 
