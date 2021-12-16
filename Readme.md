@@ -450,7 +450,9 @@ go run cmd/main.go
 
  <hr/>
 <p align=center  style="background-color:#333333 !important;">
+  <a href="https://www.jetbrains.com/">
   Developed with
   <br/>
-  <img align="center" href="https://www.jetbrains.com/" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="drawing" width="100"/>
+  <img align="center" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="drawing" width="100"/>
+  </a>
 </p>
