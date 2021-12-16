@@ -447,4 +447,7 @@ KUBERNETES_SERVICE_PORT="443" \
 LDAP_PASSWD="password" \
 go run cmd/main.go
 ```
-<img align="center" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="drawing" width="100"/>
+  
+<p align=center  style="background-color:#333333 !important;">
+  <img align="center" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="drawing" width="100"/>
+</p>
