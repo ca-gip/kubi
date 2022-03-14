@@ -25,6 +25,10 @@ spec:
       type: string
       description: List of authorized cidr for egress traffic
       JSONPath: .spec.egress.cidrs
+    - name: Egress-Namespaces
+      type: string
+      description: List of egress namespaces
+      JSONPath: .spec.egress.namespaces
     - name: Ingress-Namespaces
       type: string
       description: List of ingress namespaces
@@ -50,6 +54,10 @@ spec:
                   items:
                     type: string
                     pattern: '^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$'
+                namespaces:
+                  type: array
+                  items:
+                    type: string
             ingress:
               type: object
               properties:

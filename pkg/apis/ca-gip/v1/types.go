@@ -25,8 +25,9 @@ type NetworkPolicyConfigSpec struct {
 }
 
 type EgressType struct {
-	Ports []int    `json:"ports,omitempty"`
-	Cidrs []string `json:"cidrs,omitempty"`
+	Ports      []int    `json:"ports,omitempty"`
+	Namespaces []string `json:"namespaces,omitempty"`
+	Cidrs      []string `json:"cidrs,omitempty"`
 }
 
 type IngressType struct {

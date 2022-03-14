@@ -44,6 +44,8 @@ type Config struct {
 	CustomLabels       map[string]string
 	DefaultPermission  string
 	Blacklist          []string
+	BlacklistNamespace string
+	WhitelistNamespace string
 }
 
 // Note: struct fields must be public in order for unmarshal to

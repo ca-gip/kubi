@@ -655,6 +655,14 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 		},
 	}
 
+	// Add default whitelisted namespace egress rules
+	for _, namespace := range networkPolicyConfig.Spec.Egress.Namespaces {
+		policyPeers = append(policyPeers, v1n.NetworkPolicyPeer{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"name": namespace}},
+			PodSelector:       &metav1.LabelSelector{MatchLabels: nil},
+		})
+	}
+
 	for _, cidr := range networkPolicyConfig.Spec.Egress.Cidrs {
 		policyPeers = append(policyPeers, v1n.NetworkPolicyPeer{IPBlock: &v1n.IPBlock{CIDR: cidr}})
 	}
