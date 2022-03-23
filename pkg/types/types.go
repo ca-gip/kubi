@@ -3,6 +3,7 @@ package types
 import (
 	"crypto/tls"
 	"fmt"
+
 	"github.com/dgrijalva/jwt-go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -30,22 +31,21 @@ type LdapConfig struct {
 }
 
 type Config struct {
-	Tenant             string
-	Ldap               LdapConfig
-	PublicApiServerURL string
-	KubeCa             string
-	KubeCaText         string
-	KubeToken          string
-	ApiServerTLSConfig tls.Config
-	TokenLifeTime      string
-	ExtraTokenLifeTime string
-	Locator            string
-	NetworkPolicy      bool
-	CustomLabels       map[string]string
-	DefaultPermission  string
-	Blacklist          []string
-	BlacklistNamespace string
-	WhitelistNamespace string
+	Tenant                  string
+	Ldap                    LdapConfig
+	PublicApiServerURL      string
+	KubeCa                  string
+	KubeCaText              string
+	KubeToken               string
+	ApiServerTLSConfig      tls.Config
+	TokenLifeTime           string
+	ExtraTokenLifeTime      string
+	Locator                 string
+	NetworkPolicy           bool
+	CustomLabels            map[string]string
+	DefaultPermission       string
+	Blacklist               []string
+	BlackWhitelistNamespace string
 }
 
 // Note: struct fields must be public in order for unmarshal to
@@ -129,4 +129,9 @@ type ResponseError struct {
 type Auth struct {
 	Username string
 	Password string
+}
+
+type BlackWhitelist struct {
+	Blacklist []string `json:"blacklist"`
+	Whitelist []string `json:"whitelist"`
 }
