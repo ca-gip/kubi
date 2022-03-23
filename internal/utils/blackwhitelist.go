@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/ca-gip/kubi/pkg/types"
+	"github.com/mitchellh/mapstructure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-func MakeBlackWhitelist() (*types.Config, error) {
+func MakeBlackWhitelist() error {
 
 	kconfig, err := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
@@ -17,20 +18,14 @@ func MakeBlackWhitelist() (*types.Config, error) {
 
 	blacklistCM, errRB := api.ConfigMaps(Config.BlackWhitelistNamespace).Get(context.TODO(), "blackwhitelist", metav1.GetOptions{})
 	if errRB != nil {
-		utils.Log.Error().Msg(errRB.Error())
-		return
-	} else {
-		utils.ProjectCreation.WithLabelValues("created", projectInfos.Project).Inc()
+		Log.Error().Msg(errRB.Error())
+		return errRB
 	}
 
-	keys := make([]string, 0, len(blacklistCM.Data))
-	for k := range blacklistCM.Data {
-		keys = append(keys, k)
-	}
+	blackwhitelist := types.BlackWhitelist{}
 
-	blackwhitelist := types.BlackWhitelist{
-		Blacklist: keys["blacklist"],
-		Whitelist: keys["whitelist"],
-	}
+	mapstructure.Decode(blacklistCM.Data, &blackwhitelist)
+
+	return nil
 
 }
