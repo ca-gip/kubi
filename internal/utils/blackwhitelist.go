@@ -16,6 +16,10 @@ func MakeBlackWhitelist() error {
 	clientSet, err := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
+	if err != nil {
+		return err
+	}
+
 	blacklistCM, errRB := api.ConfigMaps(Config.BlackWhitelistNamespace).Get(context.TODO(), "blackwhitelist", metav1.GetOptions{})
 	if errRB != nil {
 		Log.Error().Msg(errRB.Error())
@@ -24,7 +28,11 @@ func MakeBlackWhitelist() error {
 
 	blackwhitelist := types.BlackWhitelist{}
 
-	mapstructure.Decode(blacklistCM.Data, &blackwhitelist)
+	if mapstructure.Decode(blacklistCM.Data, &blackwhitelist)
+
+	if errDecodeMap != nil {
+		return errDecodeMap
+	}
 
 	return nil
 
