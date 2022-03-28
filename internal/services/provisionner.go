@@ -52,13 +52,29 @@ func GenerateResources() error {
 // A loop wrapper for generateProject
 // splitted for unit test !
 func GenerateProjects(context []*types.Project) {
-	for _, auth := range context {
-		if utils.Include(utils.Config.Blacklist, auth.Namespace()) {
-			utils.Log.Info().Msgf("Project %s is blacklisted", auth.Namespace())
-		} else {
-			generateProject(auth)
+	blackWhiteList, errBWL := utils.MakeBlackWhitelist()
+	if errBWL != nil {
+		utils.Log.Error().Msg(errBWL.Error())
+	} else {
+		for _, auth := range context {
+			// if configmap with blacklist exist
+			if blackWhiteList != nil {
+				if utils.Include(blackWhiteList.Blacklist, auth.Namespace()) {
+					utils.Log.Info().Msgf("Project %s is blacklisted", auth.Namespace())
+					deleteProject(auth)
+				} else if len(blackWhiteList.Whitelist) > 0 { // if configmap with whitelist exist and not empty
+					if utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
+						generateProject(auth)
+					}
+				} else { // if configmap with whitelist exist and not empty
+					generateProject(auth)
+				}
+			} else { // if configmap with whitelist exist and not empty
+				generateProject(auth)
+			}
 		}
 	}
+
 }
 
 // generate a project config or update it if exists
@@ -149,6 +165,21 @@ func generateProject(projectInfos *types.Project) {
 			utils.ProjectCreation.WithLabelValues("updated", projectInfos.Project).Inc()
 		}
 	}
+}
+
+// delete a project ( for blacklist purpose )
+func deleteProject(projectInfos *types.Project) {
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := versioned.NewForConfig(kconfig)
+
+	errDeletionProject := clientSet.CagipV1().Projects().Delete(context.TODO(), projectInfos.Namespace(), metav1.DeleteOptions{})
+
+	if errDeletionProject != nil {
+		utils.Log.Info().Msgf("Cannot delete project: %v", projectInfos.Namespace())
+		return
+	}
+
+	utils.Log.Info().Msgf("Project: %v deleted", projectInfos.Namespace())
 }
 
 // GenerateRolebinding from tupple
