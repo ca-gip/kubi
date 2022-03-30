@@ -46,6 +46,7 @@ type Config struct {
 	DefaultPermission       string
 	Blacklist               []string
 	BlackWhitelistNamespace string
+	Whitelist               bool
 }
 
 // Note: struct fields must be public in order for unmarshal to

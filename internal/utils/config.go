@@ -70,6 +70,9 @@ func MakeConfig() (*types.Config, error) {
 	startTLS, errStartTLS := strconv.ParseBool(getEnv("LDAP_START_TLS", "false"))
 	Checkf(errStartTLS, "Invalid LDAP_START_TLS, must be a boolean")
 
+	whitelist, errWhitelist := strconv.ParseBool(getEnv("WHITELIST", "false"))
+	Checkf(errWhitelist, "Invalid WHITELIST, must be a boolean")
+
 	if len(os.Getenv("LDAP_PORT")) > 0 {
 		envLdapPort, err := strconv.Atoi(os.Getenv("LDAP_PORT"))
 		Check(err)
@@ -127,6 +130,7 @@ func MakeConfig() (*types.Config, error) {
 		CustomLabels:       customLabels,
 		DefaultPermission:  getEnv("DEFAULT_PERMISSION", ""),
 		Blacklist:          strings.Split(getEnv("BLACKLIST", ""), ","),
+		Whitelist:          whitelist,
 	}
 
 	err := validation.ValidateStruct(config,

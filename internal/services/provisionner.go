@@ -52,26 +52,36 @@ func GenerateResources() error {
 // A loop wrapper for generateProject
 // splitted for unit test !
 func GenerateProjects(context []*types.Project) {
-	blackWhiteList, errBWL := utils.MakeBlackWhitelist()
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
+	api := clientSet.CoreV1()
+
+	blacklistCM, errRB := GetBlackWhitelistCM(api)
+	if errRB != nil {
+		utils.Log.Error().Msg("Can't get Blacklist")
+	}
+
+	blackWhiteList, errBWL := MakeBlackWhitelist(blacklistCM.Data)
 	if errBWL != nil {
 		utils.Log.Error().Msg(errBWL.Error())
+		CreateBlackWhitelistEvent(errBWL.Error(), api)
 	} else {
 		for _, auth := range context {
-			// if configmap with blacklist exist
-			if blackWhiteList != nil {
+
+			// if whitelist boolean set we search namespace in configmap whitelist
+			if utils.Config.Whitelist {
+				if blackWhiteList != nil && utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
+					generateProject(auth)
+				}
+			} else if blackWhiteList != nil { // if configmap with blacklist exist
 				if utils.Include(blackWhiteList.Blacklist, auth.Namespace()) {
 					utils.Log.Info().Msgf("Project %s is blacklisted", auth.Namespace())
 					deleteProject(auth)
-				} else if len(blackWhiteList.Whitelist) > 0 { // if configmap with whitelist exist and not empty
-					if utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
-						generateProject(auth)
-					}
-				} else { // if configmap with whitelist exist and not empty
-					generateProject(auth)
 				}
-			} else { // if configmap with whitelist exist and not empty
+			} else { // if configmap not exist and bool whitelist is false
 				generateProject(auth)
 			}
+
 		}
 	}
 
