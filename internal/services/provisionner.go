@@ -4,14 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ca-gip/kubi/internal/authprovider"
+	"reflect"
+	"strings"
+	"time"
+
+	ldap "github.com/ca-gip/kubi/internal/authprovider"
 	"github.com/ca-gip/kubi/internal/utils"
 	v12 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	"github.com/ca-gip/kubi/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 	v1n "k8s.io/api/networking/v1"
-	"k8s.io/api/rbac/v1"
+	v1 "k8s.io/api/rbac/v1"
 	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -21,9 +25,6 @@ import (
 	v14 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
-	"strings"
-	"time"
 )
 
 // Handler to regenerate all resources created by kubi
@@ -36,6 +37,11 @@ func RefreshK8SResources() {
 
 // Generate Namespaces and Rolebinding from Ldap groups
 func GenerateResources() error {
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
+	api := clientSet.CoreV1()
+	blackWhiteList := types.BlackWhitelist{}
+
 	groups, err := ldap.GetAllGroups()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
@@ -45,46 +51,44 @@ func GenerateResources() error {
 		return errors.New("LDAP, no ldap groups found!")
 	}
 	auths := GetUserNamespaces(groups)
-	GenerateProjects(auths)
+
+	blacklistCM, errRB := GetBlackWhitelistCM(api)
+	if errRB != nil {
+		utils.Log.Info().Msg("Can't get Black&Whitelist")
+	} else {
+		blackWhiteList = MakeBlackWhitelist(blacklistCM.Data)
+	}
+
+	GenerateProjects(auths, &blackWhiteList)
 	return nil
 }
 
 // A loop wrapper for generateProject
 // splitted for unit test !
-func GenerateProjects(context []*types.Project) {
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, _ := kubernetes.NewForConfig(kconfig)
-	api := clientSet.CoreV1()
+func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhitelist) {
 
-	blacklistCM, errRB := GetBlackWhitelistCM(api)
-	if errRB != nil {
-		utils.Log.Error().Msg("Can't get Blacklist")
-	}
+	for _, auth := range context {
 
-	blackWhiteList, errBWL := MakeBlackWhitelist(blacklistCM.Data)
-	if errBWL != nil {
-		utils.Log.Error().Msg(errBWL.Error())
-		CreateBlackWhitelistEvent(errBWL.Error(), api)
-	} else {
-		for _, auth := range context {
-
-			// if whitelist boolean set we search namespace in configmap whitelist
-			if utils.Config.Whitelist {
-				if blackWhiteList != nil && utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
-					generateProject(auth)
-				}
-			} else if blackWhiteList != nil { // if configmap with blacklist exist
-				if utils.Include(blackWhiteList.Blacklist, auth.Namespace()) {
-					utils.Log.Info().Msgf("Project %s is blacklisted", auth.Namespace())
-					deleteProject(auth)
-				}
-			} else { // if configmap not exist and bool whitelist is false
+		// if whitelist boolean set we search namespace in configmap whitelist
+		if utils.Config.Whitelist { // if configmap with whitelist exist and not empty
+			if blackWhiteList.Whitelist[0] != "" && utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
+				utils.Log.Info().Msgf("Project %s is whitelisted", auth.Namespace())
 				generateProject(auth)
+			} else {
+				utils.Log.Error().Msgf("Cannot find project %s in whitelist", auth.Namespace())
 			}
-
+		} else if blackWhiteList.Blacklist[0] != "" { // if configmap with blacklist exist and not empty
+			if utils.Include(blackWhiteList.Blacklist, auth.Namespace()) {
+				utils.Log.Info().Msgf("delete project %s in blacklist", auth.Namespace())
+				deleteProject(auth)
+			} else {
+				utils.Log.Info().Msgf("Cannot find project %s in blacklist", auth.Namespace())
+			}
+		} else { // if configmap not exist and bool whitelist is false
+			generateProject(auth)
 		}
-	}
 
+	}
 }
 
 // generate a project config or update it if exists
