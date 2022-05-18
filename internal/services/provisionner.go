@@ -55,6 +55,7 @@ func GenerateResources() error {
 	blacklistCM, errRB := GetBlackWhitelistCM(api)
 	if errRB != nil {
 		utils.Log.Info().Msg("Can't get Black&Whitelist")
+		return err
 	} else {
 		blackWhiteList = MakeBlackWhitelist(blacklistCM.Data)
 	}
@@ -204,10 +205,10 @@ func GenerateUserRoleBinding(namespace string, role string) {
 	api := clientSet.RbacV1()
 
 	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role), err)
-	roleBinding("view", api, namespace, subjectView(namespace), err)
+	roleBinding("view", api, namespace, subjectView(), err)
 }
 
-func subjectView(namespace string) []v1.Subject {
+func subjectView() []v1.Subject {
 	subjectView := []v1.Subject{
 		{
 			APIGroup: "rbac.authorization.k8s.io",
