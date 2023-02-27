@@ -2,7 +2,7 @@
 name: chaos testing for kubi with Litmus
 on:
   - push
-  - pull_request
+  
 jobs:
   kind:
     runs-on: ubuntu-latest
