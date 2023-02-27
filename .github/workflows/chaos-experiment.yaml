@@ -60,9 +60,7 @@ jobs:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
           
           
-      - name: deploy kubi 
-      
-       
+      # deploy kubi        
 
       - name: Setup Litmus
         uses: litmuschaos/github-chaos-actions@master
