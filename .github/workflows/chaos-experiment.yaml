@@ -1,0 +1,98 @@
+name: "chaos testing for kubi with Litmus"
+on: [push, pull_request]
+
+jobs: 
+
+  kind:
+  
+   runs-on: ubuntu-latest 
+   name: create cluster KinD  with (1.21,1.23) Kub version 
+   strategy:
+     fail-fast: false
+     matrix:
+       kubernetes:
+         - "1.21"
+
+   steps:
+     
+     - name: checkout
+       uses: actions/checkout@v3
+       
+     - name: Create cluster KinD
+       uses: helm/kind-action@v1.4.0
+       with:
+         config: .github/kind-cluster-${{ matrix.kubernetes }}.yaml
+
+     - name: testing cluster kinD
+       run: 
+         kubectl cluster-info --context kind-chart-testing
+         echo " current-context:" $(kubectl config current-context)
+       
+   release:
+   
+    name: Create Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [webhook, api, operator]
+        
+    steps:
+      
+       - name: Checkout
+         uses: actions/checkout@v2
+       - name: Docker meta
+         id: meta
+         uses: docker/metadata-action@v3
+         with:
+           images: cagip/kubi-${{ matrix.component }}
+     
+       - name: Login to DockerHub
+         if: github.event_name != 'pull_request'
+         uses: docker/login-action@v1
+         with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+       - name: Build and push
+         uses: docker/build-push-action@v2
+         with:
+          context: .
+          file: Dockerfile.${{ matrix.component }}
+          push: ${{ GitHub.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          
+     
+       - name: Setting up kubeconfig ENV for Github Chaos Action
+         run: echo ::set-env name=KUBE_CONFIG_DATA::$(base64 -w 0 ~/.kube/config)
+         env:
+           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+ 
+       
+       - name: deploy kubi in kind cluster
+       
+       
+       - name: Setup Litmus
+         uses: litmuschaos/github-chaos-actions@master
+         env:
+          INSTALL_LITMUS: true 
+     
+       - name: setup chaos experiment "pod-delete"
+         uses: litmuschaos/github-chaos-actions@master
+         env:
+            EXPERIMENT_NAME: pod-delete
+            EXPERIMENT_IMAGE: litmuschaos/go-runner
+            EXPERIMENT_IMAGE_TAG: ci
+            JOB_CLEANUP_POLICY: delete 
+            APP_NS: default
+            APP_KIND: deployment
+            IMAGE_PULL_POLICY: Always
+            TOTAL_CHAOS_DURATION: 30
+            CHAOS_INTERVAL: 10
+            FORCE: false
+
+       - name: Uninstall Litmus
+         if: always()
+         uses: litmuschaos/github-chaos-actions@master
+         env:
+            LITMUS_CLEANUP: true
