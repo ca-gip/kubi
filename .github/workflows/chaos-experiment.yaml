@@ -1,0 +1,85 @@
+---
+name: chaos testing for kubi with Litmus
+on:
+  - push
+jobs:
+  kind:
+    runs-on: ubuntu-latest
+    name: create cluster KinD  with (1.21,1.23) Kub version
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes:
+          - 1.21
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: Create cluster KinD
+        uses: helm/kind-action@v1.4.0
+        with:
+          config: .github/kind-cluster-${{ matrix.kubernetes }}.yaml
+      - name: testing cluster kinD
+        run: kubectl cluster-info --context kind-chart-testing echo " current-context:"
+          $(kubectl config current-context)
+                 
+      - name: Setting up kubeconfig ENV for Github Chaos Action
+        run: echo ::set-env name=KUBE_CONFIG_DATA::$(base64 -w 0 ~/.kube/config)
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+      
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+          go-path: ${{ github.workspace }}/go
+          
+      - name: Set GOROOT
+        run: echo "export GOROOT=/opt/hostedtoolcache/go/1.17.13/x64" >> $GITHUB_ENV 
+          
+      - name: Create certificate for kubi
+        run : |
+         chmod +x ./.github/Csr.sh
+         ./.github/Csr.sh
+              
+      - name: deploy kubi Api
+        run: |
+         
+               API_URL=$(kubectl config view --minify --output 'jsonpath={.clusters[].cluster.server}')
+               
+               API_PORT=${API_URL##*:}
+               echo "API port: $API_PORT"
+               echo "API URL: $API_URL"
+ 
+
+               LDAP_ADMIN_GROUPBASE="cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com" \
+               LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+               LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
+               LDAP_GROUPBASE="ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+               LDAP_PORT="389"   \
+               LDAP_SERVER="kube-ldap.kube-system.svc.cluster.local"  \
+               LDAP_USE_SSL="false"   \
+               LDAP_USERBASE="ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
+               LDAP_USERFILTER="(cn=%s)"   \
+               LOCATOR="local"   \
+               PUBLIC_APISERVER_URL="https://kubernetes.default.svc.cluster.local"  \
+               TENANT="cagip" \
+               KUBERNETES_SERVICE_HOST="kubernetes.default.svc.cluster.local" \
+               KUBERNETES_SERVICE_PORT="API_PORT" \
+               LDAP_PASSWD="password" \
+               go run ./cmd/api//main.go &
+     
+              
+      - name: existing  namespaces test 
+        run:  | 
+               go get k8s.io/client-go/tools/clientcmd@v0.20.4
+               sleep 2m
+               go test ./.github/end_to_end/y_test.go
+               
+              
+              
+              
+              
+              
+              
