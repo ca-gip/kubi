@@ -2,7 +2,6 @@
 name: chaos testing for kubi with Litmus
 on:
   - push
-  
 jobs:
   kind:
     runs-on: ubuntu-latest
@@ -23,6 +22,45 @@ jobs:
       - name: testing cluster kinD
         run: kubectl cluster-info --context kind-chart-testing echo " current-context:"
           $(kubectl config current-context)
+                 
+      - name: Setting up kubeconfig ENV for Github Chaos Action
+        run: echo ::set-env name=KUBE_CONFIG_DATA::$(base64 -w 0 ~/.kube/config)
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.20.1
+      - name: Install dependencies
+        run: |
+          go version
+          go get -u golang.org/x/lint/golint
+          
+      - name:  install cfssl 
+        run: |
+          get github.com/cloudflare/cfssl/cmd/cfssljson
+          get github.com/cloudflare/cfssl/cmd/cfssl 
+          
+      - name: Create a crt signed by Kubernetes CA
+        run: |
+          cat <<EOF | cfssl genkey - | cfssljson -bare server
+          {
+            "hosts": [
+              "kubi.devops.managed.kvm",
+              "kubi-svc",
+              "kubi-svc.kube-system",
+              "kubi-svc.kube-system.svc",
+              "kubi-svc.kube-system.svc.cluster.local",
+              "kubi.devops.managed.kvm"
+            ],
+            "CN": "kubi-svc.kube-system.svc.cluster.local",
+            "key": {
+              "algo": "ecdsa",
+              "size": 256
+            }
+          }
+          EOF
+            
   release:
     name: Create Build
     runs-on: ubuntu-latest
@@ -54,19 +92,13 @@ jobs:
           push: ${{ GitHub.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      - name: Setting up kubeconfig ENV for Github Chaos Action
-        run: echo ::set-env name=KUBE_CONFIG_DATA::$(base64 -w 0 ~/.kube/config)
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
           
-          
-      # deploy kubi        
-
+        
+   
       - name: Setup Litmus
         uses: litmuschaos/github-chaos-actions@master
         env:
           INSTALL_LITMUS: true
-          
       - name: Running "pod-delete" chaos experiment
         uses: litmuschaos/github-chaos-actions@master
         env:
@@ -80,34 +112,32 @@ jobs:
           TOTAL_CHAOS_DURATION: 30
           CHAOS_INTERVAL: 10
           FORCE: false
-        
+          
       - name: Running "pod-network-latency" chaos experiment
         uses: litmuschaos/github-chaos-actions@master
         env:
           EXPERIMENT_NAME: pod-network-latency
           EXPERIMENT_IMAGE: litmuschaos/go-runner
           EXPERIMENT_IMAGE_TAG: ci
-          JOB_CLEANUP_POLICY: delete         
+          JOB_CLEANUP_POLICY: delete
           APP_NS: kubi
           TOTAL_CHAOS_DURATION: 60
           NETWORK_INTERFACE: eth0
           NETWORK_LATENCY: 60000
-          CONTAINER_RUNTIME: containerd     
+          CONTAINER_RUNTIME: containerd
           
-      #check out custom experiment network    
       - name: Running "pod-network-loss" chaos experiment
         uses: litmuschaos/github-chaos-actions@master
         env:
           EXPERIMENT_NAME: pod-network-loss
           EXPERIMENT_IMAGE: litmuschaos/go-runner
           EXPERIMENT_IMAGE_TAG: ci
-          JOB_CLEANUP_POLICY: delete       
+          JOB_CLEANUP_POLICY: delete
           TARGET_CONTAINER: kubi
           TOTAL_CHAOS_DURATION: 60
           NETWORK_INTERFACE: eth0
           NETWORK_PACKET_LOSS_PERCENTAGE: 100
           CONTAINER_RUNTIME: containerd
-
           
       - name: Uninstall Litmus
         if: always()
