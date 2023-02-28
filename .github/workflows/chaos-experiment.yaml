@@ -40,7 +40,8 @@ jobs:
         run: |
           get github.com/cloudflare/cfssl/cmd/cfssljson
           get github.com/cloudflare/cfssl/cmd/cfssl 
-          
+       
+     # change value of kubi.devops.managed.kvm  
       - name: Create a crt signed by Kubernetes CA
         run: |
           cat <<EOF | cfssl genkey - | cfssljson -bare server
@@ -60,7 +61,34 @@ jobs:
             }
           }
           EOF
-            
+     
+      - name: create the signing request 
+        run: |
+           cat <<EOF | kubectl create -f -
+           apiVersion: certificates.k8s.io/v1eta1
+           kind: CertificateSigningRequest
+           metadata:
+             name: kubi-svc-kube-system
+             
+           soec:
+            group:
+            - system: authenticated
+            request: $(cat server.csr | base64 | tr -d  '\n')
+            usages: 
+            - digital signature
+            - key encipherment
+            - server auth
+           EOF
+             
+      - name: Approuve and recieve crt
+        run : |
+          kubectl certificate approve kubi-svc.kube-system
+          kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}'     | base64 --decode > server.crt
+      
+      - name: create secret for LDAP bind password
+      
+       
+       
   release:
     name: Create Build
     runs-on: ubuntu-latest
