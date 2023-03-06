@@ -40,88 +40,28 @@ jobs:
         run: |
           get github.com/cloudflare/cfssl/cmd/cfssljson
           get github.com/cloudflare/cfssl/cmd/cfssl 
-       
-     # change value of kubi.devops.managed.kvm  
-      - name: Create a crt signed by Kubernetes CA
-        run: |
-          cat <<EOF | cfssl genkey - | cfssljson -bare server
-          {
-            "hosts": [
-              "kubi.devops.managed.kvm",
-              "kubi-svc",
-              "kubi-svc.kube-system",
-              "kubi-svc.kube-system.svc",
-              "kubi-svc.kube-system.svc.cluster.local",
-              "kubi.devops.managed.kvm"
-            ],
-            "CN": "kubi-svc.kube-system.svc.cluster.local",
-            "key": {
-              "algo": "ecdsa",
-              "size": 256
-            }
-          }
-          EOF
-     
-      - name: create the signing request 
-        run: |
-           cat <<EOF | kubectl create -f -
-           apiVersion: certificates.k8s.io/v1eta1
-           kind: CertificateSigningRequest
-           metadata:
-             name: kubi-svc-kube-system
-             
-           soec:
-            group:
-            - system: authenticated
-            request: $(cat server.csr | base64 | tr -d  '\n')
-            usages: 
-            - digital signature
-            - key encipherment
-            - server auth
-           EOF
-             
-      - name: Approuve and recieve crt
+ 
+      - name: Create certificate for kubi
         run : |
-          kubectl certificate approve kubi-svc.kube-system
-          kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}'     | base64 --decode > server.crt
-      
-      - name: create secret for LDAP bind password
-      
-       
-       
-  release:
-    name: Create Build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        component:
-          - webhook
-          - api
-          - operator
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: cagip/kubi-${{ matrix.component }}
-      - name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: Dockerfile.${{ matrix.component }}
-          push: ${{ GitHub.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          
+         ./github/Csr.sh
+         
+      - name: crete secret for kubi deployment
+        run: |
+          kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
         
+      - name: crete secret for kubi ldap
+        run: |
+          kubectl -n kube-system create secret generic kubi-secret \
+           --from-literal ldap_passwd='admin'
+      - name: Deploy the prerequisites
+        run: |
+         kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
+       
+      - name:  local config (ldap deploy + configmap kubi-ldap + configmap openldap)
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+       
+       
    
       - name: Setup Litmus
         uses: litmuschaos/github-chaos-actions@master
