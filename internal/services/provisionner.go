@@ -454,15 +454,13 @@ func createNamespace(project *v12.Project, api v13.CoreV1Interface) error {
 func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) error {
 	utils.Log.Info().Msgf("Updating ns %v", project.Name)
 
-	ns := &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Namespace",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   project.Name,
-			Labels: generateNamespaceLabels(project),
-		},
+	ns, errns := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
+
+	if errns != nil {
+		utils.Log.Error().Err(errns)
+	} else {
+		ns.Name = project.Name
+		ns.ObjectMeta.Labels = generateNamespaceLabels(project)
 	}
 
 	_, err := api.Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})

@@ -15,10 +15,11 @@ require (
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.20.4
-	k8s.io/apimachinery v0.20.4
-	k8s.io/client-go v0.20.4
-	k8s.io/code-generator v0.20.4
+	k8s.io/api v0.21.11
+	k8s.io/apimachinery v0.21.11
+	k8s.io/client-go v0.21.11
+	k8s.io/code-generator v0.21.11
+	k8s.io/kube-openapi v0.0.0-20211110012726-3cc51fd1e909 // indirect
 )
 
 replace k8s.io/code-generator => github.com/efortin/kubernetes/staging/src/k8s.io/code-generator v0.0.0-20210602081514-49be077fdae8
