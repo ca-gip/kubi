@@ -1,1 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phpldapadmin
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpldapadmin
+  template:
+    metadata:
+      labels:
+        app: phpldapadmin
+    spec:
+      containers:
+      - name: phpldapadmin
+        image: osixia/phpldapadmin:0.9.0
+        env:
+        - name: PHPLDAPADMIN_LDAP_HOSTS
+          value: kube-ldap
+        - name: PHPLDAPADMIN_HTTPS
+          value: "false"
+        - name: PHPLDAPADMIN_LDAP_PORT
+          value: "389"
+        ports:
+        - containerPort: 80
 
