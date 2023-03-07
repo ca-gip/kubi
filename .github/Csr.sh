@@ -82,7 +82,7 @@ echo '{
             }
         }
     }
-}'
+}' > server-signing-config.json
 
 
 #signature du certificat 
