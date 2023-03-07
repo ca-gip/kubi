@@ -37,7 +37,9 @@ jobs:
           
           
       - name: Install cfssl and cfssljson
-        uses: cloudflare/setup-cfssl@v1
+        run: |
+         go get -u github.com/cloudflare/cfssl/cmd/cfssl
+         go get -u github.com/cloudflare/cfssl/cmd/cfssljson
           
  
       - name: Create certificate for kubi
