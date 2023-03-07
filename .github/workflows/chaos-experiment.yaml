@@ -11,7 +11,6 @@ jobs:
       matrix:
         kubernetes:
           - 1.21
-          - 1.23
     steps:
       - name: checkout
         uses: actions/checkout@v3
