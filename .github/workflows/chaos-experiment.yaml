@@ -44,6 +44,7 @@ jobs:
  
       - name: Create certificate for kubi
         run : |
+         chmod +x ./.github/Csr.sh
          ./.github/Csr.sh
          
       - name: crete secret for kubi deployment
