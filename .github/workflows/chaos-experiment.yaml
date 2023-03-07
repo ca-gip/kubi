@@ -36,10 +36,10 @@ jobs:
           go version
           go get -u golang.org/x/lint/golint
           
-      - name:  install cfssl 
-        run: |
-          get github.com/cloudflare/cfssl/cmd/cfssljson
-          get github.com/cloudflare/cfssl/cmd/cfssl 
+          
+      - name: Install cfssl and cfssljson
+        uses: cloudflare/setup-cfssl@v1
+          
  
       - name: Create certificate for kubi
         run : |
@@ -53,6 +53,7 @@ jobs:
         run: |
           kubectl -n kube-system create secret generic kubi-secret \
            --from-literal ldap_passwd='admin'
+           
       - name: Deploy the prerequisites
         run: |
          kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
