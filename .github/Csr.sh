@@ -99,7 +99,7 @@ kubectl get csr kubi-svc.kube-system -o json | \
   kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/kubi-svc.kube-system/status -f -
 
 
-kubectl get csr my-svc.my-namespace -o jsonpath='{.status.certificate}' \
+kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}' \
     | base64 --decode > server.crt
 
 
