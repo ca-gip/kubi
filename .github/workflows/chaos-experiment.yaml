@@ -61,7 +61,10 @@ jobs:
         run: |
           kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
        
-       
+      - name: deploy kubi
+        run: |
+         kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
+          
    
       - name: Setup Litmus
         uses: litmuschaos/github-chaos-actions@master
@@ -74,7 +77,8 @@ jobs:
           EXPERIMENT_IMAGE: litmuschaos/go-runner
           EXPERIMENT_IMAGE_TAG: ci
           JOB_CLEANUP_POLICY: delete
-          APP_NS: kubi
+          APP_NS: kube-system
+          APP_LABEL: app=kubi
           APP_KIND: deployment
           IMAGE_PULL_POLICY: Always
           TOTAL_CHAOS_DURATION: 30
@@ -88,7 +92,8 @@ jobs:
           EXPERIMENT_IMAGE: litmuschaos/go-runner
           EXPERIMENT_IMAGE_TAG: ci
           JOB_CLEANUP_POLICY: delete
-          APP_NS: kubi
+          APP_NS: kube-system
+          APP_LABEL: app=kubi
           TOTAL_CHAOS_DURATION: 60
           NETWORK_INTERFACE: eth0
           NETWORK_LATENCY: 60000
@@ -101,7 +106,8 @@ jobs:
           EXPERIMENT_IMAGE: litmuschaos/go-runner
           EXPERIMENT_IMAGE_TAG: ci
           JOB_CLEANUP_POLICY: delete
-          TARGET_CONTAINER: kubi
+          APP_NS: kube-system
+          APP_LABEL: app=kubi
           TOTAL_CHAOS_DURATION: 60
           NETWORK_INTERFACE: eth0
           NETWORK_PACKET_LOSS_PERCENTAGE: 100
