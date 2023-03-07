@@ -49,7 +49,7 @@ jobs:
             wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
             chmod +x cfssl
             sudo mv cfssl /usr/local/bin
-            cfssl -version
+ 
 
  
       - name: Create certificate for kubi
