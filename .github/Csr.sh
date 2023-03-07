@@ -101,7 +101,10 @@ kubectl get csr kubi-svc.kube-system -o json | \
 
 kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}' \
     | base64 --decode > server.crt
+    
+cat server.crt
 
+kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 
 
 
