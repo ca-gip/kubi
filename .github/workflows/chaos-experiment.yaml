@@ -55,10 +55,6 @@ jobs:
         run : |
          chmod +x ./.github/Csr.sh
          ./.github/Csr.sh
-         
-      - name: crete secret for kubi deployment
-        run: |
-          kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
         
       - name: crete secret for kubi ldap
         run: |
