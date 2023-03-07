@@ -82,7 +82,7 @@ echo '{
             }
         }
     }
-}' >
+}'
 
 
 #signature du certificat 
