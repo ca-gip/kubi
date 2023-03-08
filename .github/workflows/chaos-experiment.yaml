@@ -26,13 +26,19 @@ jobs:
         run: echo ::set-env name=KUBE_CONFIG_DATA::$(base64 -w 0 ~/.kube/config)
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+      
+      - name: Checkout code
+        uses: actions/checkout@v2
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.20.1
-      - name: Install dependencies
+          go-version: 1.17
+          go-path: ${{ github.workspace }}/go
+      
+      - name: Build and Test
         run: |
-          go get -u golang.org/x/lint/golint
+          go build ./...
+          go test ./...
           
           
       - name: Install cfssl and cfssljson
