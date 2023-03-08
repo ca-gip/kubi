@@ -35,7 +35,9 @@ jobs:
           go-version: 1.17
           go-path: ${{ github.workspace }}/go
           
-          
+      - name: Set GOROOT
+        run: echo "export GOROOT=/opt/hostedtoolcache/go/1.17.13/x64" >> $GITHUB_ENV
+
       - name: Install cfssl and cfssljson
         run: |
             VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
