@@ -455,23 +455,26 @@ func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) erro
 	utils.Log.Info().Msgf("Updating ns %v", project.Name)
 
 	ns, errns := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
-
 	if errns != nil {
-		utils.Log.Error().Err(errns)
-	} else {
-		ns.Name = project.Name
-		ns.ObjectMeta.Labels = generateNamespaceLabels(project)
+		msgError := fmt.Errorf("could not get namespace in updating ns in updateExistingNamespace() %v", errns)
+		utils.Log.Error().Err(msgError)
+		return msgError
 	}
+
+	ns.Name = project.Name
+	ns.ObjectMeta.Labels = generateNamespaceLabels(project)
 
 	_, err := api.Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
-
 	if err != nil {
-		utils.Log.Error().Err(err)
+		msgError := fmt.Errorf("could not update ns in updateExistingNamespace() %v", errns)
+		utils.Log.Error().Err(msgError)
 		utils.NamespaceCreation.WithLabelValues("error", project.Name).Inc()
-	} else {
-		utils.NamespaceCreation.WithLabelValues("updated", project.Name).Inc()
+		return msgError
 	}
-	return err
+
+	utils.NamespaceCreation.WithLabelValues("updated", project.Name).Inc()
+
+	return nil
 }
 
 // Generate CustomLabels that should be applied on Kubi's Namespaces
