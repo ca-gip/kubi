@@ -53,7 +53,10 @@ jobs:
             sudo mv cfssl /usr/local/bin
  
 
- 
+      - name: deploy crds 
+        run : |
+          kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+          
       - name: Create certificate for kubi
         run : |
          chmod +x ./.github/Csr.sh
