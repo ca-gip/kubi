@@ -80,7 +80,7 @@ jobs:
       - name: Create secret dirs on your local machine   
         run : |
             sudo mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
-            sudo mkdir /var/run/secrets/kubernets.io/serviceaccount
+            sudo mkdir /var/run/secrets/kubernetes.io/serviceaccount
       
       - name: The mapping between the secret:key and file path  
         run : |
