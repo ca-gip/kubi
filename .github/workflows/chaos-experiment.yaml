@@ -81,8 +81,7 @@ jobs:
         run : |
              sudo mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
              sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
-             kubectl -n kube-system get secrets $( sudo kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-             
+             kubectl get all -n kube-system
            
       - name:  cloning kubi
         run:  |
