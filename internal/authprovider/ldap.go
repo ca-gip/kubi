@@ -3,6 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
+	"regexp"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
@@ -330,7 +331,8 @@ func HasOpsAccess(userDN string) bool {
 
 // request to search user
 func newUserSearchRequest(userBaseDN string, username string) *ldap.SearchRequest {
-	userFilter := fmt.Sprintf(utils.Config.Ldap.UserFilter, username)
+	escapeFilter := regexp.MustCompile(`[(|)|\||&|*]`)
+	userFilter := fmt.Sprintf(utils.Config.Ldap.UserFilter, escapeFilter.ReplaceAllString(username, ""))
 	return &ldap.SearchRequest{
 		BaseDN:       userBaseDN,
 		Scope:        ldap.ScopeWholeSubtree,
