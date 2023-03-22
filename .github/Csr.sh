@@ -1,5 +1,13 @@
 #!/bin/bash
 
+
+# kubi private key 
+openssl ecparam -genkey -name secp521r1 -noout -out /tmp/ecdsa-key.pem
+
+# kubi public key
+openssl ec -in /tmp/ecdsa-key.pem -pubout -out /tmp/ecdsa-public.pem
+
+
 mkdir dev
 cd dev
 
@@ -31,7 +39,7 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
 }
 EOF
 
-# creation de la demande de signature 
+
 
 cat <<EOF | kubectl create -f -
 apiVersion: certificates.k8s.io/v1
@@ -49,12 +57,11 @@ spec:
   - server auth
 EOF
 
-# approuver la demande d esignature
 
 kubectl certificate approve kubi-svc.kube-system
 
 
-#creation de le CA
+
 cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
 {
   "CN": "kube-chaos",
@@ -66,7 +73,6 @@ cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
 EOF
 
 
-# fichier de configuration pour le CA
 
 echo '{
     "signing": {
@@ -85,14 +91,14 @@ echo '{
 }' > server-signing-config.json
 
 
-#signature du certificat 
+
 
 kubectl get csr kubi-svc.kube-system -o jsonpath='{.spec.request}' | \
   base64 --decode | \
   cfssl sign -ca ca.pem -ca-key ca-key.pem -config server-signing-config.json - | \
   cfssljson -bare ca-signed-server
 
-#upload le certificat signé
+
 
 kubectl get csr kubi-svc.kube-system -o json | \
   jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
@@ -106,5 +112,6 @@ cat server.crt
 
 kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 
+kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
 
 
