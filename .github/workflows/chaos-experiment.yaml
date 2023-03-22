@@ -79,8 +79,8 @@ jobs:
      
       - name: Create secret dirs on your local machine   
         run : |
-              mkdir  /var/run/secrets/{certs,ecdsa,kubernetes.io}
-              mkdir /var/run/secrets/kubernetes.io/serviceaccount
+              mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
+              mkdir  /var/run/secrets/kubernetes.io/serviceaccount
       
       - name: The mapping between the secret:key and file path  
         run : |
