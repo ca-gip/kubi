@@ -79,9 +79,15 @@ jobs:
      
       - name: Create secret dirs on your local machine   
         run : |
-             sudo mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
-             sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
-             kubectl get all -n kube-system
+              sudo mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
+              sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
+              
+              sudo kubectl -n kube-system get secrets $(sudo kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              sudo kubectl -n kube-system get secrets $(sudo kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/token
+              sudo kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /var/run/secrets/certs/tls.crt
+              sudo kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /var/run/secrets/certs/tls.key
+              sudo kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-key.pem
+              sudo kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-public.pem
            
       - name:  cloning kubi
         run:  |
