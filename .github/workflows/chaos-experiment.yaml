@@ -79,13 +79,13 @@ jobs:
      
       - name: Create secret dirs on your local machine   
         run : |
-              mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
-              mkdir  /var/run/secrets/kubernetes.io/serviceaccount
+             sudo  mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
+             sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
       
       - name: The mapping between the secret:key and file path  
         run : |
             
-            kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            sudo kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
              
            
       - name:  cloning kubi
