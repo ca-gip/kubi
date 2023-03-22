@@ -112,16 +112,13 @@ jobs:
         
       - name :  get ldif data 
         run: |
-           kubectl -n kube-system exec -it $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')  /bin/bash
-           ldapsearch -x -D "cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com" -w password  "(objectclass=*)" "*"
-           exit
-
+           kubectl -n kube-system exec  $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- ldapsearch -x -D "cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com" -w password  "(objectclass=*)" "*"
          
          
          
          
          
-         
+             
          
          
           
