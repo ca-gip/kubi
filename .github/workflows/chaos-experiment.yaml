@@ -94,16 +94,10 @@ jobs:
                sudo mv tls.key /var/run/secrets/certs/
                sudo mv ecdsa-public.pem /var/run/secrets/ecdsa/
                sudo mv ecdsa-key.pem /var/run/secrets/ecdsa/
-               echo " testing the result"
-               sudo cat /var/run/secrets/kubernetes.io/serviceaccount/token 
-               echo " testing the result"
-               sudo cat  /var/run/secrets/certs/tls.crt
-               echo " testing the result"
+               sudo ls /var/run/secrets/kubernetes.io/serviceaccount/
                sudo ls /var/run/secrets/ecdsa/
-               echo " shoing certificat"
-               cat /var/run/secrets/ecdsa/ecdsa-public.pem
-               echo " fait"
-               cat /var/run/secrets/ecdsa/ecdsa-key.pem
+               sudo ls /var/run/secrets/certs/
+               
                
       - name:  cloning kubi
         run:  |
@@ -118,8 +112,7 @@ jobs:
         
       - name :  get ldif data 
         run: |
-           openldap=$(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')  
-           kubectl  exec -it  $openldap -n kube-system /bin/bash
+           kubectl exec -it $openldap=$(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')  
            ldapsearch -x -D "cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com" -w password  "(objectclass=*)" "*"
            exit
 
