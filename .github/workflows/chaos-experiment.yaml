@@ -118,6 +118,7 @@ jobs:
              API_URL=$(kubectl config view --minify --output 'jsonpath={.clusters[].cluster.server}')
              API_PORT=${API_URL##*:}
              echo "API port: $API_PORT"
+             acho "API URL: $API_URL"
              sudo apt install git
              git clone https://github.com/ca-gip/kubi.git
              
