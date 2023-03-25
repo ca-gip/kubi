@@ -121,8 +121,9 @@ jobs:
              sudo apt install git
              git clone https://github.com/ca-gip/kubi.git
              
-             cd /kubi/cmd/api
-             
+             cd  kubi/cmd/api/
+             pwd 
+             ls
              LDAP_ADMIN_GROUPBASE="cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com" \
              LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"\
              LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com" \
