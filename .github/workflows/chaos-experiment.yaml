@@ -135,10 +135,10 @@ jobs:
              LDAP_USERBASE="ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com"\
              LDAP_USERFILTER="(cn=%s)"\
              LOCATOR="local"  \
-             PUBLIC_APISERVER_URL="API_URL" \
+             PUBLIC_APISERVER_URL=API_URL\
              TENANT="cagip" \
-             KUBERNETES_SERVICE_HOST="127.0.0.1"\
-             KUBERNETES_SERVICE_PORT="API_PORT"\
+             KUBERNETES_SERVICE_HOST=127.0.0.1\
+             KUBERNETES_SERVICE_PORT=API_PORT\
              LDAP_PASSWD="password" \
              go run main.go
              
