@@ -144,63 +144,15 @@ jobs:
               # Attendre que le pod OpenLDAP soit prêt
               kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
               kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils && ldapsearch -x -D 'cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com' -w password '(objectclass=*)' '*'"
+
+  tes:
+    runs-on: ubuntu-latest
+    needs: kind
+    steps:  
+         - name: Installer ldap-utils and add
+           run: |
+              # Attendre que le pod OpenLDAP soit prêt
+              kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
+              kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils && ldapsearch -x -D 'cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com' -w password '(objectclass=*)' '*'"
+
        
-    
-    
-      - name: Setting up kubeconfig ENV for Github Chaos Action
-        run: echo ::set-env name=KUBE_CONFIG_DATA::$(base64 -w 0 ~/.kube/config)
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-      
-      - name: Setup Litmus
-        uses: litmuschaos/github-chaos-actions@master
-        env:
-          INSTALL_LITMUS: true
-      - name: Running "pod-delete" chaos experiment
-        uses: litmuschaos/github-chaos-actions@master
-        env:
-          EXPERIMENT_NAME: pod-delete
-          EXPERIMENT_IMAGE: litmuschaos/go-runner
-          EXPERIMENT_IMAGE_TAG: ci
-          JOB_CLEANUP_POLICY: delete
-          APP_NS: kube-system
-          APP_LABEL: app=kubi
-          APP_KIND: deployment
-          IMAGE_PULL_POLICY: Always
-          TOTAL_CHAOS_DURATION: 30
-          CHAOS_INTERVAL: 10
-          FORCE: false
-          
-      - name: Running "pod-network-latency" chaos experiment
-        uses: litmuschaos/github-chaos-actions@master
-        env:
-          EXPERIMENT_NAME: pod-network-latency
-          EXPERIMENT_IMAGE: litmuschaos/go-runner
-          EXPERIMENT_IMAGE_TAG: ci
-          JOB_CLEANUP_POLICY: delete
-          APP_NS: kube-system
-          APP_LABEL: app=kubi
-          TOTAL_CHAOS_DURATION: 60
-          NETWORK_INTERFACE: eth0
-          NETWORK_LATENCY: 60000
-          CONTAINER_RUNTIME: containerd
-          
-      - name: Running "pod-network-loss" chaos experiment
-        uses: litmuschaos/github-chaos-actions@master
-        env:
-          EXPERIMENT_NAME: pod-network-loss
-          EXPERIMENT_IMAGE: litmuschaos/go-runner
-          EXPERIMENT_IMAGE_TAG: ci
-          JOB_CLEANUP_POLICY: delete
-          APP_NS: kube-system
-          APP_LABEL: app=kubi
-          TOTAL_CHAOS_DURATION: 60
-          NETWORK_INTERFACE: eth0
-          NETWORK_PACKET_LOSS_PERCENTAGE: 100
-          CONTAINER_RUNTIME: containerd
-          
-      - name: Uninstall Litmus
-        if: always()
-        uses: litmuschaos/github-chaos-actions@master
-        env:
-          LITMUS_CLEANUP: true
