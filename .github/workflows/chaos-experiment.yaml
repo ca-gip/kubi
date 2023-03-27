@@ -138,14 +138,8 @@ jobs:
                LDAP_PASSWD="password" \
                go run main.go
                exit
-             
-      - name: Installer ldap-utils and add
-        run: |
-              # Attendre que le pod OpenLDAP soit prêt
-              kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
-              kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils && ldapsearch -x -D 'cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com' -w password '(objectclass=*)' '*'"
 
-  tes:
+  test:
     runs-on: ubuntu-latest
     needs: kind
     steps:  
