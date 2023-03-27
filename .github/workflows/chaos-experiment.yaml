@@ -115,33 +115,34 @@ jobs:
       - name: deploy kubi Api
         run: |
          
-             API_URL=$(kubectl config view --minify --output 'jsonpath={.clusters[].cluster.server}')
-             API_PORT=${API_URL##*:}
-             echo "API port: $API_PORT"
-             echo "API URL: $API_URL"
-             sudo apt install git
-             git clone https://github.com/ca-gip/kubi.git
-             
-             cd  kubi/cmd/api/
-             pwd 
-             ls
-             LDAP_ADMIN_GROUPBASE="cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com" \
-             LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"\
-             LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com" \
-             LDAP_GROUPBASE="ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com"\
-             LDAP_PORT="389" \
-             LDAP_SERVER="kube-ldap.kube-system.svc.cluster.local"\
-             LDAP_USE_SSL="false" v\
-             LDAP_USERBASE="ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com"\
-             LDAP_USERFILTER="(cn=%s)"\
-             LOCATOR="local"  \
-             PUBLIC_APISERVER_URL=API_URL\
-             TENANT="cagip" \
-             KUBERNETES_SERVICE_HOST=127.0.0.1\
-             KUBERNETES_SERVICE_PORT=API_PORT\
-             LDAP_PASSWD="password" \
-             go run main.go
-             
+               API_URL=$(kubectl config view --minify --output 'jsonpath={.clusters[].cluster.server}')
+               API_PORT=${API_URL##*:}
+               echo "API port: $API_PORT"
+               echo "API URL: $API_URL"
+               sudo apt install git
+               git clone https://github.com/ca-gip/kubi.git
+
+               cd  kubi/cmd/api/
+               pwd 
+               ls
+
+               LDAP_ADMIN_GROUPBASE="cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com" \
+               LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+               LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
+               LDAP_GROUPBASE="ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+               LDAP_PORT="389"   \
+               LDAP_SERVER="kube-ldap.kube-system.svc.cluster.local"  \
+               LDAP_USE_SSL="false"   \
+               LDAP_USERBASE="ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
+               LDAP_USERFILTER="(cn=%s)"   \
+               LOCATOR="local"   \
+               PUBLIC_APISERVER_URL="https://kubernetes.default.svc.cluster.local"  \
+               TENANT="cagip" \
+               KUBERNETES_SERVICE_HOST="kubernetes.default.svc.cluster.local" \
+               KUBERNETES_SERVICE_PORT="API_PORT" \
+               LDAP_PASSWD="password" \
+               go run main.go
+
              
              
       - name: Setting up kubeconfig ENV for Github Chaos Action
