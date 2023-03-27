@@ -137,7 +137,7 @@ jobs:
                KUBERNETES_SERVICE_PORT="API_PORT" \
                LDAP_PASSWD="password" \
                go run main.go
-               exit
+               
 
   test:
     runs-on: ubuntu-latest
