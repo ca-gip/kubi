@@ -67,6 +67,7 @@ jobs:
            
       - name: deploy crds 
         run : |
+            kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
             kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
 
       - name: Deploy the prerequisites
@@ -156,7 +157,7 @@ jobs:
                ls
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
                go build -o app ./.github/test.go
-               sleep 15m
+               sleep 10m
                kubectl get ns
         
                
