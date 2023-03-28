@@ -149,7 +149,7 @@ jobs:
               cn: DL_KUB_CHAOS-DEV_ADMIN
               member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
               member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-              EOF
+              EOF"
       - name: existing  namespaces test 
         run:  |
                sudo apt install git
