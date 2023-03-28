@@ -34,7 +34,7 @@ func main() {
                 panic(err.Error())
         } 
         // existing ns 
-                nsName := "kube-system"
+                nsName := "CHAOS-DEV"
                 _, err = clientset.CoreV1().Namespaces().Get(context.TODO(),nsName, metav1.GetOptions{})
                 if err != nil {
                   if os.IsNotExist(err) {
