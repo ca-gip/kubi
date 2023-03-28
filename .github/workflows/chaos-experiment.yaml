@@ -45,6 +45,7 @@ jobs:
             wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
             chmod +x cfssljson
             sudo mv cfssljson /usr/local/bin
+            
             cfssljson -version
             VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
             VNUMBER=${VERSION#"v"}
@@ -52,10 +53,7 @@ jobs:
             chmod +x cfssl
             sudo mv cfssl /usr/local/bin
  
-
-      - name: deploy crds 
-        run : |
-          kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+      
           
       - name: Create certificate for kubi
         run : |
@@ -67,6 +65,10 @@ jobs:
           kubectl -n kube-system create secret generic kubi-secret \
            --from-literal ldap_passwd='password'
            
+      - name: deploy crds 
+        run : |
+            kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
+
       - name: Deploy the prerequisites
         run: |
          kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
@@ -105,8 +107,18 @@ jobs:
               kubectl get configmap -n kube-system
               kubectl get secret -n kube-system
         
-
-
+      - name: Installer ldap-utils and add
+        run: |
+              # Attendre que le pod OpenLDAP soit prêt
+              kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
+              kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils && ldapsearch -x -D 'cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com' -w password '(objectclass=*)' '*'"
+      - name: list all namespaces
+        run:  |
+               sudo apt install git
+               git clone https://github.com/ca-gip/kubi.git      
+               go build -o app ./.github/test.go
+               ./app
+               
       - name: deploy kubi Api
         run: |
          
@@ -114,9 +126,7 @@ jobs:
                API_PORT=${API_URL##*:}
                echo "API port: $API_PORT"
                echo "API URL: $API_URL"
-               sudo apt install git
-               git clone https://github.com/ca-gip/kubi.git
-
+               
                cd  kubi/cmd/api/
                pwd 
                ls
@@ -137,16 +147,3 @@ jobs:
                KUBERNETES_SERVICE_PORT="API_PORT" \
                LDAP_PASSWD="password" \
                go run main.go
-               timeout-minutes: 3
-
-  test:
-    runs-on: ubuntu-latest
-    needs: kind
-    steps:  
-         - name: Installer ldap-utils and add
-           run: |
-              # Attendre que le pod OpenLDAP soit prêt
-              kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
-              kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils && ldapsearch -x -D 'cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com' -w password '(objectclass=*)' '*'"
-
-       
