@@ -159,6 +159,7 @@ jobs:
                go build -o app ./.github/test.go
                sleep 10m
                kubectl get ns
+               ./app
         
                
               
