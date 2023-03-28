@@ -114,7 +114,7 @@ jobs:
                API_PORT=${API_URL##*:}
                echo "API port: $API_PORT"
                echo "API URL: $API_URL"
-               
+               git clone https://github.com/ca-gip/kubi.git
                cd  kubi/cmd/api/
                pwd 
                ls
@@ -153,7 +153,8 @@ jobs:
       - name: existing  namespaces test 
         run:  |
                sudo apt install git
-               git clone https://github.com/ca-gip/kubi.git      
+               pwd
+               cd ../../
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
                go build -o app ./.github/test.go
                ./app
