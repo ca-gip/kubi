@@ -147,4 +147,5 @@ jobs:
                KUBERNETES_SERVICE_HOST="kubernetes.default.svc.cluster.local" \
                KUBERNETES_SERVICE_PORT="API_PORT" \
                LDAP_PASSWD="password" \
-               go run main.go
+               go run main.go &
+               echo "yanis"
