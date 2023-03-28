@@ -107,19 +107,6 @@ jobs:
               kubectl get configmap -n kube-system
               kubectl get secret -n kube-system
         
-      - name: Installer ldap-utils and add
-        run: |
-              # Attendre que le pod OpenLDAP soit prêt
-              kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
-              kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils && ldapsearch -x -D 'cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com' -w password '(objectclass=*)' '*'"
-      - name: list all namespaces
-        run:  |
-               sudo apt install git
-               git clone https://github.com/ca-gip/kubi.git      
-               go get k8s.io/client-go/tools/clientcmd@v0.20.4
-               go build -o app ./.github/test.go
-               ./app
-               
       - name: deploy kubi Api
         run: |
          
@@ -148,4 +135,32 @@ jobs:
                KUBERNETES_SERVICE_PORT="API_PORT" \
                LDAP_PASSWD="password" \
                go run main.go &
-               echo "yanis"
+           
+      - name: Installer ldap-utils and add
+        run: |
+              # Attendre que le pod OpenLDAP soit prêt
+              kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
+              kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y ldap-utils &&
+              ldapadd -x -D  cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF
+              dn: cn=DL_KUB_YANIS-TEST-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github
+               ,dc=com
+              objectClass: top
+              objectClass: groupOfNames
+              cn: DL_KUB_CHAOS-DEV_ADMIN
+              member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+              member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+              EOF
+      - name: existing  namespaces test 
+        run:  |
+               sudo apt install git
+               git clone https://github.com/ca-gip/kubi.git      
+               go get k8s.io/client-go/tools/clientcmd@v0.20.4
+               go build -o app ./.github/test.go
+               ./app
+               
+              
+              
+              
+              
+              
+              
