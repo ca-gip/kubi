@@ -152,9 +152,8 @@ jobs:
               EOF"
       - name: existing  namespaces test 
         run:  |
-               sudo apt install git
                pwd
-               cd ../
+               ls
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
                go build -o app ./.github/test.go
                ./app
