@@ -154,7 +154,7 @@ jobs:
       - name: existing  namespaces test 
         run:  | 
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
-               sleep 7m
+               sleep 9m
                go test ./.github/end_to_end/y_test.go
                
               
