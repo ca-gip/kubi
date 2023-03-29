@@ -152,15 +152,10 @@ jobs:
               member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
               EOF"
       - name: existing  namespaces test 
-        run:  |
-               pwd
-               ls
+        run:  | 
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
-               go build -o app ./.github/test.go
-               sleep 10m
-               kubectl get ns
-               ./app
-        
+               sleep 5m
+               go test ./.github/end_to_end/y_test.go
                
               
               
