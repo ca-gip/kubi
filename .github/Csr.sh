@@ -21,6 +21,22 @@ PUBLIC_APISERVER_URL=$(kubectl config view --minify | grep server | cut -f 2- -d
 
 #creation du certificat pour  faire la demande de signature par kube CA
 
+# install CFSSL tools
+
+VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+VNUMBER=${VERSION#"v"}
+wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
+chmod +x cfssljson
+sudo mv cfssljson /usr/local/bin
+
+cfssljson -version
+VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+VNUMBER=${VERSION#"v"}
+wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
+chmod +x cfssl
+sudo mv cfssl /usr/local/bin
+
+# create certificat 
 cat <<EOF | cfssl genkey - | cfssljson -bare server
 {
   "hosts": [
@@ -38,7 +54,6 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
   }
 }
 EOF
-
 
 
 cat <<EOF | kubectl create -f -
@@ -113,5 +128,26 @@ cat server.crt
 kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 
 kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
+
+sudo mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
+sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
+      
+              
+kubectl -n kube-system get secrets $( kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > ca.crt
+kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > token
+kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > tls.crt
+kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > tls.key
+kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > ecdsa-key.pem
+kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > ecdsa-public.pem
+
+sudo mv ca.crt /var/run/secrets/kubernetes.io/serviceaccount/
+sudo mv token /var/run/secrets/kubernetes.io/serviceaccount/
+sudo mv tls.crt /var/run/secrets/certs/
+sudo mv tls.key /var/run/secrets/certs/ sudo mv ecdsa-public.pem /var/run/secrets/ecdsa/
+sudo mv ecdsa-key.pem /var/run/secrets/ecdsa/
+sudo ls /var/run/secrets/kubernetes.io/serviceaccount/
+sudo ls /var/run/secrets/ecdsa/
+sudo ls /var/run/secrets/certs/
+
 
 
