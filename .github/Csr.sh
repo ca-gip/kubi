@@ -128,6 +128,15 @@ cat server.crt
 kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 
 kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
+kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
+
+
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+          
+
 
 sudo mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
 sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
