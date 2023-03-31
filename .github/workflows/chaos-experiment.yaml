@@ -42,26 +42,7 @@ jobs:
         run : |
          chmod +x ./.github/Csr.sh
          ./.github/Csr.sh
-        
-      - name: crete secret for kubi ldap
-        run: |
-          kubectl -n kube-system create secret generic kubi-secret \
-           --from-literal ldap_passwd='password'
-           
-      - name: deploy crds 
-        run : |
-            kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
-            kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
-
-      - name: Deploy the prerequisites
-        run: |
-         kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
-       
-      - name:  local config (ldap deploy + configmap kubi-ldap + configmap openldap)
-        run: |
-          kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
-          
-
+  
       - name : checking for deploy
         run : |
               kubectl get all -n kube-system
