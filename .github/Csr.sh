@@ -137,4 +137,21 @@ kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployment
 kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
           
 
+kubectl -n kube-system get secrets $( kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > ca.crt
+kubectl -n kube-system get secrets $( kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > token
+kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > tls.crt
+kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > tls.key
+kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > ecdsa-key.pem
+kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > ecdsa-public.pem
 
+sudo mkdir -p  /var/run/secrets/{certs,ecdsa,kubernetes.io}
+sudo mkdir  /var/run/secrets/kubernetes.io/serviceaccount
+sudo mv ca.crt  /var/run/secrets/kubernetes.io/serviceaccount/
+sudo mv token  /var/run/secrets/kubernetes.io/serviceaccount/
+sudo mv tls.crt  /var/run/secrets/certs/
+sudo mv tls.key  /var/run/secrets/certs/
+sudo mv ecdsa-public.pem /var/run/secrets/ecdsa/
+sudo mv ecdsa-key.pem /var/run/secrets/ecdsa/
+sudo ls /var/run/secrets/kubernetes.io/serviceaccount/
+sudo ls /var/run/secrets/ecdsa/ 
+sudo ls /var/run/secrets/certs/
