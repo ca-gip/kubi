@@ -43,8 +43,8 @@ func main() {
 	}
 	services.WatchProjects()
         
-	os.Setenv("timer_refresh" , "10")
-	timerKubiRefresh := time.NewTicker(os.Getenv("timer_refresh") * time.Second)
+	//os.Setenv("timer_refresh" , "10")
+	timerKubiRefresh := time.NewTicker(5 * time.Minute)
 	 
 	
 	go func() {
