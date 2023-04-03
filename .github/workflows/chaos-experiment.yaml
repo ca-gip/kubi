@@ -81,10 +81,11 @@ jobs:
                ,dc=com
               objectClass: top
               objectClass: groupOfNames
-              cn: DL_KUB_CHAOS-DEV_ADMIN
+              cn: DL_KUB_CHAOS-DIV_ADMIN
               member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
               member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
               EOF"
+              
       - name: existing  namespaces test 
         run:  | 
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
