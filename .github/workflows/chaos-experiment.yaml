@@ -90,7 +90,7 @@ jobs:
       - name: existing  namespaces test 
         run:  | 
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
-               sleep 2m
+               sleep 1m
                go test ./.github/end_to_end/y_test.go
                
               
