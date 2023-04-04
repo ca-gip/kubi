@@ -24,8 +24,8 @@ import (
 )
 
 const (
-
-	kubiDeploymentUrl = "kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml"
+	
+  kubiDeploymentUrl = "kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml"
   kubiCrdUrl = "kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml"
   kubiPrerequiesUrl ="kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml"
   kubiLocalConfigUrl ="kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml"
