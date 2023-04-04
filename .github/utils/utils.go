@@ -18,7 +18,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"  
-  
+        . "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	
 )
 
 const (
