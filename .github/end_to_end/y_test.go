@@ -35,7 +35,7 @@ func TestMain(t *testing.T) {
 	}
 	// Check if each secret exists in the namespace
 	namespace := "kube-system"
-	secretNames := []string{"kubi-encryption-secret", "kubi", "kubi-secret"}
+	secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
 
 	for _, secretName := range secretNames {
 		_, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
