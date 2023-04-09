@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -43,7 +42,7 @@ func TestMain(t *testing.T) {
 		if err != nil {
 			t.Errorf("Failed to get secret %s in namespace %s: %v", secretName, namespace, err)
 		} else {
-			fmt.Printf("Secret %s in namespace %s exists\n", secretName, namespace)
+			t.Logf("Secret %s in namespace %s exists\n", secretName, namespace)
 		}
 	}
 
@@ -59,7 +58,7 @@ func TestMain(t *testing.T) {
 			t.Errorf("error checking namespace existence: %v", err)
 		}
 	} else {
-		fmt.Printf("Namespace %q exists\n", nsName)
+		t.Logf("Namespace %q exists\n", nsName)
 	}
 
 }
