@@ -13,7 +13,19 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, error) {
+	_, err := clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func TestMain(t *testing.T) {
+
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -33,32 +45,30 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating clientset: %v", err)
 	}
+
 	// Check if each secret exists in the namespace
-	namespace := "kube-system"
-	secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
+	/*
+		namespace := "kube-system"
+		secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
 
-	for _, secretName := range secretNames {
-		_, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
-		if err != nil {
-			t.Errorf("Failed to get secret %s in namespace %s: %v", secretName, namespace, err)
-		} else {
-			t.Logf("Secret %s in namespace %s exists\n", secretName, namespace)
+		for _, secretName := range secretNames {
+			_, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
+			if err != nil {
+				t.Errorf("Failed to get secret %s in namespace %s: %v", secretName, namespace, err)
+			} else {
+				t.Logf("Secret %s in namespace %s exists\n", secretName, namespace)
+			}
 		}
-	}
-
+	*/
 	//adding new group to Openldap
 
-	// existing ns
+	//existing ns
 	nsName := "chaos-development"
-	_, err = clientset.CoreV1().Namespaces().Get(context.TODO(), nsName, metav1.GetOptions{})
-	if err != nil {
-		if os.IsNotExist(err) {
-			t.Errorf("expected namespace %q to exist, but it does not", nsName)
-		} else {
-			t.Errorf("error checking namespace existence: %v", err)
-		}
-	} else {
-		t.Logf("Namespace %q exists\n", nsName)
+	got := namespaceExists(clientset, nsName)
+	want := true
+
+	if want != got {
+		t.Errorf("kubi n'a pas crée le namespace")
 	}
 
 }
