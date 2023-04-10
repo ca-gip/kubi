@@ -69,7 +69,7 @@ func TestAddGroupToOpenLDAP(t *testing.T) {
 	}
 
 	// Exécuter la commande `kubectl exec` pour ajouter le groupe
-	cmd := exec.Command("kubectl", "exec", "-n", "kube-system",
+	addcmd := exec.Command("kubectl", "exec", "-n", "kube-system",
 		"$(kubectl", "get", "pods", "-n", "kube-system", "-l", "app=kubi-ldap", "-o", "jsonpath='{.items[0].metadata.name}')", "--", "su", "-c",
 		"apt-get update && apt-get install -y ldap-utils && ldapadd -x -D cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF "+
 			"dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com "+
@@ -79,7 +79,9 @@ func TestAddGroupToOpenLDAP(t *testing.T) {
 			"member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com "+
 			"member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com "+
 			"EOF")
-
+	if err := addCmd.Run(); err != nil {
+		t.Fatalf("Failed to add group to OpenLDAP: %v", err)
+	}
 	// Vérifier que le groupe a été ajouté en exécutant une commande de recherche LDAP
 	searchCmd := exec.Command("ldapsearch", "-x", "-b", "dc=kubi,dc=ca-gip,dc=github,dc=com", "-D", "cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com", "-w", "password", "cn=DL_KUB_CHAOS-DEV_ADMIN")
 	output, err := searchCmd.Output()
