@@ -19,9 +19,9 @@ func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, e
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, err
+		return false
 	}
-	return true, nil
+	return true
 }
 
 func TestMain(t *testing.T) {
