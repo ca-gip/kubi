@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +12,22 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
+
+// creating kube client
+func NewClientSet(kubeconfig string) (*kubernetes.Clientset, error) {
+	if kubeconfig == "" {
+		kubeconfig = filepath.Join(homedir.HomeDir(), ".kube", "config")
+	}
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
+}
 
 // function to check existing namespace
 func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, error) {
@@ -28,25 +43,10 @@ func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, e
 
 func TestNamespace(t *testing.T) {
 
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	clientset, err := NewClientSet("")
 	if err != nil {
-		t.Fatalf("error building config from flags: %v", err)
+		panic(err)
 	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		t.Fatalf("error creating clientset: %v", err)
-	}
-
 	//existing ns
 	namespace := "chaos-development"
 	exists, err := namespaceExists(clientset, namespace)
@@ -59,27 +59,13 @@ func TestNamespace(t *testing.T) {
 // Check if each secret exists in the namespace
 func TestSecretkubi(t *testing.T) {
 
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	clientset, err := NewClientSet("")
 	if err != nil {
-		t.Fatalf("error building config from flags: %v", err)
-	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		t.Fatalf("error creating clientset: %v", err)
+		panic(err)
 	}
 
 	namespace := "kube-system"
-	secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
+	secretNames := []string{"kubi-encryption-secret", "kubi", "kubi-secret"}
 
 	for _, secretName := range secretNames {
 		_, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
