@@ -75,7 +75,7 @@ jobs:
         run:  | 
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
                sleep 10m
-               go test ./.github/end_to_end/y_test.go
+               go test -v  ./.github/end_to_end/y_test.go
                
               
               
