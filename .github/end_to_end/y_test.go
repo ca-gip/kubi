@@ -49,8 +49,7 @@ func TestNamespace(t *testing.T) {
 
 	//existing ns
 	namespace := "chaos-development"
-	_, err := clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
-	exists, err := NamespaceExist(clientset, namespace)
+	exists, err := namespaceExists(clientset, namespace)
 
 	assert.NoError(t, err, "Error checking namespace existence")
 	assert.True(t, exists, "Expected namespace %q to exist, but it does not", namespace)
@@ -58,7 +57,7 @@ func TestNamespace(t *testing.T) {
 }
 
 // Check if each secret exists in the namespace
-func TestLdapGroup(t *testing.T) {
+func TestSecretkubi(t *testing.T) {
 	namespace := "kube-system"
 	secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
 
