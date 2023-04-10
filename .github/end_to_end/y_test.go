@@ -61,9 +61,9 @@ func TestSecretkubi(t *testing.T) {
 		assert.NoError(t, err, "Failed to get secret %s in namespace %s", secretName, namespace)
 	}
 
-
+}
 // test d'ajour d'un group à notre openldap 
-func TestAddGroupToOpenLDAP(t *testing.T) {
+ func TestAddGroupToOpenLDAP(t *testing.T) {
 		// Exécuter la commande `kubectl wait` pour attendre que le pod soit prêt
 		waitCmd := exec.Command("kubectl", "wait", "--for=condition=Ready", "pod", "-n", "kube-system", "-l", "app=kubi-ldap")
 		if err := waitCmd.Run(); err != nil {
@@ -71,22 +71,16 @@ func TestAddGroupToOpenLDAP(t *testing.T) {
 		}
 	
 		// Exécuter la commande `kubectl exec` pour ajouter le groupe
-		addCmd := exec.Command("kubectl", "exec", "-n", "kube-system", 
-		"$(kubectl", "get", "pods", "-n", "kube-system","-l", "app=kubi-ldap", "-o", "jsonpath='{.items[0].metadata.name}')", "--", "su", "-c", 
-		"apt-get update &&
-		 apt-get install -y ldap-utils && 
-		 ldapadd -x -D cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF 
-		 dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
-		 objectClass: top
-		 objectClass: groupOfNames
-		 cn: DL_KUB_CHAOS-DEV_ADMIN
-		 member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-		 member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-		 EOF"
-
-		 if err := addCmd.Run(); err != nil {
-			t.Fatalf("Failed to add group to OpenLDAP: %v", err)
-		}
+		cmd := exec.Command("kubectl", "exec", "-n", "kube-system",
+        "$(kubectl", "get", "pods", "-n", "kube-system", "-l", "app=kubi-ldap", "-o", "jsonpath='{.items[0].metadata.name}')", "--", "su", "-c",
+        "apt-get update && apt-get install -y ldap-utils && ldapadd -x -D cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF "+
+            "dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com "+
+            "objectClass: top "+
+            "objectClass: groupOfNames "+
+            "cn: DL_KUB_CHAOS-DEV_ADMIN "+
+            "member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com "+
+            "member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com "+
+            "EOF")
 
 
     // Vérifier que le groupe a été ajouté en exécutant une commande de recherche LDAP
