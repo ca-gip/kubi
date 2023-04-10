@@ -58,6 +58,26 @@ func TestNamespace(t *testing.T) {
 
 // Check if each secret exists in the namespace
 func TestSecretkubi(t *testing.T) {
+
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		t.Fatalf("error building config from flags: %v", err)
+	}
+
+	// create the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		t.Fatalf("error creating clientset: %v", err)
+	}
+
 	namespace := "kube-system"
 	secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
 
