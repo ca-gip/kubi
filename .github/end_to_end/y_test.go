@@ -19,9 +19,9 @@ func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, e
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false
+		return false, err
 	}
-	return true
+	return true, nil
 }
 
 func TestMain(t *testing.T) {
@@ -64,7 +64,7 @@ func TestMain(t *testing.T) {
 
 	//existing ns
 	nsName := "chaos-development"
-	got := namespaceExists(clientset, nsName)
+	got, _ := namespaceExists(clientset, nsName)
 	want := true
 
 	if want != got {
