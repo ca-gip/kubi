@@ -79,7 +79,7 @@ func TestAddGroupToOpenLDAP(t *testing.T) {
 			"member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com "+
 			"member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com "+
 			"EOF")
-	if err := addCmd.Run(); err != nil {
+	if err := addcmd.Run(); err != nil {
 		t.Fatalf("Failed to add group to OpenLDAP: %v", err)
 	}
 	// Vérifier que le groupe a été ajouté en exécutant une commande de recherche LDAP
