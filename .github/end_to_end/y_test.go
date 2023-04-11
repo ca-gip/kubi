@@ -71,6 +71,6 @@ func TestNamespace(t *testing.T) {
 	exists, err := namespaceExists(clientset, Namespace)
 
 	assert.NoError(t, err, "Error checking namespace existence")
-	assert.True(t, exists, "Expected namespace %q to exist, but it does not", namespace)
+	assert.True(t, exists, "Expected namespace %q to exist, but it does not", Namespace)
 
 }
