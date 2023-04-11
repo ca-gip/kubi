@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,22 +13,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
-
-// creating kube client
-func NewClientSet(kubeconfig string) (*kubernetes.Clientset, error) {
-	if kubeconfig == "" {
-		kubeconfig = filepath.Join(homedir.HomeDir(), ".kube", "config")
-	}
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return clientset, nil
-}
 
 // function to check existing namespace
 func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, error) {
@@ -41,16 +26,41 @@ func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, e
 	return true, nil
 }
 
-// vérifier les secrets
-func TestSecretkubi(t *testing.T) {
+func TestNamespace(t *testing.T) {
 
-	clientset, err := NewClientSet("")
-	if err != nil {
-		panic(err)
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		t.Fatalf("error building config from flags: %v", err)
+	}
+
+	// create the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		t.Fatalf("error creating clientset: %v", err)
+	}
+
+	//existing ns
+	namespace := "chaos-development"
+	_, err := clientset.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+	exists, err := NamespaceExist(clientset, namespace)
+
+	assert.NoError(t, err, "Error checking namespace existence")
+	assert.True(t, exists, "Expected namespace %q to exist, but it does not", namespace)
+
+}
+
+// Check if each secret exists in the namespace
+func TestLdapGroup(t *testing.T) {
 	namespace := "kube-system"
-	secretNames := []string{"kubi-encryption-secret", "kubi", "kubi-secret"}
+	secretNames := []string{"kubi-encyption-secret", "kubi", "kubi-secret"}
 
 	for _, secretName := range secretNames {
 		_, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
@@ -59,18 +69,4 @@ func TestSecretkubi(t *testing.T) {
 
 }
 
-// echecking for new ns created by kubi
-func TestNamespace(t *testing.T) {
-
-	clientset, err := NewClientSet("")
-	if err != nil {
-		panic(err)
-	}
-
-	namespace := "chaos-development"
-	exists, err := namespaceExists(clientset, namespace)
-
-	assert.NoError(t, err, "Error checking namespace existence")
-	assert.True(t, exists, "Expected namespace %q to exist, but it does not", namespace)
-
-}
+//adding new group to Openldap
