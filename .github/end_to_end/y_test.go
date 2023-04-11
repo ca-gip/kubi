@@ -41,7 +41,7 @@ func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, e
 	return true, nil
 }
 
-// vérifier les secrets
+
 func TestSecretkubi(t *testing.T) {
 
 	clientset, err := NewClientSet("")
@@ -59,7 +59,7 @@ func TestSecretkubi(t *testing.T) {
 
 }
 
-// echecking for new ns created by kubi
+// checking for new ns created by kubi
 func TestNamespace(t *testing.T) {
 
 	clientset, err := NewClientSet("")
