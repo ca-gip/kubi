@@ -14,11 +14,11 @@ codegen: dependency
 	bash hack/update-codegen.sh
 
 test: codegen
-	 GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils
+	 GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils ./internal/authprovider
 
 test-only:
 	@echo "-> Test only kubi operator binary"
-	GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils
+	GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils ./internal/authprovider
 
 build-operator: test
 	@echo "-> Building kubi operator"
