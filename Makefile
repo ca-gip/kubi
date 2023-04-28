@@ -22,15 +22,15 @@ test-only:
 
 build-operator: test
 	@echo "-> Building kubi operator"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-operator -i $(GOPATH)/src/$(REPO)/cmd/operator/main.go
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-operator $(GOPATH)/src/$(REPO)/cmd/operator/main.go
 
 build-api: test
 	@echo "-> Building kubi api"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-api -i $(GOPATH)/src/$(REPO)/cmd/api/main.go
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-api $(GOPATH)/src/$(REPO)/cmd/api/main.go
 
 build-webhook: test
 	@echo "-> Building kubi authorization webhook"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-webhook -i $(GOPATH)/src/$(REPO)/cmd/authorization-webhook/main.go
+	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-webhook $(GOPATH)/src/$(REPO)/cmd/authorization-webhook/main.go
 
 build: build-webhook build-operator build-api
 
