@@ -204,7 +204,7 @@ EOF
 
 ```bash
 cat <<EOF | kubectl create -f -
-apiVersion: certificates.k8s.io/v1beta1
+apiVersion: certificates.k8s.io/v1
 kind: CertificateSigningRequest
 metadata:
   name: kubi-svc.kube-system
@@ -212,12 +212,14 @@ spec:
   groups:
   - system:authenticated
   request: $(cat server.csr | base64 | tr -d '\n')
+  signerName: kubernetes.io/kube-apiserver-client
   usages:
   - digital signature
   - key encipherment
   - server auth
 EOF
 ```
+
 
 ## Approve the csr
 ```bash

@@ -1,14 +1,10 @@
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: networkpolicyconfigs.ca-gip.github.com
 spec:
   group: ca-gip.github.com
-  versions:
-    - name: v1
-      served: true
-      storage: true
   scope: Cluster
   names:
     plural: networkpolicyconfigs
@@ -16,67 +12,68 @@ spec:
     kind: NetworkPolicyConfig
     shortNames:
       - netpolconf
-  additionalPrinterColumns:
-    - name: Egress-Ports
-      type: string
-      description: List of authorized port for egress traffic
-      JSONPath: .spec.egress.ports
-    - name: Egress-Cidr
-      type: string
-      description: List of authorized cidr for egress traffic
-      JSONPath: .spec.egress.cidrs
-    - name: Egress-Namespaces
-      type: string
-      description: List of egress namespaces
-      JSONPath: .spec.egress.namespaces
-    - name: Ingress-Namespaces
-      type: string
-      description: List of ingress namespaces
-      JSONPath: .spec.ingress.namespaces
-  validation:
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+      - name: Egress-Ports
+        type: string
+        description: List of authorized port for egress traffic
+        jsonPath: .spec.egress.ports
+      - name: Egress-Cidr
+        type: string
+        description: List of authorized cidr for egress traffic
+        jsonPath: .spec.egress.cidrs
+      - name: Egress-Namespaces
+        type: string
+        description: List of egress namespaces
+        jsonPath: .spec.egress.namespaces
+      - name: Ingress-Namespaces
+        type: string
+        description: List of ingress namespaces
+        jsonPath: .spec.ingress.namespaces
+      schema:
     # openAPIV3Schema is the schema for validating custom objects.
-    openAPIV3Schema:
-      properties:
-        spec:
-          type: object
-          properties:
-            egress:
-              type: object
-              properties:
-                ports:
-                  type: array
-                  items:
-                    type: integer
-                    minimum: 1
-                    maximum: 65535
-                cidrs:
-                  type: array
-                  items:
+       openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              egress:
+                type: object
+                properties:
+                  ports:
+                    type: array
+                    items:
+                     type: integer
+                     minimum: 1
+                     maximum: 65535
+                  cidrs:
+                   type: array
+                   items:
                     type: string
                     pattern: '^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$'
-                namespaces:
-                  type: array
-                  items:
-                    type: string
-            ingress:
-              type: object
-              properties:
-                namespaces:
+                  namespaces:
+                   type: array
+                   items:
+                     type: string
+              ingress:
+                type: object
+                properties:
+                 namespaces:
                   type: array
                   items:
                     type: string
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1 
 kind: CustomResourceDefinition
 metadata:
   name: projects.ca-gip.github.com
 spec:
   group: ca-gip.github.com
-  versions:
-    - name: v1
-      served: true
-      storage: true
   scope: Cluster
   names:
     plural: projects
@@ -84,36 +81,41 @@ spec:
     kind: Project
     shortNames:
       - project
-  additionalPrinterColumns:
-    - name: Tenant
-      type: string
-      description: The customer aka company owning the cluster
-      JSONPath: .spec.tenant
-    - name: Environment
-      type: string
-      description: The environment for this namespace
-      JSONPath: .spec.environment
-    - name: Project
-      type: string
-      description: The project name ( without environment )
-      JSONPath: .spec.project
-    - name: Stages
-      type: string
-      description: Stages allowed for this project, can be mapped to registry or CI/CD
-      JSONPath: .spec.stages
-    - name: Source Entity
-      type: string
-      description: The refering entity ( LDAP group for the moment )
-      JSONPath: .spec.sourceEntity
-    - name: Contact
-      type: string
-      description: The refering contact for operation
-      JSONPath: .spec.contact
-  validation:
-    # openAPIV3Schema is the schema for validating custom objects.
-    openAPIV3Schema:
-      properties:
-        spec:
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      additionalPrinterColumns:
+      - name: Tenant
+        type: string
+        description: The customer aka company owning the cluster
+        jsonPath: .spec.tenant
+      - name: Environment
+        type: string
+        description: The environment for this namespace
+        jsonPath: .spec.environment
+      - name: Project
+        type: string
+        description: The project name ( without environment )
+        jsonPath: .spec.project
+      - name: Stages
+        type: string
+        description: Stages allowed for this project, can be mapped to registry or CI/CD
+        jsonPath: .spec.stages
+      - name: Source Entity
+        type: string
+        description: The refering entity ( LDAP group for the moment )
+        jsonPath: .spec.sourceEntity
+      - name: Contact
+        type: string
+        description: The refering contact for operation
+        jsonPath: .spec.contact
+      schema:
+       # openAPIV3Schema is the schema for validating custom objects.
+       openAPIV3Schema:
+        type: object
+        properties:
+         spec:
           type: object
           required:
             - project
