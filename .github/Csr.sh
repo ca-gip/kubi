@@ -8,9 +8,6 @@ openssl ecparam -genkey -name secp521r1 -noout -out /tmp/ecdsa-key.pem
 openssl ec -in /tmp/ecdsa-key.pem -pubout -out /tmp/ecdsa-public.pem
 
 
-mkdir dev
-cd dev
-
 # recuperer les adresses ip des nodes
 
 kubectl get nodes -o=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address}{"\n"}{end}'
