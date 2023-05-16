@@ -132,7 +132,7 @@ spec:
     spec:
       containers:
         - name: kubi-ldap
-          image: dinkel/openldap
+          image: bitnami/openldap
           ports:
             - containerPort: 389
           envFrom:
