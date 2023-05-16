@@ -156,7 +156,7 @@ sudo ls /var/run/secrets/certs/
 kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
 kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}'
 kubectl get all -n kube-system 
-kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install ldap-utils &&
+kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')   -c  " sudo apt-get update && apt-get install ldap-utils &&
 ldapadd -x -D  cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF
 dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
 objectClass: top
