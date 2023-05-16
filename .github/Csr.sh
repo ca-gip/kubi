@@ -161,7 +161,7 @@ kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
 POD_NAME=$(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')
 
 # Installation de ldap-utils
-kubectl exec -n kube-system "$POD_NAME" -- apt-get update && apt-get install -y ldap-utils
+kubectl exec -n kube-system "$POD_NAME" -- apt-get install -y ldap-utils
 
 # Exécution de la commande ldapadd
 kubectl exec -n kube-system "$POD_NAME" -- ldapadd -x -D cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF
