@@ -154,19 +154,17 @@ sudo ls /var/run/secrets/certs/
 
 kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
 
+kubectl get all -n kube-system
 
-kubectl get all -n kube-system 
-
-# Executing commands inside the kubi-ldap pod
+# Exécution des commandes à l'intérieur du pod kubi-ldap
 
 POD_NAME=$(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')
 
-# Installing ldap-utils
-kubectl exec -n kube-system "$POD_NAME" -- 
+# Installation de ldap-utils
+kubectl exec -n kube-system "$POD_NAME" -- apt-get update
+kubectl exec -n kube-system "$POD_NAME" -- apt-get install -y ldap-utils
 
-kubectl exec -n kube-system "$POD_NAME" -- mkdir -p /var/lib/apt/lists/partial && apt-get update && apt-get install  ldap-utils
-
-# Executing ldapadd command
+# Exécution de la commande ldapadd
 kubectl exec -n kube-system "$POD_NAME" -- ldapadd -x -D cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF
 dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
 objectClass: top
@@ -175,4 +173,5 @@ cn: DL_KUB_CHAOS-DEV_ADMIN
 member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
 member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
 EOF
+
 
