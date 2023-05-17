@@ -159,7 +159,9 @@ kubectl get all -n kube-system
 # Exécution des commandes à l'intérieur du pod kubi-ldap
 
 POD_NAME=$(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}')
-kubectl exec -n kube-system "$POD_NAME" -c "apt-get update && apt-get install ldap-utils"
+
+kubectl exec "$POD_NAME" -- apt-get update
+kubectl exec "$POD_NAME" -- apt-get install -y ldap-utils
 
 
 # Exécution de la commande ldapadd
