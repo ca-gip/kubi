@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -41,7 +42,6 @@ func namespaceExists(clientset *kubernetes.Clientset, namespace string) (bool, e
 	return true, nil
 }
 
-
 //  checking for kubi secret
 func TestSecretkubi(t *testing.T) {
 
@@ -55,7 +55,7 @@ func TestSecretkubi(t *testing.T) {
 
 	for _, secretName := range secretNames {
 		_, err := clientset.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
-		assert.NoError(t, err, " Failed to get secret %s in namespace %s", secretName, namespace)
+		assert.NoError(t, err, "Failed to get secret %s in namespace %s", secretName, namespace)
 	}
 
 }

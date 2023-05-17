@@ -1,35 +1,32 @@
 #!/bin/bash
 
 
-# kubi private key 
-openssl ecparam -genkey -name secp521r1 -noout -out /tmp/ecdsa-key.pem
-
 # kubi public key
-openssl ec -in /tmp/ecdsa-key.pem -pubout -out /tmp/ecdsa-public.pem
-
+openssl ec -in $tmp_dir/ecdsa-key.pem -pubout -out $tmp_dir/ecdsa-public.pem
 
 # recuperer les adresses ip des nodes
+ls $tmp_dir
+sudo openssl ec -in $tmp_dir/ecdsa-key.pem -pubout -out $tmp_dir/ecdsa-public.pem
+
+#  Nodes IPs 
 
 kubectl get nodes -o=jsonpath='{range .items[*]}{.status.addresses[?(@.type=="InternalIP")].address}{"\n"}{end}'
 
-# ip du control plane
+# control plane IP
 
 PUBLIC_APISERVER_URL=$(kubectl config view --minify | grep server | cut -f 2- -d ":" | tr -d " ")
 
-#creation du certificat pour  faire la demande de signature par kube CA
-
 # install CFSSL tools
-
-VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-VNUMBER=${VERSION#"v"}
-wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
+VERSION_T=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+VNUMBER=${VERSION_T#"v"}
+wget https://github.com/cloudflare/cfssl/releases/download/${VERSION_T}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
 chmod +x cfssljson
 sudo mv cfssljson /usr/local/bin
 
 cfssljson -version
-VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-VNUMBER=${VERSION#"v"}
-wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
+VERSION_J=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+VNUMBER=${VERSION_J#"v"}
+wget https://github.com/cloudflare/cfssl/releases/download/${VERSION_J}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
 chmod +x cfssl
 sudo mv cfssl /usr/local/bin
 
@@ -51,7 +48,6 @@ cat <<EOF | cfssl genkey - | cfssljson -bare server
   }
 }
 EOF
-
 
 cat <<EOF | kubectl create -f -
 apiVersion: certificates.k8s.io/v1
@@ -83,8 +79,6 @@ cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
   }
 }
 EOF
-
-
 
 echo '{
     "signing": {
@@ -124,14 +118,15 @@ cat server.crt
 
 kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
 
-kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
+kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=./test/ecdsa-key.pem --from-file=./test/ecdsa-public.pem
 kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
 
-
+# set up dev-kubi env 
 kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
 kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
 kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
-kubectl apply -f ./.github/ldap-loca-config.yaml
+kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+
 
 kubectl -n kube-system get secrets $( kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > ca.crt
 kubectl -n kube-system get secrets $( kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > token
@@ -152,15 +147,3 @@ sudo ls /var/run/secrets/kubernetes.io/serviceaccount/
 sudo ls /var/run/secrets/ecdsa/ 
 sudo ls /var/run/secrets/certs/
 
-export TERM=xterm
-
-kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
-kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  " apt-get install -y  slapd ldap-utils &&
-ldapadd -x -D  cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF
-dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
-objectClass: top
-objectClass: groupOfNames
-cn: DL_KUB_CHAOS-DEV_ADMIN
-member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-EOF"

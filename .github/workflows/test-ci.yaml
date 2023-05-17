@@ -11,6 +11,7 @@ jobs:
       matrix:
         kubernetes:
           - 1.21
+          - 1.23
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -74,8 +75,7 @@ jobs:
       - name: existing  namespaces test 
         run:  | 
                go get k8s.io/client-go/tools/clientcmd@v0.20.4
-               sleep 10m
-               go test -v  ./.github/end_to_end/y_test.go
+               go test -v  ./e2etest/e2e_test.go
                
               
               
