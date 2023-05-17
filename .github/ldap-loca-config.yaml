@@ -1,0 +1,167 @@
+apiVersion: v1
+data:
+  LDAP_ADMIN_GROUPBASE: cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_ADMIN_USERBASE: dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_BINDDN: cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_GROUPBASE: ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_PORT: "389"
+  LDAP_SERVER: kube-ldap.kube-system.svc.cluster.local
+  LDAP_USE_SSL: "false"
+  LDAP_USERBASE: ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_USERFILTER: (cn=%s)
+  LOCATOR: local
+  PUBLIC_APISERVER_URL: https://kubernetes.default.svc.cluster.local
+  TENANT: cagip
+  CUSTOM_LABELS: quota=managed
+kind: ConfigMap
+metadata:
+  name: kubi-config
+  namespace: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+data:
+  kubi.ldif: |
+    dn: ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: People
+
+    dn: ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: Groups
+
+    dn: ou=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: GLOBAL
+
+    dn: ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: LOCAL
+
+    dn: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: mario
+    sn: mario
+    mail: mario@cagip.gca
+    userPassword: {SHA}rdtHKR7hafMwgBznNSC5by6vIOo=
+
+    dn: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: luigi
+    sn: luigi
+    mail: luigi@cagip.gca
+    userPassword: luigi
+
+    dn: cn=bowser,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: bowser
+    sn: bowser
+    mail: bowser@cagip.gca
+    userPassword: bowser
+
+    dn: cn=DL_KUB_TEAM-1-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: groupOfNames
+    cn: DL_KUB_TEAM-1-DEV_ADMIN
+    member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+
+    dn: cn=DL_ADMIN_TEAM,ou=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: groupOfNames
+    cn: DL_ADMIN_TEAM
+    member: cn=bowser,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+
+    dn: cn=DL_KUB_TEAM-2-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: groupOfNames
+    cn: DL_KUB_TEAM-2-DEV_ADMIN
+    member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+
+    dn: cn=DL_KUB_TEAM-3-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    objectClass: top
+    objectClass: groupOfNames
+    cn: DL_KUB_TEAM-3-DEV_ADMIN
+    member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+metadata:
+  name: kube-ldap-data
+  namespace: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+data:
+  SLAPD_PASSWORD: password
+  SLAPD_DOMAIN: kubi.ca-gip.github.com
+  SLAPD_ADDITIONAL_MODULES: memberof
+  SLAPD_CONFIG_PASSWORD: config
+metadata:
+  name: kube-ldap-config
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubi-ldap-deployment
+  namespace: kube-system
+  labels:
+    app: kubi-ldap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubi-ldap
+  template:
+    metadata:
+      labels:
+        app: kubi-ldap
+    spec:
+      containers:
+        - name: kubi-ldap
+          image: osixia/openldap
+          ports:
+            - containerPort: 389
+          envFrom:
+            - configMapRef:
+                name: kube-ldap-config
+          volumeMounts:
+            - name: kubi-ldifs
+              mountPath: /etc/ldap.dist/prepopulate
+      volumes:
+        - name: kubi-ldifs
+          configMap:
+            name: kube-ldap-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-ldap
+  namespace: kube-system
+  labels:
+    app: kubi-ldap
+spec:
+  type: NodePort
+  ports:
+    - name: tcp
+      port: 389
+      targetPort: 389
+      protocol: TCP
+      nodePort: 30389
+  selector:
+    app: kubi-ldap
+---
