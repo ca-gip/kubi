@@ -152,9 +152,10 @@ sudo ls /var/run/secrets/kubernetes.io/serviceaccount/
 sudo ls /var/run/secrets/ecdsa/ 
 sudo ls /var/run/secrets/certs/
 
+export TERM=xterm
 
 kubectl wait --for=condition=Ready pod -n kube-system -l app=kubi-ldap
-kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y slapd ldap-utils &&
+kubectl exec -n kube-system $(kubectl get pods -n kube-system -l app=kubi-ldap -o jsonpath='{.items[0].metadata.name}') -- su -c  "apt-get update && apt-get install -y  ldap-utils &&
 ldapadd -x -D  cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com -w password <<EOF 
 dn: cn=DL_KUB_CHAOS-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
 objectClass: top
