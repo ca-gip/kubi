@@ -102,6 +102,10 @@ For specific exceptions, add another network policy.
 |  **DEFAULT_PERMISSION**            | *ClusterRole associated with default service account*    | `view`       | `no   `     | -           |
 |  **BLACKLIST**                     | *Ignore Project*                     | `my-project-dev`                 | `no   `     | -           |
 
+## Versioning
+ 
+Since version v0.24.0, we have decided to modify the naming of versions for ease of reading and understanding.
+Example: v0.24.0 means that the operator was developed for Kubernetes version 1.24 and that the last 0 corresponds to the various patches we have made to the operator.
 # Client
 
 
@@ -285,7 +289,7 @@ kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployment
 You can customize the default network policy named `kubi-default`, for example:
 
 ```yaml
-apiVersion: "ca-gip.github.com/v1"
+apiVersion: "cagip.github.com/v1"
 kind: NetworkPolicyConfig
 metadata:
   name: kubi-default

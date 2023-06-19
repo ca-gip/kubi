@@ -106,7 +106,7 @@ apiVersion: v1
 kind: ConfigMap
 data:
   SLAPD_PASSWORD: password
-  SLAPD_DOMAIN: kubi.ca-gip.github.com
+  SLAPD_DOMAIN: kubi.cagip.github.com
   SLAPD_ADDITIONAL_MODULES: memberof
   SLAPD_CONFIG_PASSWORD: config
 metadata:

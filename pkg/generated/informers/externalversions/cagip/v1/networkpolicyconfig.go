@@ -6,10 +6,10 @@ import (
 	"context"
 	time "time"
 
-	cagipv1 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	versioned "github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	internalinterfaces "github.com/ca-gip/kubi/pkg/generated/informers/externalversions/internalinterfaces"
-	v1 "github.com/ca-gip/kubi/pkg/generated/listers/ca-gip/v1"
+	v1 "github.com/ca-gip/kubi/pkg/generated/listers/cagip/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

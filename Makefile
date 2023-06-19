@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean dependecy test test-only codegen dependency build build-operator build-api build-webhook
 
 REPO= github.com/ca-gip/kubi
 IMAGE= kubi

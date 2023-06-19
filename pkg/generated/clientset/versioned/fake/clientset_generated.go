@@ -4,8 +4,8 @@ package fake
 
 import (
 	clientset "github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
-	cagipv1 "github.com/ca-gip/kubi/pkg/generated/clientset/versioned/typed/ca-gip/v1"
-	fakecagipv1 "github.com/ca-gip/kubi/pkg/generated/clientset/versioned/typed/ca-gip/v1/fake"
+	cagipv1 "github.com/ca-gip/kubi/pkg/generated/clientset/versioned/typed/cagip/v1"
+	fakecagipv1 "github.com/ca-gip/kubi/pkg/generated/clientset/versioned/typed/cagip/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
