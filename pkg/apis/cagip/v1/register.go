@@ -1,7 +1,7 @@
 package v1
 
 import (
-	cagip "github.com/ca-gip/kubi/pkg/apis/ca-gip"
+	cagip "github.com/ca-gip/kubi/pkg/apis/cagip"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

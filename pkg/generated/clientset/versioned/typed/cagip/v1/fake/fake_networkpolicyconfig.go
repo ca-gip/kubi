@@ -5,7 +5,7 @@ package fake
 import (
 	"context"
 
-	cagipv1 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -94,7 +94,7 @@ func (c *FakeNetworkPolicyConfigs) UpdateStatus(ctx context.Context, networkPoli
 // Delete takes name of the networkPolicyConfig and deletes it. Returns an error if one occurs.
 func (c *FakeNetworkPolicyConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(networkpolicyconfigsResource, name), &cagipv1.NetworkPolicyConfig{})
+		Invokes(testing.NewRootDeleteActionWithOptions(networkpolicyconfigsResource, name, opts), &cagipv1.NetworkPolicyConfig{})
 	return err
 }
 

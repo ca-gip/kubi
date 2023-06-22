@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
+	v1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	scheme "github.com/ca-gip/kubi/pkg/generated/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"

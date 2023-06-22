@@ -6,7 +6,7 @@ import (
 
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
-	v12 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
+	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +14,7 @@ import (
 func TestBlackWhiteList(t *testing.T) {
 
 	fakeProjectJson := []byte(`{
-		"apiVersion": "ca-gip.github.com/v1",
+		"apiVersion": "cagip.github.com/v1",
 		"kind": "Project",
 		"metadata": {
 			"labels": {

@@ -10,7 +10,7 @@ import (
 
 	ldap "github.com/ca-gip/kubi/internal/authprovider"
 	"github.com/ca-gip/kubi/internal/utils"
-	v12 "github.com/ca-gip/kubi/pkg/apis/ca-gip/v1"
+	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	"github.com/ca-gip/kubi/pkg/types"
 	corev1 "k8s.io/api/core/v1"

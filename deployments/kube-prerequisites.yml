@@ -26,7 +26,7 @@ rules:
   - apiGroups: [""]
     resources: ["nodes", "namespaces"]
     verbs: ["get", "watch", "list"]
-  - apiGroups: ["ca-gip.github.com"]
+  - apiGroups: ["cagip.github.com"]
     resources: ["projects"]
     verbs: ["get", "watch", "list"]
 ---

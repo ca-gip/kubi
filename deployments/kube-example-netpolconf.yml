@@ -1,4 +1,4 @@
-apiVersion: "ca-gip.github.com/v1"
+apiVersion: "cagip.github.com/v1"
 kind: NetworkPolicyConfig
 metadata:
   name: kubi-default
