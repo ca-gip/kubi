@@ -1,0 +1,47 @@
+linters-settings:
+  # Enable or disable specific linters
+  enable:
+    - govet
+    - golint
+    - staticcheck
+    - unused
+    - structcheck
+    - errcheck
+
+  # Exclude specific directories or files from linting
+  exclude:
+    - vendor/
+
+linters:
+  # govet linter configuration
+  govet:
+    enabled: true
+    check-shadowing: true
+
+  # golint linter configuration
+  golint:
+    enabled: true
+  #  min-confidence: 0.8
+
+  # staticcheck linter configuration
+  staticcheck:
+    enabled: true
+    exclude:
+      - ST1005 # Error strings should not be capitalized
+
+
+  # unused linter configuration
+  unused:
+    enabled: true
+    ignore-exported: true
+
+  # structcheck linter configuration
+  structcheck:
+    enabled: true
+    allow-underscore-discard: true
+
+
+# Exclude specific packages or directories from being checked
+packages-exclude:
+  - github.com/ca-gip/kubi/pkg/generated/clientset/versioned
+  - github.com/ca-gip/kubi/pkg/generated/listers/cagip/v1

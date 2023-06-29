@@ -3,10 +3,11 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ca-gip/kubi/internal/utils"
-	"io/ioutil"
-	"k8s.io/api/authentication/v1beta1"
+	"io"
 	"net/http"
+
+	"github.com/ca-gip/kubi/internal/utils"
+	"k8s.io/api/authentication/v1beta1"
 )
 
 // Authenticate service for kubernetes Api Server
@@ -17,7 +18,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		var code int
 		var tokenStatus error
 
-		bodyString, err := ioutil.ReadAll(r.Body)
+		bodyString, err := io.ReadAll(r.Body)
 		if err != nil {
 			utils.Log.Error().Err(err)
 		}
@@ -41,7 +42,10 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			code = http.StatusUnauthorized
 			w.WriteHeader(code)
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			err := json.NewEncoder(w).Encode(resp)
+			if err != nil {
+				utils.Log.Error().Err(err).Msg("Error encoding JSON response")
+			}
 		} else {
 			utils.Log.Info().Msgf("Challenging token for user %v", token.User)
 

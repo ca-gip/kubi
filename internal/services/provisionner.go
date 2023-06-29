@@ -201,11 +201,17 @@ func deleteProject(projectInfos *types.Project) {
 // If exists, nothing is done, only creating !
 func GenerateUserRoleBinding(namespace string, role string) {
 	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating in-cluster config")
+	}
 	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating Kubernetes clientSet")
+	}
 	api := clientSet.RbacV1()
 
-	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role), err)
-	roleBinding("view", api, namespace, subjectView(), err)
+	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role))
+	roleBinding("view", api, namespace, subjectView())
 }
 
 func subjectView() []v1.Subject {
@@ -213,7 +219,7 @@ func subjectView() []v1.Subject {
 		{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Group",
-			Name:     fmt.Sprintf("%s", utils.ApplicationViewer),
+			Name:     utils.ApplicationViewer,
 		},
 	}
 	return subjectView
@@ -239,8 +245,7 @@ func subjectAdmin(namespace string, role string) []v1.Subject {
 	}
 	return subjectAdmin
 }
-
-func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject, err error) {
+func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject) {
 	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
 
 	newRoleBinding := v1.RoleBinding{
@@ -261,25 +266,33 @@ func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace stri
 		},
 	}
 
+	var createOrUpdateErr error
+
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		_, createOrUpdateErr = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
 	} else {
-		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
+		_, createOrUpdateErr = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
+		utils.Log.Info().Msgf("Rolebinding %v has been updated for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
 	}
 
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
+	if createOrUpdateErr != nil {
+		utils.Log.Error().Msg(createOrUpdateErr.Error())
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
 	}
 }
 
 func GenerateAppRoleBinding(namespace string) {
 	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating in-cluster config")
+	}
 	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating Kubernetes clientSet")
+	}
 	api := clientSet.RbacV1()
 
 	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingAppName, metav1.GetOptions{})
@@ -327,7 +340,13 @@ func GenerateAppRoleBinding(namespace string) {
 
 func GenerateDefaultRoleBinding(namespace string) {
 	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating in-cluster config")
+	}
 	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating Kubernetes clientSet")
+	}
 	api := clientSet.RbacV1()
 
 	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingDefaultName, metav1.GetOptions{})
@@ -376,7 +395,13 @@ func GenerateDefaultRoleBinding(namespace string) {
 // Generate
 func GenerateAppServiceAccount(namespace string) {
 	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating in-cluster config")
+	}
 	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Fatal().Err(err).Msg("Error creating Kubernetes clientSet")
+	}
 	api := clientSet.CoreV1()
 
 	_, errRB := api.ServiceAccounts(namespace).Get(context.TODO(), utils.KubiServiceAccountAppName, metav1.GetOptions{})
@@ -395,6 +420,10 @@ func GenerateAppServiceAccount(namespace string) {
 
 	if errRB != nil {
 		_, err = api.ServiceAccounts(namespace).Create(context.TODO(), &newServiceAccount, metav1.CreateOptions{})
+
+		if err != nil {
+			utils.Log.Error().Err(err).Msg("Error creating service account")
+		}
 		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
 	} else if err != nil {

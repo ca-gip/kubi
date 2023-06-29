@@ -26,11 +26,6 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func hasEnv(key string) bool {
-	_, ok := os.LookupEnv(key)
-	return ok
-}
-
 func AppendIfMissing(slice []string, i string) []string {
 	for _, ele := range slice {
 		if ele == i {

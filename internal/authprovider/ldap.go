@@ -3,6 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
+
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -18,10 +19,11 @@ func GetUserGroups(userDN string) ([]string, error) {
 
 	// First TCP connect
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 
 	request := newUserGroupSearchRequest(userDN)
 	results, err := conn.Search(request)
@@ -42,11 +44,11 @@ func GetUserGroups(userDN string) ([]string, error) {
 func GetAllGroups() ([]string, error) {
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		return nil, err
 	}
-
+	defer conn.Close()
 	request := newGroupSearchRequest()
 	results, err := conn.Search(request)
 
@@ -88,10 +90,11 @@ func AuthenticateUser(username string, password string) (*string, *string, error
 
 func checkAuthenticate(userDN string, password string) error {
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 	tlsConfig := &tls.Config{
 		ServerName:         utils.Config.Ldap.Host,
 		InsecureSkipVerify: utils.Config.Ldap.SkipTLSVerification,
@@ -196,12 +199,12 @@ func HasAdminAccess(userDN string) bool {
 	}
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return false
 	}
-
+	defer conn.Close()
 	req := newUserAdminSearchRequest(userDN)
 	res, err := conn.Search(req)
 
@@ -223,12 +226,12 @@ func hasApplicationAccess(userDN string) bool {
 	}
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return false
 	}
-
+	defer conn.Close()
 	req := newUserApplicationSearchRequest(userDN)
 	res, err := conn.Search(req)
 
@@ -245,11 +248,12 @@ func HasViewerAccess(userDN string) bool {
 	}
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return false
 	}
+	defer conn.Close()
 
 	req := newUserViewerSearchRequest(userDN)
 	res, err := conn.Search(req)
@@ -267,12 +271,12 @@ func hasCustomerOpsAccess(userDN string) bool {
 	}
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return false
 	}
-
+	defer conn.Close()
 	req := newCustomerOpsSearchRequest(userDN)
 	res, err := conn.Search(req)
 
@@ -292,11 +296,12 @@ func HasServiceAccess(userDN string) bool {
 	}
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return false
 	}
+	defer conn.Close()
 
 	req := newServiceSearchRequest(userDN)
 	res, err := conn.Search(req)
@@ -314,12 +319,12 @@ func HasOpsAccess(userDN string) bool {
 	}
 
 	conn, err := getBindedConnection()
-	defer conn.Close()
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return false
 	}
-
+	defer conn.Close()
 	req := newUserOpsSearchRequest(userDN)
 	res, err := conn.Search(req)
 
