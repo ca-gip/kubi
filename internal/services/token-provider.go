@@ -5,16 +5,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/ca-gip/kubi/internal/authprovider"
-	"github.com/ca-gip/kubi/internal/utils"
-	"github.com/ca-gip/kubi/pkg/types"
-	"github.com/dgrijalva/jwt-go"
-	"gopkg.in/yaml.v2"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	ldap "github.com/ca-gip/kubi/internal/authprovider"
+	"github.com/ca-gip/kubi/internal/utils"
+	"github.com/ca-gip/kubi/pkg/types"
+	"github.com/dgrijalva/jwt-go"
+	"gopkg.in/yaml.v2"
 )
 
 type TokenIssuer struct {
@@ -33,6 +34,9 @@ type TokenIssuer struct {
 func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, scopes string) (*string, error) {
 
 	duration, err := time.ParseDuration(issuer.ExtraTokenDuration)
+	if err != nil {
+		utils.Log.Error().Err(err).Msg("Error parsing duration")
+	}
 	expiration := time.Now().Add(duration)
 	url, _ := url.Parse(issuer.PublicApiServerURL)
 
@@ -71,6 +75,9 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	var auths = GetUserNamespaces(groups)
 
 	duration, err := time.ParseDuration(issuer.TokenDuration)
+	if err != nil {
+		utils.Log.Error().Err(err).Msg("Error parsing duration")
+	}
 	expirationTime := time.Now().Add(duration)
 
 	url, _ := url.Parse(issuer.PublicApiServerURL)
@@ -84,6 +91,10 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		utils.Log.Info().Msgf("The user %s will have transversal service access ( service: %v )", username, hasServiceAccess)
 		auths = []*types.Project{}
 		duration, err = time.ParseDuration(issuer.ExtraTokenDuration)
+
+		if err != nil {
+			utils.Log.Error().Err(err).Msg("Error parsing duration")
+		}
 		expirationTime = time.Now().Add(duration)
 		utils.Log.Info().Msgf("A specific token with duration %v would be issued.", duration.String())
 	}
@@ -129,7 +140,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 		return nil, err
 	}
 
-	var token *string = nil
+	var token *string
 	if len(scopes) > 0 {
 		token, err = issuer.GenerateExtraToken(auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), scopes)
 	} else {
@@ -153,7 +164,11 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.Log.Info().Err(err)
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, "Basic Auth: Invalid credentials")
+		_, err := io.WriteString(w, "Basic Auth: Invalid credentials")
+
+		if err != nil {
+			utils.Log.Error().Err(err).Msg("Error writing to response")
+		}
 	}
 
 	scopes := r.URL.Query().Get("scopes")
@@ -173,8 +188,12 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
 	utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
 	w.WriteHeader(http.StatusCreated)
-	io.WriteString(w, *token)
-	return
+	_, err = io.WriteString(w, *token)
+
+	if err != nil {
+		utils.Log.Error().Err(err).Msg("Error writing to response")
+	}
+
 }
 
 // GenerateConfig generates a config in yaml, including JWT token
@@ -186,7 +205,10 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		utils.Log.Info().Msg(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, "Basic Auth: Invalid credentials")
+		_, err = io.WriteString(w, "Basic Auth: Invalid credentials")
+		if err != nil {
+			utils.Log.Error().Err(err).Msg("Error writing to response")
+		}
 		return
 	}
 
@@ -241,7 +263,10 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	utils.Log.Error().Err(err)
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")
-	w.Write(yml)
+	_, err = w.Write(yml)
+	if err != nil {
+		utils.Log.Error().Err(err).Msg("Error writing to response")
+	}
 
 }
 
@@ -253,7 +278,7 @@ func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, e
 
 	tokenSplits := strings.Split(usertoken, ".")
 	if len(tokenSplits) != 3 {
-		return nil, errors.New(fmt.Sprintf("The token %s is not a JWT token", usertoken))
+		return nil, fmt.Errorf("The token %s is not a JWT token", usertoken)
 	}
 
 	if err != nil {
@@ -273,7 +298,7 @@ func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
 	method := jwt.SigningMethodES512
 	tokenSplits := strings.Split(usertoken, ".")
 	if len(tokenSplits) != 3 {
-		return errors.New(fmt.Sprintf("The token %s is not a JWT token", usertoken))
+		return fmt.Errorf("The token %s is not a JWT token", usertoken)
 	}
 	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
 }

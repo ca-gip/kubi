@@ -1,12 +1,12 @@
 package services
 
 import (
-	"errors"
 	"fmt"
-	"github.com/ca-gip/kubi/internal/utils"
-	"github.com/ca-gip/kubi/pkg/types"
 	"regexp"
 	"strings"
+
+	"github.com/ca-gip/kubi/internal/utils"
+	"github.com/ca-gip/kubi/pkg/types"
 )
 
 var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
@@ -54,18 +54,13 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	lowerGroup := strings.ToLower(group)
 	keys := DnsParser.SubexpNames()
 	if len(keys) < 3 {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The ldap group parser doesn't have the two mandatory key: namespace and role,
-			you have only this: %v")
-			 `, keys))
+		return nil, fmt.Errorf("LDAP: The ldap group parser doesn't have the two mandatory keys: namespace and role, you have only this: %v", keys)
 	}
 
 	countSplits := len(DnsParser.FindStringSubmatch(lowerGroup))
 
 	if countSplits != 3 {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The ldap group '%v', cannot be parse. Can't find a namespace and a role'
-			 `, group))
+		return nil, fmt.Errorf("LDAP: The ldap group '%v' cannot be parsed. Can't find a namespace and a role", group)
 	}
 
 	rawNamespace, role := DnsParser.ReplaceAllString(lowerGroup, "${namespace}"), DnsParser.ReplaceAllString(lowerGroup, "${role}")
@@ -77,23 +72,15 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	isRoleValid := utils.Index(utils.WhitelistedRoles, project.Role) != -1
 
 	if utils.Index(utils.BlacklistedNamespaces, project.Namespace()) != -1 {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The ldap group %v, cannot be created. 
-			The namespace %v is protected.`, group, project.Namespace()))
+		return nil, fmt.Errorf("LDAP: The ldap group %v cannot be created. The namespace %v is protected.", group, project.Namespace())
 	} else if !isNamespaceValid {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The ldap group %v, cannot be created. 
-			The namespace %v is not dns1123 compliant.`, group, project.Namespace()))
+		return nil, fmt.Errorf("LDAP: The ldap group %v cannot be created. The namespace %v is not dns1123 compliant.", group, project.Namespace())
 	} else if !isRoleValid {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The ldap group %v, cannot be created. 
-			The role %v is not valid.`, group, project.Namespace()))
+		return nil, fmt.Errorf("LDAP: The ldap group %v cannot be created. The role %v is not valid.", group, project.Namespace())
 	} else if len(project.Namespace()) > utils.DNS1123LabelMaxLength {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The name for namespace cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
+		return nil, fmt.Errorf("LDAP: The name for namespace cannot exceed %v characters.", utils.DNS1123LabelMaxLength)
 	} else if len(role) > utils.DNS1123LabelMaxLength {
-		return nil, errors.New(fmt.Sprintf(`
-			LDAP: The name for role cannot exceeded %v characters.`, utils.DNS1123LabelMaxLength))
+		return nil, fmt.Errorf("LDAP: The name for role cannot exceed %v characters.", utils.DNS1123LabelMaxLength)
 	} else {
 		return &project, nil
 	}

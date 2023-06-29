@@ -38,7 +38,12 @@ func TestBlackWhiteList(t *testing.T) {
 
 	fakeProject := &v12.Project{}
 
-	json.Unmarshal(fakeProjectJson, fakeProject)
+	err := json.Unmarshal(fakeProjectJson, fakeProject)
+
+	if err != nil {
+		utils.Log.Error().Err(err).Msg("Error unmarshaling JSON")
+
+	}
 
 	t.Run("with_nil_object", func(t *testing.T) {
 

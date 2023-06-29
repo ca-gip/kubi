@@ -37,7 +37,7 @@ type Config struct {
 	KubeCa                  string
 	KubeCaText              string
 	KubeToken               string
-	ApiServerTLSConfig      tls.Config
+	ApiServerTLSConfig      *tls.Config
 	TokenLifeTime           string
 	ExtraTokenLifeTime      string
 	Locator                 string
@@ -117,7 +117,8 @@ func (project *Project) Namespace() (ns string) {
 	if len(project.Environment) > 0 {
 		ns = fmt.Sprintf("%s-%s", project.Project, project.Environment)
 	} else {
-		ns = fmt.Sprintf("%s", project.Project)
+		ns = project.Project
+
 	}
 	return
 }

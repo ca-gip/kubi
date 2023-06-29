@@ -4,18 +4,18 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"github.com/ca-gip/kubi/pkg/types"
-	"github.com/go-ozzo/ozzo-validation"
-	"github.com/go-ozzo/ozzo-validation/is"
-	"io/ioutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/rest"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ca-gip/kubi/pkg/types"
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/rest"
 )
 
 var Config *types.Config
@@ -33,10 +33,10 @@ func MakeConfig() (*types.Config, error) {
 		return nil, rest.ErrNotInCluster
 	}
 
-	kubeToken, errToken := ioutil.ReadFile(TokenFile)
+	kubeToken, errToken := os.ReadFile(TokenFile)
 	Check(errToken)
 
-	kubeCA, errCA := ioutil.ReadFile(TlsCaFile)
+	kubeCA, errCA := os.ReadFile(TlsCaFile)
 	Check(errCA)
 
 	caEncoded := base64.StdEncoding.EncodeToString(kubeCA)
@@ -122,7 +122,7 @@ func MakeConfig() (*types.Config, error) {
 		KubeCaText:              string(kubeCA),
 		KubeToken:               string(kubeToken),
 		PublicApiServerURL:      getEnv("PUBLIC_APISERVER_URL", ""),
-		ApiServerTLSConfig:      *tlsConfig,
+		ApiServerTLSConfig:      tlsConfig,
 		TokenLifeTime:           getEnv("TOKEN_LIFETIME", "4h"),
 		ExtraTokenLifeTime:      getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
 		Locator:                 getEnv("LOCATOR", KubiLocatorIntranet),
