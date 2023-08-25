@@ -20,6 +20,7 @@ type LdapConfig struct {
 	AdminGroupBase       string
 	Host                 string
 	Port                 int
+	PageSize             uint32
 	UseSSL               bool
 	StartTLS             bool
 	SkipTLSVerification  bool

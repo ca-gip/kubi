@@ -4,18 +4,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"github.com/ca-gip/kubi/pkg/types"
-	"github.com/go-ozzo/ozzo-validation"
-	"github.com/go-ozzo/ozzo-validation/is"
 	"io/ioutil"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/rest"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/ca-gip/kubi/pkg/types"
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/rest"
 )
 
 var Config *types.Config
@@ -58,6 +59,10 @@ func MakeConfig() (*types.Config, error) {
 	}
 
 	// LDAP validation
+
+	ldapPageSize, errLdapPageSize := strconv.Atoi(getEnv("LDAP_PAGE_SIZE", "500"))
+	Checkf(errLdapPageSize, "Invalid LDAP_PAGE_SIZE, must be an integer")
+
 	ldapPort, errLdapPort := strconv.Atoi(getEnv("LDAP_PORT", "389"))
 	Checkf(errLdapPort, "Invalid LDAP_PORT, must be an integer")
 
@@ -104,6 +109,7 @@ func MakeConfig() (*types.Config, error) {
 		AdminUserBase:        getEnv("LDAP_ADMIN_USERBASE", ""),
 		AdminGroupBase:       getEnv("LDAP_ADMIN_GROUPBASE", ""),
 		ViewerGroupBase:      getEnv("LDAP_VIEWER_GROUPBASE", ""),
+		PageSize:             uint32(ldapPageSize),
 		Host:                 os.Getenv("LDAP_SERVER"),
 		Port:                 ldapPort,
 		UseSSL:               useSSL,
