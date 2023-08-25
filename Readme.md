@@ -89,6 +89,7 @@ For specific exceptions, add another network policy.
 |  **LDAP_SERVICE_GROUPBASE**        |  *BaseDn for service group base search*| `ou=ServiceGroup,dc=example,dc=org`| `no  `     | -           |
 |  **LDAP_SERVER**                   |  *LDAP server ip address*            | `"192.168.2.1"                 ` | `yes  `     | -           |
 |  **LDAP_PORT**                     |  *LDAP server port 389, 636...*      | `389                           ` | `no   `     | `389  `     |
+|  **LDAP_PAGE_SIZE**                |  *LDAP page size, 500...*            | `500                           ` | `no   `     | `500  `     |
 |  **LDAP_USE_SSL**                  |  *Use SSL or no*                     | `true                          ` | `no   `     | `false`     |
 |  **LDAP_START_TLS**                |  *Use StartTLS ( use with 389 port)* | `true                          ` | `false`     | `false`     |
 |  **LDAP_SKIP_TLS_VERIFICATION**    |  *Skip TLS verification*             | `true                          ` | `false`     | `true`      |

@@ -3,6 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
+
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -24,7 +25,7 @@ func GetUserGroups(userDN string) ([]string, error) {
 	}
 
 	request := newUserGroupSearchRequest(userDN)
-	results, err := conn.Search(request)
+	results, err := conn.SearchWithPaging(request, utils.Config.Ldap.PageSize)
 
 	if err != nil {
 		return nil, errors.Wrapf(err, "error searching for user's group for %s", userDN)
@@ -48,7 +49,7 @@ func GetAllGroups() ([]string, error) {
 	}
 
 	request := newGroupSearchRequest()
-	results, err := conn.Search(request)
+	results, err := conn.SearchWithPaging(request, utils.Config.Ldap.PageSize)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Error searching all groups")
@@ -168,7 +169,7 @@ func getUserDN(userBaseDN string, username string) (string, string, error) {
 
 	req := newUserSearchRequest(userBaseDN, username)
 
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	if err != nil {
 		return utils.Empty, utils.Empty, errors.Wrapf(err, "Error searching for user %s", username)
@@ -203,7 +204,7 @@ func HasAdminAccess(userDN string) bool {
 	}
 
 	req := newUserAdminSearchRequest(userDN)
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	return err == nil && len(res.Entries) > 0
 }
@@ -230,7 +231,7 @@ func hasApplicationAccess(userDN string) bool {
 	}
 
 	req := newUserApplicationSearchRequest(userDN)
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	return err == nil && len(res.Entries) > 0
 }
@@ -252,7 +253,7 @@ func HasViewerAccess(userDN string) bool {
 	}
 
 	req := newUserViewerSearchRequest(userDN)
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	return err == nil && len(res.Entries) > 0
 }
@@ -274,7 +275,7 @@ func hasCustomerOpsAccess(userDN string) bool {
 	}
 
 	req := newCustomerOpsSearchRequest(userDN)
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	return err == nil && len(res.Entries) > 0
 }
@@ -299,7 +300,7 @@ func HasServiceAccess(userDN string) bool {
 	}
 
 	req := newServiceSearchRequest(userDN)
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	return err == nil && len(res.Entries) > 0
 }
@@ -321,7 +322,7 @@ func HasOpsAccess(userDN string) bool {
 	}
 
 	req := newUserOpsSearchRequest(userDN)
-	res, err := conn.Search(req)
+	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	return err == nil && len(res.Entries) > 0
 }
