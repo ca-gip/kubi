@@ -60,7 +60,7 @@ func MakeConfig() (*types.Config, error) {
 
 	// LDAP validation
 
-	ldapPageSize, errLdapPageSize := strconv.Atoi(getEnv("LDAP_PAGE_SIZE", "500"))
+	ldapPageSize, errLdapPageSize := strconv.Atoi(getEnv("LDAP_PAGE_SIZE", "1000"))
 	Checkf(errLdapPageSize, "Invalid LDAP_PAGE_SIZE, must be an integer")
 
 	ldapPort, errLdapPort := strconv.Atoi(getEnv("LDAP_PORT", "389"))
