@@ -106,7 +106,7 @@ apiVersion: v1
 kind: ConfigMap
 data:
   SLAPD_PASSWORD: password
-  SLAPD_DOMAIN: kubi.cagip.github.com
+  SLAPD_DOMAIN: kubi.ca-gip.github.com
   SLAPD_ADDITIONAL_MODULES: memberof
   SLAPD_CONFIG_PASSWORD: config
 metadata:
@@ -132,7 +132,7 @@ spec:
     spec:
       containers:
         - name: kubi-ldap
-          image: osixia/openldap
+          image: osixia/openldap:1.5.0
           ports:
             - containerPort: 389
           envFrom:

@@ -42,8 +42,11 @@ func main() {
 		utils.Log.Info().Msg("NetworkPolicies generation is disabled.")
 	}
 	services.WatchProjects()
-
-	timerKubiRefresh := time.NewTicker(10 * time.Minute)
+        
+	//os.Setenv("timer_refresh" , "10")
+	timerKubiRefresh := time.NewTicker(5 * time.Minute)
+	 
+	
 	go func() {
 		for {
 			select {
