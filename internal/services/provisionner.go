@@ -481,10 +481,13 @@ func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) erro
 func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
 
 	defaultLabels := map[string]string{
-		"name":        project.Name,
-		"type":        "customer",
-		"creator":     "kubi",
-		"environment": project.Spec.Environment,
+		"name":                               project.Name,
+		"type":                               "customer",
+		"creator":                            "kubi",
+		"environment":                        project.Spec.Environment,
+		"pod-security.kubernetes.io/enforce": utils.Config.PodSecurityAdmissionEnforcement,
+		"pod-security.kubernetes.io/warn":    utils.Config.PodSecurityAdmissionWarning,
+		"pod-security.kubernetes.io/audit":   utils.Config.PodSecurityAdmissionAudit,
 	}
 
 	return utils.Union(defaultLabels, utils.Config.CustomLabels)

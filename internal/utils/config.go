@@ -99,6 +99,10 @@ func MakeConfig() (*types.Config, error) {
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 	tenant := strings.ToLower(getEnv("TENANT", KubiTenantUndeterminable))
 
+	podSecurityAdmissionEnforcement := strings.ToLower(getEnv("PODSECURITYADMISSION_ENFORCEMENT", PodSecurityAdmissionEnforcement))
+	podSecurityAdmissionWarning := strings.ToLower(getEnv("PODSECURITYADMISSION_WARNING", PodSecurityAdmissionWarning))
+	podSecurityAdmissionAudit := strings.ToLower(getEnv("PODSECURITYADMISSION_AUDIT", PodSecurityAdmissionAudit))
+
 	ldapConfig := types.LdapConfig{
 		UserBase:             os.Getenv("LDAP_USERBASE"),
 		GroupBase:            os.Getenv("LDAP_GROUPBASE"),
@@ -122,22 +126,25 @@ func MakeConfig() (*types.Config, error) {
 		Attributes:           []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
-		Tenant:                  tenant,
-		Ldap:                    ldapConfig,
-		KubeCa:                  caEncoded,
-		KubeCaText:              string(kubeCA),
-		KubeToken:               string(kubeToken),
-		PublicApiServerURL:      getEnv("PUBLIC_APISERVER_URL", ""),
-		ApiServerTLSConfig:      *tlsConfig,
-		TokenLifeTime:           getEnv("TOKEN_LIFETIME", "4h"),
-		ExtraTokenLifeTime:      getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
-		Locator:                 getEnv("LOCATOR", KubiLocatorIntranet),
-		NetworkPolicy:           networkpolicyEnabled,
-		CustomLabels:            customLabels,
-		DefaultPermission:       getEnv("DEFAULT_PERMISSION", ""),
-		Blacklist:               strings.Split(getEnv("BLACKLIST", ""), ","),
-		Whitelist:               whitelist,
-		BlackWhitelistNamespace: getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
+		Tenant:                          tenant,
+		PodSecurityAdmissionEnforcement: podSecurityAdmissionEnforcement,
+		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
+		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
+		Ldap:                            ldapConfig,
+		KubeCa:                          caEncoded,
+		KubeCaText:                      string(kubeCA),
+		KubeToken:                       string(kubeToken),
+		PublicApiServerURL:              getEnv("PUBLIC_APISERVER_URL", ""),
+		ApiServerTLSConfig:              *tlsConfig,
+		TokenLifeTime:                   getEnv("TOKEN_LIFETIME", "4h"),
+		ExtraTokenLifeTime:              getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
+		Locator:                         getEnv("LOCATOR", KubiLocatorIntranet),
+		NetworkPolicy:                   networkpolicyEnabled,
+		CustomLabels:                    customLabels,
+		DefaultPermission:               getEnv("DEFAULT_PERMISSION", ""),
+		Blacklist:                       strings.Split(getEnv("BLACKLIST", ""), ","),
+		Whitelist:                       whitelist,
+		BlackWhitelistNamespace:         getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
 	}
 
 	err := validation.ValidateStruct(config,

@@ -32,22 +32,25 @@ type LdapConfig struct {
 }
 
 type Config struct {
-	Tenant                  string
-	Ldap                    LdapConfig
-	PublicApiServerURL      string
-	KubeCa                  string
-	KubeCaText              string
-	KubeToken               string
-	ApiServerTLSConfig      tls.Config
-	TokenLifeTime           string
-	ExtraTokenLifeTime      string
-	Locator                 string
-	NetworkPolicy           bool
-	CustomLabels            map[string]string
-	DefaultPermission       string
-	Blacklist               []string
-	BlackWhitelistNamespace string
-	Whitelist               bool
+	PodSecurityAdmissionEnforcement string
+	PodSecurityAdmissionWarning     string
+	PodSecurityAdmissionAudit       string
+	Tenant                          string
+	Ldap                            LdapConfig
+	PublicApiServerURL              string
+	KubeCa                          string
+	KubeCaText                      string
+	KubeToken                       string
+	ApiServerTLSConfig              tls.Config
+	TokenLifeTime                   string
+	ExtraTokenLifeTime              string
+	Locator                         string
+	NetworkPolicy                   bool
+	CustomLabels                    map[string]string
+	DefaultPermission               string
+	Blacklist                       []string
+	BlackWhitelistNamespace         string
+	Whitelist                       bool
 }
 
 // Note: struct fields must be public in order for unmarshal to

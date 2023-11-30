@@ -51,7 +51,10 @@ const (
 	KubiEnvironmentDevelopment        = "development"
 	KubiEnvironmentShortDevelopment   = "dev"
 
-	KubiTenantUndeterminable = "undeterminable"
+	KubiTenantUndeterminable        = "undeterminable"
+	PodSecurityAdmissionEnforcement = "baseline"
+	PodSecurityAdmissionWarning     = "restricted"
+	PodSecurityAdmissionAudit       = "restricted"
 )
 
 var BlacklistedNamespaces = []string{
