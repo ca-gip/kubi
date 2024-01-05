@@ -48,6 +48,7 @@ type Config struct {
 	NetworkPolicy                   bool
 	CustomLabels                    map[string]string
 	DefaultPermission               string
+	PrivilegedNamespaces            []string
 	Blacklist                       []string
 	BlackWhitelistNamespace         string
 	Whitelist                       bool

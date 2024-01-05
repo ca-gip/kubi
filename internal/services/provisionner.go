@@ -485,7 +485,7 @@ func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
 		"type":                               "customer",
 		"creator":                            "kubi",
 		"environment":                        project.Spec.Environment,
-		"pod-security.kubernetes.io/enforce": utils.Config.PodSecurityAdmissionEnforcement,
+		"pod-security.kubernetes.io/enforce": utils.IsInPrivilegedNamespacesList(project.Name),
 		"pod-security.kubernetes.io/warn":    utils.Config.PodSecurityAdmissionWarning,
 		"pod-security.kubernetes.io/audit":   utils.Config.PodSecurityAdmissionAudit,
 	}

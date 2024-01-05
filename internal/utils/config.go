@@ -142,6 +142,7 @@ func MakeConfig() (*types.Config, error) {
 		NetworkPolicy:                   networkpolicyEnabled,
 		CustomLabels:                    customLabels,
 		DefaultPermission:               getEnv("DEFAULT_PERMISSION", ""),
+		PrivilegedNamespaces:            strings.Split(getEnv("PRIVILEGED_NAMESPACES", ""), ","),
 		Blacklist:                       strings.Split(getEnv("BLACKLIST", ""), ","),
 		Whitelist:                       whitelist,
 		BlackWhitelistNamespace:         getEnv("BLACK_WHITELIST_NAMESPACE", "default"),

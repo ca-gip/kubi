@@ -105,6 +105,10 @@ For specific exceptions, add another network policy.
 |  **CUSTOM_LABELS**                 | *Add custom labels to namespaces*    | `quota=managed,monitoring=true`  | `no   `     | -           |
 |  **DEFAULT_PERMISSION**            | *ClusterRole associated with default service account*    | `view`       | `no   `     | -           |
 |  **BLACKLIST**                     | *Ignore Project*                     | `my-project-dev`                 | `no   `     | -           |
+|  **PODSECURITYADMISSION_ENFORCEMENT**                     | *PodSecurityAdmission  Enforcement*                     | `restricted`                 | `no   `     | `baseline  `           |
+|  **PODSECURITYADMISSION_WARNING**                     | *PodSecurityAdmission Warning*                     | `restricted`                 | `no   `     | `restricted  `           |
+|  **PODSECURITYADMISSION_AUDIT**                     | *PodSecurityAdmission Audit*                     | `restricted`                 | `no   `     | `restricted  `           |
+|  **PRIVILEGED_NAMESPACES**                     | *Namespaces allowed to use privileged annotation*                     | `native-development`                 | `no   `     | -           |
 
 ## Versioning
  

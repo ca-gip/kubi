@@ -55,6 +55,8 @@ const (
 	PodSecurityAdmissionEnforcement = "baseline"
 	PodSecurityAdmissionWarning     = "restricted"
 	PodSecurityAdmissionAudit       = "restricted"
+
+	PodSecurityPrivileged = "privileged"
 )
 
 var BlacklistedNamespaces = []string{
