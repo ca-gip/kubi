@@ -25,6 +25,7 @@ import (
 	v14 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	podSecurity "k8s.io/pod-security-admission/api"
 )
 
 // Handler to regenerate all resources created by kubi
@@ -481,13 +482,24 @@ func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) erro
 func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
 
 	defaultLabels := map[string]string{
-		"name":        project.Name,
-		"type":        "customer",
-		"creator":     "kubi",
-		"environment": project.Spec.Environment,
+		"name":                               project.Name,
+		"type":                               "customer",
+		"creator":                            "kubi",
+		"environment":                        project.Spec.Environment,
+		"pod-security.kubernetes.io/enforce": GetPodSecurityStandardName(project.Name),
+		"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
+		"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
 	}
 
 	return utils.Union(defaultLabels, utils.Config.CustomLabels)
+}
+
+func GetPodSecurityStandardName(namespace string) string {
+	if utils.IsInPrivilegedNsList(namespace) {
+		utils.Log.Warn().Msgf("Namespace %v is labeled as privileged", namespace)
+		return string(podSecurity.LevelPrivileged)
+	}
+	return string(utils.Config.PodSecurityAdmissionEnforcement)
 }
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble

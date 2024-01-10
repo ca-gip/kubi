@@ -1,6 +1,9 @@
 package utils
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 func IsEmpty(value string) bool {
 	return len(value) == 0
@@ -45,4 +48,13 @@ func Union(a map[string]string, b map[string]string) map[string]string {
 		a[k] = v
 	}
 	return a
+}
+
+func IsInPrivilegedNsList(namespace string) bool {
+	for _, nsItem := range Config.PrivilegedNamespaces {
+		if strings.Contains(nsItem, namespace) {
+			return true
+		}
+	}
+	return false
 }

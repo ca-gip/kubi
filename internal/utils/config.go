@@ -17,6 +17,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
+	podSecurity "k8s.io/pod-security-admission/api"
 )
 
 var Config *types.Config
@@ -99,6 +100,27 @@ func MakeConfig() (*types.Config, error) {
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 	tenant := strings.ToLower(getEnv("TENANT", KubiTenantUndeterminable))
 
+	// No need to state a default or crash, because kubernetes defaults to restricted.
+	podSecurityAdmissionEnforcement, errPodSecurityAdmissionEnforcement := podSecurity.ParseLevel(strings.ToLower(getEnv("PODSECURITYADMISSION_ENFORCEMENT", string(podSecurity.LevelRestricted))))
+
+	if errPodSecurityAdmissionEnforcement != nil {
+		Log.Error().Msgf("PODSECURITYADMISSION_ENFORCEMENT is incorrect. %s ", errPodSecurityAdmissionEnforcement.Error())
+	}
+
+	// No need to state a default or crash, because kubernetes defaults to restricted.
+	podSecurityAdmissionWarning, errPodSecurityAdmissionWarning := podSecurity.ParseLevel(strings.ToLower(getEnv("PODSECURITYADMISSION_WARNING", string(podSecurity.LevelRestricted))))
+
+	if errPodSecurityAdmissionWarning != nil {
+		Log.Error().Msgf("PODSECURITYADMISSION_WARNING is incorrect. %s ", errPodSecurityAdmissionWarning.Error())
+	}
+
+	// No need to state a default or crash, because kubernetes defaults to restricted.
+	podSecurityAdmissionAudit, errPodSecurityAdmissionAudit := podSecurity.ParseLevel(strings.ToLower(getEnv("PODSECURITYADMISSION_AUDIT", string(podSecurity.LevelRestricted))))
+
+	if errPodSecurityAdmissionAudit != nil {
+		Log.Error().Msgf("PODSECURITYADMISSION_AUDIT is incorrect. %s ", errPodSecurityAdmissionAudit.Error())
+	}
+
 	ldapConfig := types.LdapConfig{
 		UserBase:             os.Getenv("LDAP_USERBASE"),
 		GroupBase:            os.Getenv("LDAP_GROUPBASE"),
@@ -122,22 +144,26 @@ func MakeConfig() (*types.Config, error) {
 		Attributes:           []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 	}
 	config := &types.Config{
-		Tenant:                  tenant,
-		Ldap:                    ldapConfig,
-		KubeCa:                  caEncoded,
-		KubeCaText:              string(kubeCA),
-		KubeToken:               string(kubeToken),
-		PublicApiServerURL:      getEnv("PUBLIC_APISERVER_URL", ""),
-		ApiServerTLSConfig:      *tlsConfig,
-		TokenLifeTime:           getEnv("TOKEN_LIFETIME", "4h"),
-		ExtraTokenLifeTime:      getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
-		Locator:                 getEnv("LOCATOR", KubiLocatorIntranet),
-		NetworkPolicy:           networkpolicyEnabled,
-		CustomLabels:            customLabels,
-		DefaultPermission:       getEnv("DEFAULT_PERMISSION", ""),
-		Blacklist:               strings.Split(getEnv("BLACKLIST", ""), ","),
-		Whitelist:               whitelist,
-		BlackWhitelistNamespace: getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
+		Tenant:                          tenant,
+		PodSecurityAdmissionEnforcement: podSecurityAdmissionEnforcement,
+		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
+		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
+		Ldap:                            ldapConfig,
+		KubeCa:                          caEncoded,
+		KubeCaText:                      string(kubeCA),
+		KubeToken:                       string(kubeToken),
+		PublicApiServerURL:              getEnv("PUBLIC_APISERVER_URL", ""),
+		ApiServerTLSConfig:              *tlsConfig,
+		TokenLifeTime:                   getEnv("TOKEN_LIFETIME", "4h"),
+		ExtraTokenLifeTime:              getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
+		Locator:                         getEnv("LOCATOR", KubiLocatorIntranet),
+		NetworkPolicy:                   networkpolicyEnabled,
+		CustomLabels:                    customLabels,
+		DefaultPermission:               getEnv("DEFAULT_PERMISSION", ""),
+		PrivilegedNamespaces:            strings.Split(getEnv("PRIVILEGED_NAMESPACES", ""), ","),
+		Blacklist:                       strings.Split(getEnv("BLACKLIST", ""), ","),
+		Whitelist:                       whitelist,
+		BlackWhitelistNamespace:         getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
 	}
 
 	err := validation.ValidateStruct(config,
