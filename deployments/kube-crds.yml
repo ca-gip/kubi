@@ -13,6 +13,11 @@ spec:
         openAPIV3Schema:
           type: object
           properties:
+            status:
+              properties:
+                Name:
+                  type: string
+              type: object
             spec:
               type: object
               properties:
