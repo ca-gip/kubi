@@ -71,25 +71,23 @@ func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhite
 
 	for _, auth := range context {
 
-		// if whitelist boolean set we search namespace in configmap whitelist
-		if utils.Config.Whitelist { // if configmap with whitelist exist and not empty
-			if blackWhiteList.Whitelist[0] != "" && utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
-				utils.Log.Info().Msgf("Project %s is whitelisted", auth.Namespace())
-				generateProject(auth)
-			} else {
-				utils.Log.Error().Msgf("Cannot find project %s in whitelist", auth.Namespace())
-			}
-		} else if blackWhiteList.Blacklist[0] != "" { // if configmap with blacklist exist and not empty
-			if utils.Include(blackWhiteList.Blacklist, auth.Namespace()) {
-				utils.Log.Info().Msgf("delete project %s in blacklist", auth.Namespace())
-				deleteProject(auth)
-			} else {
-				utils.Log.Info().Msgf("Cannot find project %s in blacklist", auth.Namespace())
-			}
-		} else { // if configmap not exist and bool whitelist is false
+		switch {
+		//we treat blacklisted projects as a priority
+		case blackWhiteList.Blacklist[0] != "" && utils.Include(blackWhiteList.Blacklist, auth.Namespace()):
+			utils.Log.Info().Msgf("delete project %s in blacklist", auth.Namespace())
+			deleteProject(auth)
+			continue
+		// If whitelist is enabled, do not create project unless it's explictly mentioned
+		case utils.Config.Whitelist == true && utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
+			utils.Log.Info().Msgf("Project %s is whitelisted", auth.Namespace())
+			generateProject(auth)
+		//do not generate project if whitelist  is enabled and project not present on whitelisted projects
+		case utils.Config.Whitelist == true && !utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
+			utils.Log.Error().Msgf("Cannot find project %s in whitelist", auth.Namespace())
+		//Generate projects if whitelist is disabled and no projects in blacklist
+		default:
 			generateProject(auth)
 		}
-
 	}
 }
 
