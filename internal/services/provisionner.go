@@ -61,34 +61,46 @@ func GenerateResources() error {
 		blackWhiteList = MakeBlackWhitelist(blacklistCM.Data)
 	}
 
-	GenerateProjects(auths, &blackWhiteList)
+	createdproject, deletedprojects, ignoredProjects := GenerateProjects(auths, &blackWhiteList)
+	for _, project := range ignoredProjects {
+		utils.Log.Error().Msgf("Cannot find project %s in whitelist", project.Namespace())
+	}
+	for _, project := range deletedprojects {
+		utils.Log.Info().Msgf("delete project %s in blacklist", project.Namespace())
+		deleteProject(project)
+	}
+	// now that the project is well categorized we know that a project cannot be at the same  time to be deleted and to be generated
+	for _, project := range createdproject {
+		utils.Log.Info().Msgf("Project %s is whitelisted", project.Namespace())
+		generateProject(project)
+	}
 	return nil
 }
 
 // A loop wrapper for generateProject
 // splitted for unit test !
-func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhitelist) {
+func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhitelist) ([]*types.Project, []*types.Project, []*types.Project) {
 
+	var createdProjects, deletedProjects, ignoredProjects []*types.Project
 	for _, auth := range context {
 
 		switch {
-		//we treat blacklisted projects as a priority
+		//we treat blacklisted projects as a priority, project will be deleted
 		case blackWhiteList.Blacklist[0] != "" && utils.Include(blackWhiteList.Blacklist, auth.Namespace()):
-			utils.Log.Info().Msgf("delete project %s in blacklist", auth.Namespace())
-			deleteProject(auth)
-			continue
+			deletedProjects = append(deletedProjects,auth)
 		// If whitelist is enabled, do not create project unless it's explictly mentioned
 		case utils.Config.Whitelist == true && utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
-			utils.Log.Info().Msgf("Project %s is whitelisted", auth.Namespace())
-			generateProject(auth)
-		//do not generate project if whitelist  is enabled and project not present on whitelisted projects
+			createdProjects = append(createdProjects,auth)
+		//project will be ignored if whitelist  is enabled and project not present on whitelisted projects
 		case utils.Config.Whitelist == true && !utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
-			utils.Log.Error().Msgf("Cannot find project %s in whitelist", auth.Namespace())
-		//Generate projects if whitelist is disabled and no projects in blacklist
+			ignoredProjects = append(ignoredProjects,auth)
+		//project will be created if whitelist is disabled and no projects in blacklist
 		default:
-			generateProject(auth)
+			createdProjects = append(createdProjects,auth)
 		}
 	}
+
+	return createdProjects, deletedProjects, ignoredProjects
 }
 
 // generate a project config or update it if exists
