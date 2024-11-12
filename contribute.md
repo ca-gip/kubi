@@ -6,6 +6,7 @@ This guide helps you get started developing kubi
 Make sure you have the following dependencies installed before setting up your developer environment:
 
  - Git
+ - jq
  - Go
  - In this context we will use a kind cluster for the local deployment of Kubi : cluster kind {1.23 or 124}
 
@@ -33,14 +34,14 @@ Make sure you have the following dependencies installed before setting up your d
    VNUMBER=${VERSION#"v"}
    wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
    chmod +x cfssljson
-   mv cfssljson /usr/local/bin
+   sudo mv cfssljson /usr/local/bin
    cfssljson -version
   
    VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
    VNUMBER=${VERSION#"v"}
    wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
    chmod +x cfssl
-   mv cfssl /usr/local/bin
+   sudo mv cfssl /usr/local/bin
  ```
     
  - create certificat
@@ -130,31 +131,31 @@ Make sure you have the following dependencies installed before setting up your d
 
   - Upload the signed certificate
   ```
-    kubectl get csr kubi-svc.kube-system -o json | \
-    jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
-    kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/kubi-svc.kube-system/status -f -
+  kubectl get csr kubi-svc.kube-system -o json | \
+  jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
+  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/kubi-svc.kube-system/status -f -
   ```
 
   - Download the certificate and use it
   ```
-    kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}' \
-    | base64 --decode > server.crt
-    cat server.crt  
+  kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}' \
+  | base64 --decode > server.crt
+  cat server.crt  
   ```
 
   - Create a secret for the deployment
   ``` 
-    kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
-    kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
-    kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
+  kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
+  kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
+  kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
   ```
 
   - Deploy manifest (CRD, prerequisites,local-config) of kubi
   ```
-    kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
-    kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
-    kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
-    kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
+  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
+  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
+  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
   ```
   
 
@@ -162,7 +163,7 @@ Make sure you have the following dependencies installed before setting up your d
  
 - Create secret dirs on your local machine
  ```
- mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
+ sudo mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
  ```
 - The mapping between the secret:key anf file path 
 
@@ -178,12 +179,12 @@ Make sure you have the following dependencies installed before setting up your d
 You can execute the following commands to gather all the required secrets then decode and save them
 
   ```
-    kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-    kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /var/run/secrets/kubernetes.io  /serviceaccount/token
-    kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /var/run/secrets/certs/tls.crt
-    kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /var/run/secrets/certs/tls.key
-    kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-key.pem
-    kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-public.pem
+  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /var/run/secrets/kubernetes.io  /serviceaccount/token
+  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /var/run/secrets/certs/tls.crt
+  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /var/run/secrets/certs/tls.key
+  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-key.pem
+  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-public.pem
   ```
    
   - Customize the default network policy
