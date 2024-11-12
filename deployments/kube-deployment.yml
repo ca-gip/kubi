@@ -18,7 +18,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi-api
-          image: cagip/kubi-api:1.7.0
+          image: cagip/kubi-api:v1.28.0
           ports:
             - containerPort: 8000
           livenessProbe:
@@ -45,7 +45,7 @@ spec:
                   name: kubi-secret
                   key: ldap_passwd
         - name: kubi-webhook
-          image: cagip/kubi-webhook:1.7.0
+          image: cagip/kubi-webhook:v1.28.0
           ports:
             - containerPort: 8001
           volumeMounts:
@@ -66,7 +66,7 @@ spec:
                   name: kubi-secret
                   key: ldap_passwd
         - name: kubi-operator
-          image: cagip/kubi-operator:1.7.0
+          image: cagip/kubi-operator:v1.28.0
           ports:
             - containerPort: 8002
           volumeMounts:
@@ -114,7 +114,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi-operator
-          image: cagip/kubi-operator:1.7.0
+          image: cagip/kubi-operator:v1.28.0
           ports:
             - containerPort: 8002
           volumeMounts:
