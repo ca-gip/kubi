@@ -1,13 +1,13 @@
 apiVersion: v1
 data:
-  LDAP_ADMIN_GROUPBASE: cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
-  LDAP_ADMIN_USERBASE: dc=kubi,dc=ca-gip,dc=github,dc=com
-  LDAP_BINDDN: cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com
-  LDAP_GROUPBASE: ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_ADMIN_GROUPBASE: cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
+  LDAP_ADMIN_USERBASE: dc=kubi,dc=cagip,dc=github,dc=com
+  LDAP_BINDDN: cn=admin,dc=kubi,dc=cagip,dc=github,dc=com
+  LDAP_GROUPBASE: ou=LOCAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
   LDAP_PORT: "389"
   LDAP_SERVER: kube-ldap.kube-system.svc.cluster.local
   LDAP_USE_SSL: "false"
-  LDAP_USERBASE: ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+  LDAP_USERBASE: ou=People,dc=kubi,dc=cagip,dc=github,dc=com
   LDAP_USERFILTER: (cn=%s)
   LOCATOR: local
   PUBLIC_APISERVER_URL: https://kubernetes.default.svc.cluster.local
@@ -22,27 +22,27 @@ apiVersion: v1
 kind: ConfigMap
 data:
   kubi.ldif: |
-    dn: ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: ou=People,dc=kubi,dc=c-gip,dc=github,dc=com
     objectClass: top
     objectClass: organizationalUnit
     ou: People
 
-    dn: ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: organizationalUnit
     ou: Groups
 
-    dn: ou=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: ou=GLOBAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: organizationalUnit
     ou: GLOBAL
 
-    dn: ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: ou=LOCAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: organizationalUnit
     ou: LOCAL
 
-    dn: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=mario,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: person
     objectClass: organizationalPerson
@@ -52,7 +52,7 @@ data:
     mail: mario@cagip.gca
     userPassword: {SHA}rdtHKR7hafMwgBznNSC5by6vIOo=
 
-    dn: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=luigi,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: person
     objectClass: organizationalPerson
@@ -62,7 +62,7 @@ data:
     mail: luigi@cagip.gca
     userPassword: luigi
 
-    dn: cn=bowser,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=bowser,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: person
     objectClass: organizationalPerson
@@ -72,32 +72,32 @@ data:
     mail: bowser@cagip.gca
     userPassword: bowser
 
-    dn: cn=DL_KUB_TEAM-1-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=DL_KUB_TEAM-1-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: groupOfNames
     cn: DL_KUB_TEAM-1-DEV_ADMIN
-    member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-    member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=mario,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
+    member: cn=luigi,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
 
-    dn: cn=DL_ADMIN_TEAM,ou=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=DL_ADMIN_TEAM,ou=GLOBAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: groupOfNames
     cn: DL_ADMIN_TEAM
-    member: cn=bowser,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=bowser,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
 
-    dn: cn=DL_KUB_TEAM-2-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=DL_KUB_TEAM-2-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: groupOfNames
     cn: DL_KUB_TEAM-2-DEV_ADMIN
-    member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-    member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=mario,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
+    member: cn=luigi,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
 
-    dn: cn=DL_KUB_TEAM-3-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com
+    dn: cn=DL_KUB_TEAM-3-DEV_ADMIN,ou=LOCAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: groupOfNames
     cn: DL_KUB_TEAM-3-DEV_ADMIN
-    member: cn=mario,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
-    member: cn=luigi,ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com
+    member: cn=mario,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
+    member: cn=luigi,ou=People,dc=kubi,dc=cagip,dc=github,dc=com
 metadata:
   name: kube-ldap-data
   namespace: kube-system
