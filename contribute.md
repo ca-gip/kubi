@@ -52,10 +52,6 @@ Depending on how large the project is, you may want to outsource the questioning
 > ### Legal Notice <!-- omit in toc -->
 > When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.
 
-## Development Environment Setup
-
-Set up your[ development environment.](https://github.com/amiraaz/kubi/blob/master/command.md)
-
 ### Reporting Bugs
 
 #### Before Submitting a Bug Report
