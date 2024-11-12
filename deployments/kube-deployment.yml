@@ -32,6 +32,9 @@ spec:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
           envFrom:
             - configMapRef:
                 name: kubi-config
@@ -49,6 +52,10 @@ spec:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+
           envFrom:
             - configMapRef:
                 name: kubi-config
@@ -66,6 +73,9 @@ spec:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
           envFrom:
             - configMapRef:
                 name: kubi-config
@@ -79,6 +89,10 @@ spec:
         - name: kubi-tls
           secret:
             secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -107,6 +121,9 @@ spec:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
           envFrom:
             - configMapRef:
                 name: kubi-config
@@ -120,6 +137,9 @@ spec:
         - name: kubi-tls
           secret:
             secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
 ---
 apiVersion: v1
 kind: Service
