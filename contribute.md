@@ -1,310 +1,141 @@
 <!-- omit in toc -->
-# Developer guide
+# Contributing to kubi
 
-This guide helps you get started developing kubi
+First off, thanks for taking the time to contribute! ❤️
 
-Make sure you have the following dependencies installed before setting up your developer environment:
+All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions. 🎉
 
- - Git
- - jq
- - Go
- - In this context we will use a kind cluster for the local deployment of Kubi : cluster kind {1.23 or 124}
+> And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation,   which we would also be very happy about:
+> - Star the project
+> - Tweet about it
+> - Refer this project in your project's readme
+> - Mention the project at local meetups and tell your friends/colleagues
 
-## Deploy kubi  
+<!-- omit in toc -->
+## Table of Contents
 
- - Get the source code https://github.com/ca-gip/kubi
-  
- - install go  https://go.dev/
-    
- - Create kind cluster with version 1.24-1.26 https://kind.sigs.k8s.io/docs/user/quick-start/
-  
- - kubi private key
- ```
- openssl ecparam -genkey -name secp521r1 -noout -out /tmp/ecdsa-key.pem
- ```
-  
- - kubi public key
- ```
- openssl ec -in /tmp/ecdsa-key.pem -pubout -out /tmp/ecdsa-public.pem
- ```
-  
- - install CFSSL tools
- ```
-   VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-   VNUMBER=${VERSION#"v"}
-   wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
-   chmod +x cfssljson
-   sudo mv cfssljson /usr/local/bin
-   cfssljson -version
-  
-   VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-   VNUMBER=${VERSION#"v"}
-   wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
-   chmod +x cfssl
-   sudo mv cfssl /usr/local/bin
- ```
-    
- - create certificat
- > Change `kubi.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
-   that point to an existing Kubernetes Cluster node.
-   **Eg: 10.56.221.4, kubernetes.<my_domain>...**
-
- ```
- cat <<EOF | cfssl genkey - | cfssljson -bare server
-       {
-         "hosts": [
-         "kubi.devops.managed.kvm",
-         "kubi-svc",
-         "kubi-svc.kube-system",
-         "kubi-svc.kube-system.svc",
-         "kubi-svc.kube-system.svc.cluster.local"
-   
-          ],
-        "CN": "kubi-svc.kube-system.svc.cluster.local",
-        "key": {
-        "algo": "ecdsa",
-        "size": 256
-          }
-      }
- EOF
-   
- 
-  cat <<EOF | kubectl create -f -
-  apiVersion: certificates.k8s.io/v1
-  kind: CertificateSigningRequest
-  metadata:
-   name: kubi-svc.kube-system
-  spec:
-    groups:
-      - system:authenticated
-    request: $(cat server.csr | base64 | tr -d '\n')
-    signerName: kubernetes.io/kube-apiserver-client
-    usages:
-      - digital signature
-      - key encipherment
-      - server auth
-  EOF
-  ```
-  
-  - Approving the certificate signing request
-  ```
-  kubectl certificate approve kubi-svc.kube-system
-  kubectl get csr
-  ```
- 
-  - Create a Certificate Authority
-  ```
-  cat <<EOF | cfssl gencert -initca - | cfssljson -bare ca
-      {
-       "CN": "kube-kubi",
-       "key": {
-       "algo": "rsa",
-       "size": 2048
-        }
-      }
-  EOF
- 
-  echo '{
-     "signing": {
-          "default": {
-             "usages": [
-                "digital signature",
-                "key encipherment",
-                "server auth"
-            ],
-            "expiry": "876000h",
-            "ca_constraint": {
-                "is_ca": false
-             }
-         }
-      }
-  }' > server-signing-config.json 
-
-  ```
-  - Use a server-signing-config.json signing configuration and the certificate authority key file and certificate to sign the certificate request:
-  ```
-  kubectl get csr kubi-svc.kube-system -o jsonpath='{.spec.request}' | \
-  base64 --decode | \
-  cfssl sign -ca ca.pem -ca-key ca-key.pem -config server-signing-config.json - | \
-  cfssljson -bare ca-signed-server
-  ```
-
-  - Upload the signed certificate
-  ```
-  kubectl get csr kubi-svc.kube-system -o json | \
-  jq '.status.certificate = "'$(base64 ca-signed-server.pem | tr -d '\n')'"' | \
-  kubectl replace --raw /apis/certificates.k8s.io/v1/certificatesigningrequests/kubi-svc.kube-system/status -f -
-  ```
-
-  - Download the certificate and use it
-  ```
-  kubectl get csr kubi-svc.kube-system -o jsonpath='{.status.certificate}' \
-  | base64 --decode > server.crt
-  cat server.crt  
-  ```
-
-  - Create a secret for the deployment
-  ``` 
-  kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
-  kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
-  kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
-  ```
-
-  - Deploy manifest (CRD, prerequisites,local-config) of kubi
-  ```
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
-  ```
-  
-
- Copy the secret from you Kubernetes cluster
- 
-- Create secret dirs on your local machine
- ```
- sudo mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
- ```
-- The mapping between the secret:key anf file path 
-
-| Secret Name | Secret Key | Local Path |
-|-------------|------------|------------|
-| kubi-user-<hash> | ca.crt | /var/run/secrets/kubernetes.io/serviceaccount/ca.crt |
-| kubi-user-<hash> | token | /var/run/secrets/kubernetes.io/serviceaccount/token |
-| kubi | tls.crt |/var/run/secrets/certs/tls.crt |
-| kubi | tls.key | /var/run/secrets/certs/tls.key |
-| kubi-encryption-secret | ecdsa-key.pem | /var/run/secrets/ecdsa/ecdsa-key.pem |
-| kubi-encryption-secret | ecdsa-public.pem | /var/run/secrets/ecdsa/ecdsa-public.pem |                           
-
-You can execute the following commands to gather all the required secrets then decode and save them
-
-  ```
-  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /var/run/secrets/kubernetes.io  /serviceaccount/token
-  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /var/run/secrets/certs/tls.crt
-  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /var/run/secrets/certs/tls.key
-  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-key.pem
-  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-public.pem
-  ```
-   
-  - Customize the default network policy
-
-   You can customize the default network policy named `kubi-default`, for example:
- 
-  ```yaml
-apiVersion: "cagip.github.com/v1"
-kind: NetworkPolicyConfig
-metadata:
-  name: kubi-default
-spec:
-  egress:
-    # ports allowed for egress
-    ports:
-      - 636
-      - 389
-      - 123
-      - 53
-    # cidrs allowed for egress
-    # for ipvs, add the network used by calico, for kubernetes svc in default ns
-    cidrs:
-      - 192.168.2.0/24
-      - 172.10.0.0/24
-  ingress:
-    # namespaces allowed for ingress rules ( here only nginx )
-    namespaces:
-      - ingress-nginx
-```
-
-** Deploy the example : **
-```bash
-kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-example-netpolconf.yml
-```
-
-## Basic Webhook configuration
-
-Kubi is installed as a Kubernetes webhook.
-> For more information about webhook: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication
-
-1. **On each master node in /etc/kubernetes/pki/webhook**
+- [Code of Conduct](#code-of-conduct)
+- [I Have a Question](#i-have-a-question)
+- [I Want To Contribute](#i-want-to-contribute)
+- [Development Environment Setup](#development-environment-setup)
+- [Reporting Bugs](#reporting-bugs)
+- [Suggesting Enhancements](#suggesting-enhancements)
+- [Your First Code Contribution](#your-first-code-contribution)
+- [Improving The Documentation](#improving-the-documentation)
+- [Styleguides](#styleguides)
+- [Commit Messages](#commit-messages)
 
 
-```yaml
-# Kubernetes API version
-apiVersion: v1
-# kind of the API object
-kind: Config
-# clusters refers to the remote service.
-clusters:
-  - name: kubi
-    cluster:
-      certificate-authority: /etc/kubernetes/pki/ca.crt
-      server: https://kube-svc:8001/authenticate   
-users:
-  - name: apiserver
-    user:
-      client-certificate: /etc/kubernetes/pki/apiserver.crt
-      client-key: /etc/kubernetes/pki/apiserver.key
-current-context: kubi
-contexts:
-- context:
-    cluster:  kubi
-    user: apiserver
-  name: webhook
-```
 
-```bash
-# vim /etc/kubernetes/manifests/kube-apiserver.yaml
-- --authentication-token-webhook-config-file=/etc/kubernetes/pki/webhook.yml
-```
+## Code of Conduct
 
-> Api servers reboot automatically, check logs `kubectl logs -f kube-apiserver-master-01 -n kube-system`.
-
-## Advanced Webhook configuration
-
-You could change apiserver mount and create an aditionnal folder.
-Here we use /etc/kubernetes/pki which is automatically mounted.
-
-1. Add these params to kubeadm config in `ClusterConfiguration`:
-
-  ```bash
-  # Before, create the additionnals folder in all master nodes
-  mkdir /etc/kubernetes/additionnals
-  ```
-
-2. And edit your `kubeadm-config.yml` file with the following values:
-
-  ```yaml
-  extraArgs:
-    authentication-token-webhook-config-file: /etc/kubernetes/additionnals/webhook.yml
-  extraVolumes:
-    - name: additionnals
-      hostPath: /etc/kubernetes/additionnals
-      mountPath: /etc/kubernetes/additionnals
-  ```
-
-3. Copy the webhook file to `/etc/kubernetes/additionnals` folder.
+This project and everyone participating in it is governed by the
+[kubi Code of Conduct](https://github.com/yaniszuck/kubi/blob/add_contributing.md/CODE_OF_CONDUCT.md).
+By participating, you are expected to uphold this code.
 
 
-  - Run kubi
-  ```
-    API_URL=$(kubectl config view --minify --output 'jsonpath={.clusters[].cluster.server}')
-    API_PORT=${API_URL##*:}
-    echo "API port: $API_PORT"
-    echo "API URL: $API_URL"
-    LDAP_ADMIN_GROUPBASE="cn=DL_ADMIN_TEAM,OU=GLOBAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com" \
-    LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"  \
-    LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
-    LDAP_GROUPBASE="ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com"  \
-    LDAP_PORT="389"   \
-    LDAP_SERVER="kube-ldap.kube-system.svc.cluster.local"  \
-    LDAP_USE_SSL="false"   \
-    LDAP_USERBASE="ou=People,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
-    LDAP_USERFILTER="(cn=%s)"   \
-    LOCATOR="local"   \
-    PUBLIC_APISERVER_URL="https://kubernetes.default.svc.cluster.local"  \
-    TENANT="cagip" \
-    KUBERNETES_SERVICE_HOST="kubernetes.default.svc.cluster.local" \
-    KUBERNETES_SERVICE_PORT="API_PORT" \
-    LDAP_PASSWD="password" \
-    go run ./cmd/api//main.go &
-  ```
+## I Have a Question
+
+> If you want to ask a question, we assume that you have read the available [Documentation](https://github.com/ca-gip/kubi).
+
+Before you ask a question, it is best to search for existing [Issues](https://github.com/ca-gip/kubi/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
+
+If you then still feel the need to ask a question and need clarification, we recommend the following:
+
+- Open an [Issue](https://github.com/ca-gip/kubi/issues/new).
+- Provide as much context as you can about what you're running into.
+- Provide project and platform versions (nodejs, npm, etc), depending on what seems relevant.
+
+We will then take care of the issue as soon as possible.
+
+<!--
+You might want to create a separate issue tag for questions and include it in this description. People should then tag their issues accordingly.
+
+Depending on how large the project is, you may want to outsource the questioning, e.g. to Stack Overflow or Gitter. You may add additional contact and information possibilities:
+- IRC
+- Slack
+- Gitter
+- Stack Overflow tag
+- Blog
+- FAQ
+- Roadmap
+- E-Mail List
+- Forum
+-->
+
+## I Want To Contribute
+
+> ### Legal Notice <!-- omit in toc -->
+> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.
+
+## Development Environment Setup
+
+Set up your[ development environment.](https://github.com/yaniszuck/kubi/blob/add_contributing.md/contribute/developer-guide.md)
+
+### Reporting Bugs
+
+#### Before Submitting a Bug Report
+
+A good bug report shouldn't leave others needing to chase you up for more information. Therefore, we ask you to investigate carefully, collect information and describe the issue in detail in your report. Please complete the following steps in advance to help us fix any potential bug as fast as possible.
+
+- Make sure that you are using the latest version.
+- Determine if your bug is really a bug and not an error on your side e.g. using incompatible environment components/versions (Make sure that you have read the [documentation](https://github.com/ca-gip/kubi). If you are looking for support, you might want to check [this section](#i-have-a-question)).
+- To see if other users have experienced (and potentially already solved) the same issue you are having, check if there is not already a bug report existing for your bug or error.
+- Also make sure to search the internet (including Stack Overflow) to see if users outside of the GitHub community have discussed the issue.
+- Collect information about the bug:
+  - Stack trace (Traceback)
+  - OS, Platform and Version (Windows, Linux, macOS, x86, ARM)
+  - Version of the interpreter, compiler, SDK, runtime environment, package manager, depending on what seems relevant.
+  - Possibly your input and the output
+  - Can you reliably reproduce the issue? And can you also reproduce it with older versions?
+
+<!-- omit in toc -->
+
+
+We use GitHub issues to track bugs and errors. If you run into an issue with the project:
+
+- Open an [Issue](https://github.com/ca-gip/kubi/issues/new). (Since we can't be sure at this point whether it is a bug or not, we ask you not to talk about a bug yet and not to label the issue.)
+- Explain the behavior you would expect and the actual behavior.
+- Please provide as much context as possible and describe the *reproduction steps* that someone else can follow to recreate the issue on their own. This usually includes your code. For good bug reports you should isolate the problem and create a reduced test case.
+- Provide the information you collected in the previous section.
+
+Once it's filed:
+
+- The project team will label the issue accordingly.
+- A team member will try to reproduce the issue with your provided steps. If there are no reproduction steps or no obvious way to reproduce the issue, the team will ask you for those steps and mark the issue as `needs-repro`. Bugs with the `needs-repro` tag will not be addressed until they are reproduced.
+- If the team is able to reproduce the issue, it will be marked `needs-fix`, as well as possibly other tags (such as `critical`), and the issue will be left to be [implemented by someone](#your-first-code-contribution).
+
+<!-- You might want to create an issue template for bugs and errors that can be used as a guide and that defines the structure of the information to be included. If you do so, reference it here in the description. -->
+
+
+### Suggesting Enhancements
+
+This section guides you through submitting an enhancement suggestion for kubi, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
+
+<!-- omit in toc -->
+#### Before Submitting an Enhancement
+
+- Make sure that you are using the latest version.
+- Read the [documentation](https://github.com/ca-gip/kubi) carefully and find out if the functionality is already covered, maybe by an individual configuration.
+- Perform a [search](https://github.com/ca-gip/kubi/issues) to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
+- Find out whether your idea fits with the scope and aims of the project. It's up to you to make a strong case to convince the project's developers of the merits of this feature. Keep in mind that we want features that will be useful to the majority of our users and not just a small subset. If you're just targeting a minority of users, consider writing an add-on/plugin library.
+
+<!-- omit in toc -->
+#### How Do I Submit a Good Enhancement Suggestion?
+
+Enhancement suggestions are tracked as [GitHub issues](https://github.com/ca-gip/kubi/issues).
+
+- Use a **clear and descriptive title** for the issue to identify the suggestion.
+- Provide a **step-by-step description of the suggested enhancement** in as many details as possible.
+- **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
+- You may want to **include screenshots and animated GIFs** which help you demonstrate the steps or point out the part which the suggestion is related to. You can use [this tool](https://www.cockos.com/licecap/) to record GIFs on macOS and Windows, and [this tool](https://github.com/colinkeenan/silentcast) or [this tool](https://github.com/GNOME/byzanz) on Linux. <!-- this should only be included if the project has a GUI -->
+- **Explain why this enhancement would be useful** to most kubi users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
+
+<!-- You might want to create an issue template for enhancement suggestions that can be used as a guide and that defines the structure of the information to be included. If you do so, reference it here in the description. -->
+
+
+## Styleguides
+
+### Commit Messages
+- How to get [work done in open source ](http://www.gazlene.net/getting-work-done-in-open-source.html)
+- Follow the [Conventional Commits format](https://www.conventionalcommits.org/en/v1.0.0/)
