@@ -179,11 +179,11 @@ kubi explain <another_token> for explaining another token
 
 # Installation
 
-- [Development environment set up](https://github.com/amiraaz/kubi/blob/installation.md).
+- [Development environment set up](https://github.com/amiraaz/kubi/blob/master/command.md).
 
 # Contributing
 
-- [Contributing to kubi](https://github.com/yaniszuck/kubi/blob/contribution.md).
+- [Contributing to kubi](https://github.com/amiraaz/kubi/blob/master/contribute.md).
  
 
 
