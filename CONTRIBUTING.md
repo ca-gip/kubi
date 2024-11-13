@@ -307,6 +307,8 @@ Here we use /etc/kubernetes/pki which is automatically mounted.
     KUBERNETES_SERVICE_PORT="API_PORT" \
     LDAP_PASSWD="password" \
     go run ./cmd/api//main.go &
+```
+
 
 <!-- omit in toc -->
 # Contributing to kubi
