@@ -177,10 +177,6 @@ kubi explain <another_token> for explaining another token
 
 > It is not recommended to use curl, because it is used with -k parameter ( insecure mode).
 
-# Installation
-
-- [Development environment set up](https://github.com/amiraaz/kubi/blob/master/Command.md).
-
 # Contributing
 
 - [Contributing to kubi](https://github.com/amiraaz/kubi/blob/master/CONTRIBUTING.md).
