@@ -6,7 +6,7 @@ This guide helps you get started developing kubi
 Make sure you have the following dependencies installed before setting up your developer environment:
 
  - Git
- - jq
+ - Jq
  - Go
  - In this context we will use a kind cluster for the local deployment of Kubi : cluster kind {1.23 or 124}
 
