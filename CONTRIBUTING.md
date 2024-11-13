@@ -22,14 +22,11 @@ Make sure you have the following dependencies installed before setting up your d
     
  - Create kind cluster with version 1.24-1.26 https://kind.sigs.k8s.io/docs/user/quick-start/
   
- - kubi private key
+ - Generate kubi private/public key
  ```
- openssl ecparam -genkey -name secp521r1 -noout -out /tmp/ecdsa-key.pem
- ```
-  
- - kubi public key
- ```
- openssl ec -in /tmp/ecdsa-key.pem -pubout -out /tmp/ecdsa-public.pem
+ chmod +x generate_ecdsa_keys.sh
+ ./generate_ecdsa_keys.sh
+
  ```
   
  - install CFSSL tools
@@ -156,10 +153,11 @@ Make sure you have the following dependencies installed before setting up your d
 
   - Deploy manifest (CRD, prerequisites,local-config) of kubi
   ```
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-deployment.yml
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-crds.yml
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-prerequisites.yml
-  kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-local-config.yml
+  cd kubi
+  kubectl apply -f deployments/kube-deployment.yml
+  kubectl apply -f deployments/kube-crds.yml
+  kubectl apply -f deployments/kube-prerequisites.yml
+  kubectl apply -f deployments/kube-local-config.yml
   ```
   
 
@@ -167,28 +165,28 @@ Make sure you have the following dependencies installed before setting up your d
  
 - Create secret dirs on your local machine
  ```
- sudo mkdir -p /var/run/secrets/{certs,ecdsa,kubernetes.io}
+ TEMP_DIR=$(mktemp -d) && mkdir -p "$TEMP_DIR"/{certs,ecdsa,kubernetes.io} && echo "Secret directories created at: $TEMP_DIR"
  ```
 - The mapping between the secret:key anf file path 
 
 | Secret Name | Secret Key | Local Path |
 |-------------|------------|------------|
-| kubi-user-<hash> | ca.crt | /var/run/secrets/kubernetes.io/serviceaccount/ca.crt |
-| kubi-user-<hash> | token | /var/run/secrets/kubernetes.io/serviceaccount/token |
-| kubi | tls.crt |/var/run/secrets/certs/tls.crt |
-| kubi | tls.key | /var/run/secrets/certs/tls.key |
-| kubi-encryption-secret | ecdsa-key.pem | /var/run/secrets/ecdsa/ecdsa-key.pem |
-| kubi-encryption-secret | ecdsa-public.pem | /var/run/secrets/ecdsa/ecdsa-public.pem |                           
+| kubi-user-<hash> | ca.crt |  $TEMP_DIR/kubernetes.io/serviceaccount/ca.crt |
+| kubi-user-<hash> | token |  $TEMP_DIR/kubernetes.io/serviceaccount/token |
+| kubi | tls.crt | $TEMP_DIR/certs/tls.crt |
+| kubi | tls.key |  $TEMP_DIR/certs/tls.key |
+| kubi-encryption-secret | ecdsa-key.pem |  $TEMP_DIR/ecdsa/ecdsa-key.pem |
+| kubi-encryption-secret | ecdsa-public.pem |  $TEMP_DIR/ecdsa/ecdsa-public.pem |                           
 
 You can execute the following commands to gather all the required secrets then decode and save them
 
   ```
-  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /var/run/secrets/kubernetes.io  /serviceaccount/token
-  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /var/run/secrets/certs/tls.crt
-  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /var/run/secrets/certs/tls.key
-  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-key.pem
-  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /var/run/secrets/ecdsa/ecdsa-public.pem
+  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > / $TEMP_DIR/kubernetes.io/serviceaccount/ca.crt
+  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /$TEMP_DIR/kubernetes.io  /serviceaccount/token
+  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /$TEMP_DIR/certs/tls.crt
+  kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /$TEMP_DIR/certs/tls.key
+  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-key\.pem']}" | base64 -d > /$TEMP_DIR/ecdsa/ecdsa-key.pem
+  kubectl -n kube-system get secrets kubi-encryption-secret -o "jsonpath={.data['ecdsa-public\.pem']}" | base64 -d > /$TEMP_DIR/ecdsa/ecdsa-public.pem
   ```
    
   - Customize the default network policy
@@ -221,7 +219,7 @@ spec:
 
 ** Deploy the example : **
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ca-gip/kubi/master/deployments/kube-example-netpolconf.yml
+kubectl apply -f deployments/kube-example-netpolconf.yml
 ```
 
 ## Basic Webhook configuration
@@ -255,12 +253,6 @@ contexts:
     user: apiserver
   name: webhook
 ```
-
-```bash
-# vim /etc/kubernetes/manifests/kube-apiserver.yaml
-- --authentication-token-webhook-config-file=/etc/kubernetes/pki/webhook.yml
-```
-
 > Api servers reboot automatically, check logs `kubectl logs -f kube-apiserver-master-01 -n kube-system`.
 
 ## Advanced Webhook configuration
