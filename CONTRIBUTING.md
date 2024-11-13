@@ -6,9 +6,13 @@ This guide helps you get started developing kubi
 Make sure you have the following dependencies installed before setting up your developer environment:
 
  - Git
+ - Docker
  - Jq
+ - Wget
+ - curl
  - Go
- - In this context we will use a kind cluster for the local deployment of Kubi : cluster kind {1.23 or 124}
+ - Openssl
+ - In this context we will use a kind cluster for the local deployment of Kubi : cluster kind {1.30 or 1.31}
 
 ## Deploy kubi  
 
@@ -44,7 +48,7 @@ Make sure you have the following dependencies installed before setting up your d
    sudo mv cfssl /usr/local/bin
  ```
     
- - create certificat
+ - create certificate
  > Change `kubi.devops.managed.kvm` to an existing kubernetes node ip, vip, or fqdn
    that point to an existing Kubernetes Cluster node.
    **Eg: 10.56.221.4, kubernetes.<my_domain>...**
