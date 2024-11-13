@@ -22,7 +22,7 @@ apiVersion: v1
 kind: ConfigMap
 data:
   kubi.ldif: |
-    dn: ou=People,dc=kubi,dc=c-gip,dc=github,dc=com
+    dn: ou=People,dc=kubi,dc=cagip,dc=github,dc=com
     objectClass: top
     objectClass: organizationalUnit
     ou: People
