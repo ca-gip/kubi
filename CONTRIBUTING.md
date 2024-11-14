@@ -26,14 +26,12 @@ Make sure you have the following dependencies installed before setting up your d
  ```
  chmod +x generate_ecdsa_keys.sh
  ./generate_ecdsa_keys.sh
-
  ```
   
  - install CFSSL tools
  ```
 chmod +x install_cfssl.sh
 ./install_cfssl.sh
-
  ```
     
  - create certificate
