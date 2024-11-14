@@ -31,18 +31,9 @@ Make sure you have the following dependencies installed before setting up your d
   
  - install CFSSL tools
  ```
-   VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-   VNUMBER=${VERSION#"v"}
-   wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O cfssljson
-   chmod +x cfssljson
-   sudo mv cfssljson /usr/local/bin
-   cfssljson -version
-  
-   VERSION=$(curl --silent "https://api.github.com/repos/cloudflare/cfssl/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-   VNUMBER=${VERSION#"v"}
-   wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O cfssl
-   chmod +x cfssl
-   sudo mv cfssl /usr/local/bin
+chmod +x install_cfssl.sh
+./install_cfssl.sh
+
  ```
     
  - create certificate
