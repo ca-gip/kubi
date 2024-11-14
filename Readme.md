@@ -179,7 +179,7 @@ kubi explain <another_token> for explaining another token
 
 # Contributing
 
-- [Contributing to kubi](https://github.com/amiraaz/kubi/blob/master/CONTRIBUTING.md).
+- [Contributing to kubi](https://github.com/ca-gip/kubi/blob/master/CONTRIBUTING.md).
  
 
 
