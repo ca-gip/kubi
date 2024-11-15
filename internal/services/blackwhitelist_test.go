@@ -1,10 +1,8 @@
-package services_test
+package services
 
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/types"
@@ -42,7 +40,7 @@ func TestBlackWhiteList(t *testing.T) {
 
 	t.Run("with_nil_object", func(t *testing.T) {
 
-		result := services.MakeBlackWhitelist(nil)
+		result := MakeBlackWhitelist(nil)
 		assert.Equal(t, []string([]string{""}), result.Blacklist)
 		assert.Equal(t, []string([]string{""}), result.Whitelist)
 	})
@@ -50,7 +48,7 @@ func TestBlackWhiteList(t *testing.T) {
 	t.Run("with_empty_map", func(t *testing.T) {
 		blackWhitelistData := map[string]string{}
 
-		result := services.MakeBlackWhitelist(blackWhitelistData)
+		result := MakeBlackWhitelist(blackWhitelistData)
 		assert.Equal(t, []string([]string{""}), result.Blacklist)
 		assert.Equal(t, []string([]string{""}), result.Whitelist)
 	})
@@ -61,7 +59,7 @@ func TestBlackWhiteList(t *testing.T) {
 			"dzadz$Ùdzadza": "fefezfez, 6z556/*/R/ÉR*/",
 		}
 
-		result := services.MakeBlackWhitelist(blackWhitelistData)
+		result := MakeBlackWhitelist(blackWhitelistData)
 		assert.Equal(t, []string([]string{""}), result.Blacklist)
 		assert.Equal(t, []string([]string{""}), result.Whitelist)
 	})
@@ -72,7 +70,7 @@ func TestBlackWhiteList(t *testing.T) {
 			"whitelist": "",
 		}
 
-		result := services.MakeBlackWhitelist(blackWhitelistData)
+		result := MakeBlackWhitelist(blackWhitelistData)
 		assert.Equal(t, []string([]string{"native-developpement", " native-integration"}), result.Blacklist)
 		assert.Equal(t, []string([]string{""}), result.Whitelist)
 	})
@@ -86,151 +84,270 @@ func TestGenerateProjects(t *testing.T) {
 			Project:     "native",
 			Environment: "development",
 		},
+		{
+			Project:     "native",
+			Environment: "integration",
+		},
+		{
+			Project:     "native",
+			Environment: "production",
+		},
 	}
 
+
+
 	//WHITELIST
-	t.Run("with_empty_whitelist", func(t *testing.T) {
+	t.Run("blacklisted projects are deleted and no whithelisted projects are ignored", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blacklist": "native-development,native-integration",
 			"whitelist": "",
 		}
+		expectedCreate := []*types.Project{
+		}
+		expectedDelete := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+		} 
+		expectedIgnore := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "production",
+			},
+		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
 
 		utils.Config = &types.Config{Whitelist: true}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{false}, result)
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
 	})
 
-	t.Run("with_equal_whitelist", func(t *testing.T) {
+	t.Run("blacklist takes priority and no whitlisted projects are ignored", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blacklist": "native-development,native-integration",
 			"whitelist": "native-development",
 		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		expectedCreate := []*types.Project{
+		}
 
+		expectedDelete := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+		} 
+
+		expectedIgnore := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "production",
+			},
+		}
+
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
 		utils.Config = &types.Config{Whitelist: true}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{true}, result)
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
 	})
 
-	t.Run("with_not_equal_whitelist", func(t *testing.T) {
+	t.Run("no project is created unless  explicitly defined in whitelist; blacklisted projects are deleted", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blacklist": "native-development,native-integration",
-			"whitelist": "native-divelopment",
+			"whitelist": "native-production",
 		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		expectedCreate := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "production",
+			},
+		}
+
+		expectedDelete := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+		} 
+
+		expectedIgnore := []*types.Project{
+		}
+
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
 
 		utils.Config = &types.Config{Whitelist: true}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{false}, result)
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
 	})
 
-	t.Run("with_faildata_whitelist", func(t *testing.T) {
+	t.Run("ignore all projects if confimap contains invalid data", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blaaeza": "rrzerzF",
 		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		expectedCreate := []*types.Project{
+		}
+
+		expectedDelete := []*types.Project{
+		} 
+
+		expectedIgnore := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+			{
+				Project:     "native",
+				Environment: "production",
+			},
+		}
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
 
 		utils.Config = &types.Config{Whitelist: true}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{false}, result)
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
 	})
 
 	//BLACKLIST
-	t.Run("with_empty_blacklist", func(t *testing.T) {
+	t.Run("Projects are created unless explicitly blacklisted", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blacklist": "",
 			"whitelist": "native-development",
 		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		expectedCreate := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+			{
+				Project:     "native",
+				Environment: "production",
+			},
+		}
+
+		expectedDelete := []*types.Project{
+		} 
+
+		expectedIgnore := []*types.Project{
+		}
+
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
 
 		utils.Config = &types.Config{Whitelist: false}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{false}, result)
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
 	})
 
-	t.Run("with_equal_blacklist", func(t *testing.T) {
+
+
+	t.Run("project don't require whitelisting to be created", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blacklist": "native-development,native-integration",
-			"whitelist": "native-development",
+			"whitelist": "",
+		}
+		expectedCreate := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "production",
+			},
 		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		expectedDelete := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+		} 
 
-		utils.Config = &types.Config{Whitelist: false}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{true}, result)
-	})
-
-	t.Run("with_not_equal_blacklist", func(t *testing.T) {
-
-		blackWhitelistData := map[string]string{
-			"blacklist": "native-devilopment,native-integration",
-			"whitelist": "native-divelopment",
+		expectedIgnore := []*types.Project{
 		}
 
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
 
 		utils.Config = &types.Config{Whitelist: false}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{false}, result)
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
 	})
 
-	t.Run("with_faildata_blacklist", func(t *testing.T) {
+	t.Run("all projects are created if confimap contains invalid data", func(t *testing.T) {
 
 		blackWhitelistData := map[string]string{
 			"blaaeza": "rrzerzF",
 		}
-
-		blackWhitelist := services.MakeBlackWhitelist(blackWhitelistData)
-
-		utils.Config = &types.Config{Whitelist: false}
-		result := GenerateProjects(fakeProject, &blackWhitelist)
-		assert.Equal(t, []bool{false}, result)
-	})
-
-}
-
-// Mock of GenerateProjects func from provisionner. TODO : refacto to be testable
-func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhitelist) []bool {
-
-	var boolList []bool
-
-	for _, auth := range context {
-
-		// if whitelist boolean set we search namespace in configmap whitelist
-		if utils.Config.Whitelist { // if configmap with whitelist exist and not empty
-			if blackWhiteList.Whitelist[0] != "" && utils.Include(blackWhiteList.Whitelist, auth.Namespace()) {
-				utils.Log.Info().Msgf("Project %s is whitelisted", auth.Namespace())
-				boolList = append(boolList, true)
-			} else {
-				utils.Log.Error().Msgf("Cannot find project %s in whitelist", auth.Namespace())
-				boolList = append(boolList, false)
-			}
-		} else if blackWhiteList.Blacklist[0] != "" { // if configmap with blacklist exist and not empty
-			if utils.Include(blackWhiteList.Blacklist, auth.Namespace()) {
-				utils.Log.Info().Msgf("delete project %s in blacklist", auth.Namespace())
-				boolList = append(boolList, true)
-			} else {
-				utils.Log.Info().Msgf("Cannot find project %s in blacklist", auth.Namespace())
-				boolList = append(boolList, false)
-			}
-		} else { // if configmap not exist and bool whitelist is false
-			boolList = append(boolList, false)
+		expectedCreate := []*types.Project{
+			{
+				Project:     "native",
+				Environment: "development",
+			},
+			{
+				Project:     "native",
+				Environment: "integration",
+			},
+			{
+				Project:     "native",
+				Environment: "production",
+			},
 		}
 
-	}
+		expectedDelete := []*types.Project{
+		} 
 
-	return boolList
+		expectedIgnore := []*types.Project{
+		}
+
+		blackWhitelist := MakeBlackWhitelist(blackWhitelistData)
+
+		utils.Config = &types.Config{Whitelist: false}
+		gotCreated,gotDeleted,gotIgnored := GenerateProjects(fakeProject, &blackWhitelist)
+		assert.ElementsMatch(t,gotCreated,expectedCreate, "the expected create projects match created list ")
+		assert.ElementsMatch(t,gotDeleted,expectedDelete, "the expected delete projects match deleted list ")
+		assert.ElementsMatch(t,gotIgnored,expectedIgnore, "the expected ignore projects match ignored list")
+	})
+
 }
