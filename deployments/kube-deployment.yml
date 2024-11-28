@@ -18,7 +18,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi-api
-          image: cagip/kubi-api:1.7.0
+          image: cagip/kubi-api:v1.28.0
           ports:
             - containerPort: 8000
           livenessProbe:
@@ -32,22 +32,8 @@ spec:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
               readOnly: true
-          envFrom:
-            - configMapRef:
-                name: kubi-config
-          env:
-            - name: LDAP_PASSWD
-              valueFrom:
-                secretKeyRef:
-                  name: kubi-secret
-                  key: ldap_passwd
-        - name: kubi-webhook
-          image: cagip/kubi-webhook:1.7.0
-          ports:
-            - containerPort: 8001
-          volumeMounts:
-            - name: kubi-tls
-              mountPath: "/var/run/secrets/certs"
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
               readOnly: true
           envFrom:
             - configMapRef:
@@ -58,13 +44,37 @@ spec:
                 secretKeyRef:
                   name: kubi-secret
                   key: ldap_passwd
+        - name: kubi-webhook
+          image: cagip/kubi-webhook:v1.28.0
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
         - name: kubi-operator
-          image: cagip/kubi-operator:1.7.0
+          image: cagip/kubi-operator:v1.28.0
           ports:
             - containerPort: 8002
           volumeMounts:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
               readOnly: true
           envFrom:
             - configMapRef:
@@ -79,6 +89,10 @@ spec:
         - name: kubi-tls
           secret:
             secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -100,12 +114,15 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi-operator
-          image: cagip/kubi-operator:1.7.0
+          image: cagip/kubi-operator:v1.28.0
           ports:
             - containerPort: 8002
           volumeMounts:
             - name: kubi-tls
               mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
               readOnly: true
           envFrom:
             - configMapRef:
@@ -120,6 +137,9 @@ spec:
         - name: kubi-tls
           secret:
             secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
 ---
 apiVersion: v1
 kind: Service
