@@ -3,4 +3,5 @@ vendor
 coverage.*
 kubi
 bin
-build/*
+hack/bin
+dist/
