@@ -2,15 +2,15 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"net/http"
+	"os"
+
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
-	"net/http"
-	"os"
 )
 
 func main() {
@@ -23,11 +23,11 @@ func main() {
 	utils.Config = config
 
 	// TODO Move to config ( for validation )
-	ecdsaPem, err := ioutil.ReadFile(utils.ECDSAKeyPath)
+	ecdsaPem, err := os.ReadFile(utils.ECDSAKeyPath)
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to read ECDSA private key: %v", err)
 	}
-	ecdsaPubPem, err := ioutil.ReadFile(utils.ECDSAPublicPath)
+	ecdsaPubPem, err := os.ReadFile(utils.ECDSAPublicPath)
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to read ECDSA public key: %v", err)
 	}
