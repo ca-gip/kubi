@@ -3,10 +3,11 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ca-gip/kubi/internal/utils"
-	"io/ioutil"
-	"k8s.io/api/authentication/v1beta1"
+	"io"
 	"net/http"
+
+	"github.com/ca-gip/kubi/internal/utils"
+	"k8s.io/api/authentication/v1beta1"
 )
 
 // Authenticate service for kubernetes Api Server
@@ -17,7 +18,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		var code int
 		var tokenStatus error
 
-		bodyString, err := ioutil.ReadAll(r.Body)
+		bodyString, err := io.ReadAll(r.Body)
 		if err != nil {
 			utils.Log.Error().Err(err)
 		}

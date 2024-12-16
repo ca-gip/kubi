@@ -1,14 +1,15 @@
 package main
 
 import (
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
-	"net/http"
-	"os"
-	"time"
 )
 
 func main() {
@@ -45,12 +46,10 @@ func main() {
 
 	timerKubiRefresh := time.NewTicker(10 * time.Minute)
 	go func() {
-		for {
-			select {
-			case t := <-timerKubiRefresh.C:
-				utils.Log.Info().Msgf("Refreshing Projects at %s", t.String())
-				services.RefreshK8SResources()
-			}
+		for t := range timerKubiRefresh.C {
+
+			utils.Log.Info().Msgf("Refreshing Projects at %s", t.String())
+			services.RefreshK8SResources()
 		}
 	}()
 

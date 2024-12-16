@@ -49,7 +49,7 @@ func GenerateResources() error {
 		return err
 	}
 	if len(groups) == 0 {
-		return errors.New("LDAP, no ldap groups found!")
+		return fmt.Errorf("no ldap groups found")
 	}
 	auths := GetUserNamespaces(groups)
 
@@ -87,17 +87,17 @@ func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhite
 		switch {
 		//we treat blacklisted projects as a priority, project will be deleted
 		case blackWhiteList.Blacklist[0] != "" && utils.Include(blackWhiteList.Blacklist, auth.Namespace()):
-			deletedProjects = append(deletedProjects,auth)
+			deletedProjects = append(deletedProjects, auth)
 			continue
 		// If whitelist is enabled, do not create project unless it's explictly mentioned
-		case utils.Config.Whitelist == true && utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
-			createdProjects = append(createdProjects,auth)
+		case utils.Config.Whitelist && utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
+			createdProjects = append(createdProjects, auth)
 		//project will be ignored if whitelist  is enabled and project not present on whitelisted projects
-		case utils.Config.Whitelist == true && !utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
-			ignoredProjects = append(ignoredProjects,auth)
+		case utils.Config.Whitelist && !utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
+			ignoredProjects = append(ignoredProjects, auth)
 		//project will be created if whitelist is disabled and no projects in blacklist
 		default:
-			createdProjects = append(createdProjects,auth)
+			createdProjects = append(createdProjects, auth)
 		}
 	}
 
@@ -212,12 +212,12 @@ func deleteProject(projectInfos *types.Project) {
 // GenerateRolebinding from tupple
 // If exists, nothing is done, only creating !
 func GenerateUserRoleBinding(namespace string, role string) {
-	kconfig, err := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role), err)
-	roleBinding("view", api, namespace, subjectView(), err)
+	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role))
+	roleBinding("view", api, namespace, subjectView())
 }
 
 func subjectView() []v1.Subject {
@@ -225,7 +225,7 @@ func subjectView() []v1.Subject {
 		{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "Group",
-			Name:     fmt.Sprintf("%s", utils.ApplicationViewer),
+			Name:     utils.ApplicationViewer,
 		},
 	}
 	return subjectView
@@ -252,8 +252,7 @@ func subjectAdmin(namespace string, role string) []v1.Subject {
 	return subjectAdmin
 }
 
-func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject, err error) {
-	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
+func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject) {
 
 	newRoleBinding := v1.RoleBinding{
 		RoleRef: v1.RoleRef{
@@ -273,25 +272,30 @@ func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace stri
 		},
 	}
 
+	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		_, err := api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		if err != nil {
+			utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
+			utils.Log.Error().Msg(err.Error())
+		}
+		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
-		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
-	} else {
-		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
-		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
+		return
 	}
-
+	_, err := api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
-		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
+		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
+		return
 	}
+	utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
+	utils.Log.Info().Msgf("rolebinding %v has been updated for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 }
 
 func GenerateAppRoleBinding(namespace string) {
-	kconfig, err := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
 	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingAppName, metav1.GetOptions{})
@@ -321,25 +325,30 @@ func GenerateAppRoleBinding(namespace string) {
 	}
 
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
-		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		_, err := api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		if err != nil {
+			utils.Log.Error().Msg(err.Error())
+			utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+			return
+		}
 		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-	} else {
-		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
-		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
+		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
+		return
 	}
 
+	_, err := api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+		return
 	}
-
+	utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
+	utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
 }
 
 func GenerateDefaultRoleBinding(namespace string) {
-	kconfig, err := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
 	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingDefaultName, metav1.GetOptions{})
@@ -369,26 +378,30 @@ func GenerateDefaultRoleBinding(namespace string) {
 	}
 
 	if errRB != nil {
-		_, err = api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		_, err := api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		if err != nil {
+			utils.Log.Error().Msg(err.Error())
+			utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+			return
+		}
 		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-	} else {
-		_, err = api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-		utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
-		utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
+		return
 	}
-
+	_, err := api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+		return
 	}
-
+	utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
+	utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
 }
 
 // Generate
 func GenerateAppServiceAccount(namespace string) {
-	kconfig, err := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
+	kconfig, _ := rest.InClusterConfig()
+	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
 	_, errRB := api.ServiceAccounts(namespace).Get(context.TODO(), utils.KubiServiceAccountAppName, metav1.GetOptions{})
@@ -406,16 +419,17 @@ func GenerateAppServiceAccount(namespace string) {
 	}
 
 	if errRB != nil {
-		_, err = api.ServiceAccounts(namespace).Create(context.TODO(), &newServiceAccount, metav1.CreateOptions{})
+		_, err := api.ServiceAccounts(namespace).Create(context.TODO(), &newServiceAccount, metav1.CreateOptions{})
+		if err != nil {
+			utils.Log.Error().Msg(err.Error())
+			utils.ServiceAccountCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
+			return
+		}
 		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
 		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-	} else if err != nil {
-		utils.Log.Error().Msg(err.Error())
-		utils.ServiceAccountCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
-	} else {
-		utils.ServiceAccountCreation.WithLabelValues("ok", namespace, utils.KubiServiceAccountAppName).Inc()
+		return
 	}
-
+	utils.ServiceAccountCreation.WithLabelValues("ok", namespace, utils.KubiServiceAccountAppName).Inc()
 }
 
 // generateNamespace from a name
