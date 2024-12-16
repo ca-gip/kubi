@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -68,11 +69,15 @@ func GetUserNamespace(group string) (*types.Project, error) {
 	project.Role = role
 	project.Source = group
 
-	isNamespaceValid, _ := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace())
-	isRoleValid := utils.Index(utils.WhitelistedRoles, project.Role) != -1
+	isNamespaceValid, err := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace())
+	if err != nil {
+		return nil, err
+	}
+	isInBlacklistedNamespace := slices.Contains(utils.BlacklistedNamespaces, project.Namespace())
+	isRoleValid := slices.Contains(utils.WhitelistedRoles, project.Role)
 
 	switch {
-	case utils.Index(utils.BlacklistedNamespaces, project.Namespace()) != -1:
+	case isInBlacklistedNamespace:
 		return nil, fmt.Errorf("the ldap group %v cannot be created, its namespace %v is protected through blacklist", group, project.Namespace())
 	case !isNamespaceValid:
 		return nil, fmt.Errorf("the ldap group %v cannot be created, its namespace %v is not dns1123 compliant", group, project.Namespace())

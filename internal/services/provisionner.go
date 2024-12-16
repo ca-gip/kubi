@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"time"
 
@@ -83,17 +84,19 @@ func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhite
 
 	var createdProjects, deletedProjects, ignoredProjects []*types.Project
 	for _, auth := range context {
+		isBlacklisted := slices.Contains(blackWhiteList.Blacklist, auth.Namespace())
+		isWhitelisted := slices.Contains(blackWhiteList.Whitelist, auth.Namespace())
 
 		switch {
 		//we treat blacklisted projects as a priority, project will be deleted
-		case blackWhiteList.Blacklist[0] != "" && utils.Include(blackWhiteList.Blacklist, auth.Namespace()):
+		case blackWhiteList.Blacklist[0] != "" && isBlacklisted:
 			deletedProjects = append(deletedProjects, auth)
 			continue
 		// If whitelist is enabled, do not create project unless it's explictly mentioned
-		case utils.Config.Whitelist && utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
+		case utils.Config.Whitelist && isWhitelisted:
 			createdProjects = append(createdProjects, auth)
 		//project will be ignored if whitelist  is enabled and project not present on whitelisted projects
-		case utils.Config.Whitelist && !utils.Include(blackWhiteList.Whitelist, auth.Namespace()):
+		case utils.Config.Whitelist && !isWhitelisted:
 			ignoredProjects = append(ignoredProjects, auth)
 		//project will be created if whitelist is disabled and no projects in blacklist
 		default:
@@ -533,9 +536,17 @@ func GetPodSecurityStandardName(namespace string) string {
 // for deletion, it is automatically recreated
 // for create, just create it
 func WatchProjects() cache.Store {
-	kconfig, _ := rest.InClusterConfig()
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		return nil
+	}
 
-	v3, _ := versioned.NewForConfig(kconfig)
+	v3, err := versioned.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		return nil
+	}
 
 	watchlist := cache.NewFilteredListWatchFromClient(v3.CagipV1().RESTClient(), "projects", metav1.NamespaceAll, utils.DefaultWatchOptionModifier)
 	resyncPeriod := 30 * time.Minute
@@ -609,9 +620,17 @@ func projectDelete(obj interface{}) {
 // for deletion, it is automatically recreated
 // for create, just create it
 func WatchNetPolConfig() cache.Store {
-	kconfig, _ := rest.InClusterConfig()
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		return nil
+	}
 
-	v3, _ := versioned.NewForConfig(kconfig)
+	v3, err := versioned.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		return nil
+	}
 
 	watchlist := cache.NewFilteredListWatchFromClient(v3.CagipV1().RESTClient(), "networkpolicyconfigs", metav1.NamespaceAll, utils.DefaultWatchOptionModifier)
 
@@ -632,8 +651,18 @@ func networkPolicyConfigUpdate(old interface{}, new interface{}) {
 	netpolconfig := new.(*v12.NetworkPolicyConfig)
 	utils.Log.Info().Msgf("Operator: the network config %v has changed, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
 
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, _ := versioned.NewForConfig(kconfig)
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		return
+	}
+
+	clientSet, err := versioned.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		return
+	}
+
 	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
@@ -654,10 +683,19 @@ func networkPolicyConfigCreated(obj interface{}) {
 	netpolconfig := obj.(*v12.NetworkPolicyConfig)
 	utils.Log.Info().Msgf("Operator: the network config %v has been created, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
 
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, _ := versioned.NewForConfig(kconfig)
-	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		return
+	}
 
+	clientSet, err := versioned.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		return
+	}
+
+	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return
@@ -680,20 +718,32 @@ func networkPolicyConfigDelete(obj interface{}) {
 // If exists, the existing netpol is updated else it is created
 func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPolicyConfig) {
 
-	kconfig, _ := rest.InClusterConfig()
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		return
+	}
 
 	if networkPolicyConfig == nil {
-		extendedClientSet, _ := versioned.NewForConfig(kconfig)
+		extendedClientSet, err := versioned.NewForConfig(kconfig)
+		if err != nil {
+			utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes extended clientset, %v", err.Error()))
+			return
+		}
 		existingNetworkPolicyConfig, err := extendedClientSet.CagipV1().NetworkPolicyConfigs().Get(context.TODO(), utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
-		networkPolicyConfig = existingNetworkPolicyConfig
 		if err != nil {
 			utils.Log.Info().Msgf("Operator: No default network policy config \"%v\" found, cannot create/update namespace security !, Error: %v", utils.KubiDefaultNetworkPolicyName, err.Error())
 			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
 		}
-
+		networkPolicyConfig = existingNetworkPolicyConfig
 	}
 
-	clientSet, _ := kubernetes.NewForConfig(kconfig)
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		return
+	}
+
 	api := clientSet.NetworkingV1()
 	_, errNetpol := api.NetworkPolicies(namespace).Get(context.TODO(), utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
 

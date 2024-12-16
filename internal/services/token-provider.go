@@ -32,9 +32,15 @@ type TokenIssuer struct {
 // Only user with transversal access can generate extra tokens
 func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, scopes string) (*string, error) {
 
-	duration, _ := time.ParseDuration(issuer.ExtraTokenDuration)
+	duration, err := time.ParseDuration(issuer.ExtraTokenDuration)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
+	}
 	expiration := time.Now().Add(duration)
-	url, _ := url.Parse(issuer.PublicApiServerURL)
+	url, err := url.Parse(issuer.PublicApiServerURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse url %s", issuer.PublicApiServerURL)
+	}
 
 	if !(hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
 		utils.Log.Info().Msgf("The user %s don't have transversal access ( admin: %v, application: %v, ops: %v ).", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
@@ -70,10 +76,16 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 
 	var auths = GetUserNamespaces(groups)
 
-	duration, _ := time.ParseDuration(issuer.TokenDuration)
+	duration, err := time.ParseDuration(issuer.TokenDuration)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
+	}
 	expirationTime := time.Now().Add(duration)
 
-	url, _ := url.Parse(issuer.PublicApiServerURL)
+	url, err := url.Parse(issuer.PublicApiServerURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse url %s", issuer.PublicApiServerURL)
+	}
 
 	if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
 		utils.Log.Info().Msgf("The user %s will have transversal access ( admin: %v, application: %v, ops: %v )", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
@@ -83,7 +95,10 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	if hasServiceAccess {
 		utils.Log.Info().Msgf("The user %s will have transversal service access ( service: %v )", username, hasServiceAccess)
 		auths = []*types.Project{}
-		duration, _ = time.ParseDuration(issuer.ExtraTokenDuration)
+		duration, err = time.ParseDuration(issuer.ExtraTokenDuration)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
+		}
 		expirationTime = time.Now().Add(duration)
 		utils.Log.Info().Msgf("A specific token with duration %v would be issued.", duration.String())
 	}
@@ -283,7 +298,10 @@ func (issuer *TokenIssuer) basicAuth(r *http.Request) (*types.Auth, error) {
 	if len(auth) != 2 || auth[0] != "Basic" {
 		return nil, fmt.Errorf("invalid auth")
 	}
-	payload, _ := base64.StdEncoding.DecodeString(auth[1])
+	payload, err := base64.StdEncoding.DecodeString(auth[1])
+	if err != nil {
+		return nil, fmt.Errorf("not valid base64 string %v - %w", auth[1], err)
+	}
 	pair := strings.SplitN(string(payload), ":", 2)
 	return &types.Auth{Username: pair[0], Password: pair[1]}, nil
 }
