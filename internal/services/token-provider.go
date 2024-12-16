@@ -75,16 +75,30 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (*string, error) {
 
 	var auths = GetUserNamespaces(groups)
+	claims, err := generateUserClaims(auths, groups, username, email, hasAdminAccess, hasApplicationAccess, hasOpsAccess, hasViewerAccess, hasServiceAccess, issuer)
+	if err != nil {
+		return nil, err
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
+	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
+	if err != nil {
+		return nil, err
+	}
+	return &signedToken, err
+}
 
+func generateUserClaims(auths []*types.Project, groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool, issuer *TokenIssuer) (types.AuthJWTClaims, error) {
+
+	var emptyClaims types.AuthJWTClaims
 	duration, err := time.ParseDuration(issuer.TokenDuration)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
+		return emptyClaims, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
 	}
 	expirationTime := time.Now().Add(duration)
 
 	url, err := url.Parse(issuer.PublicApiServerURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse url %s", issuer.PublicApiServerURL)
+		return emptyClaims, fmt.Errorf("unable to parse url %s", issuer.PublicApiServerURL)
 	}
 
 	if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
@@ -97,7 +111,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		auths = []*types.Project{}
 		duration, err = time.ParseDuration(issuer.ExtraTokenDuration)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
+			return emptyClaims, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
 		}
 		expirationTime = time.Now().Add(duration)
 		utils.Log.Info().Msgf("A specific token with duration %v would be issued.", duration.String())
@@ -107,6 +121,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 	claims := types.AuthJWTClaims{
 		Auths:             auths,
 		User:              username,
+		Groups:            groups,
 		Contact:           email,
 		AdminAccess:       hasAdminAccess,
 		ApplicationAccess: hasApplicationAccess,
@@ -123,12 +138,7 @@ func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, e
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
-	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
-	if err != nil {
-		return nil, err
-	}
-	return &signedToken, err
+	return claims, err
 }
 
 func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*string, error) {
