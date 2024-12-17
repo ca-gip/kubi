@@ -1,3 +1,4 @@
+version: 2
 project_name: kubi
 before:
   hooks:
@@ -105,10 +106,10 @@ dockers:
     - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-webhook:{{.ShortCommit}}-amd64"
 
 snapshot:
-  name_template: "{{ .ShortCommit }}"
+  version_template: "{{ .ShortCommit }}"
 
 release:
   disable: true
 
 changelog:
-  skip: true
+  disable: true
