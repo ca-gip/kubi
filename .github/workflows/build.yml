@@ -34,7 +34,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           distribution: goreleaser
-          version: latest
+          version: v1.24.0
           args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,7 +51,7 @@ jobs:
         if: github.event_name != 'pull_request'
         with:
           distribution: goreleaser
-          version: latest
+          version: v1.24.0
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
