@@ -2,21 +2,22 @@ package services_test
 
 import (
 	"crypto/ecdsa"
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"strings"
-	"testing"
 )
 
 func TestECDSA(t *testing.T) {
-	ecdsaPem, err := ioutil.ReadFile("./../../test/ecdsa-key.pem")
+	ecdsaPem, err := os.ReadFile("./../../test/ecdsa-key.pem")
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to read ECDSA private key: %v", err)
 	}
-	ecdsaPubPem, err := ioutil.ReadFile("./../../test/ecdsa-pub.pem")
+	ecdsaPubPem, err := os.ReadFile("./../../test/ecdsa-pub.pem")
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to read ECDSA public key: %v", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -35,16 +34,19 @@ func MakeConfig() (*types.Config, error) {
 		return nil, rest.ErrNotInCluster
 	}
 
-	kubeToken, errToken := ioutil.ReadFile(TokenFile)
+	kubeToken, errToken := os.ReadFile(TokenFile)
 	Check(errToken)
 
-	kubeCA, errCA := ioutil.ReadFile(TlsCaFile)
+	kubeCA, errCA := os.ReadFile(TlsCaFile)
 	Check(errCA)
 
 	caEncoded := base64.StdEncoding.EncodeToString(kubeCA)
 
 	// Get the SystemCertPool, continue with an empty pool on error
-	rootCAs, _ := x509.SystemCertPool()
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		log.Fatalf("Cannot retrieve system cert pool, exiting for security reason")
+	}
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
 	}
@@ -166,11 +168,15 @@ func MakeConfig() (*types.Config, error) {
 		BlackWhitelistNamespace:         getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
 	}
 
-	err := validation.ValidateStruct(config,
+	// TODO: Remove validation through ozzo-validation
+	err = validation.ValidateStruct(config,
 		validation.Field(&config.KubeToken, validation.Required),
 		validation.Field(&config.KubeCa, validation.Required, is.Base64),
 		validation.Field(&config.PublicApiServerURL, validation.Required, is.URL),
 	)
+	// TODO: Get rid of Check method
+	Check(err)
+
 	errLdap := validation.ValidateStruct(&ldapConfig,
 		validation.Field(&ldapConfig.UserBase, validation.Required, validation.Length(2, 200)),
 		validation.Field(&ldapConfig.GroupBase, validation.Required, validation.Length(2, 200)),
