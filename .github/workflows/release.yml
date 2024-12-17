@@ -1,29 +1,66 @@
-name: release
+name: Tag repo
 
 on:
   push:
     tags:
       - "*"
 
+env:
+  REGISTRY: docker.io
+
 permissions:
-  contents: write
+  contents: read
   
 jobs:
   release:
+    permissions:
+      id-token: write
+      contents: write
+      packages: write
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [webhook, api, operator]
+        arch: [amd64]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - run: git fetch --force --tags
+
+      - name: Find current sha version
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        id: sha
+
+      - name: Find current tag version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        id: tag
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+
+      - name: run tests to ensure it is still releasable
+        run: make test
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: v2.5.0
-          args: release --clean
+          args: release --snapshot --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ORG: ${{ github.repository_owner }}
+          ORG: ${{ github.REPOSITORY_OWNER }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push development image into dockerhub
+        run: |
+          docker tag ghcr.io/cagip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }} ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }}
+          docker push ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }}
+          docker tag ghcr.io/cagip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }} ca-gip/kubi-${{ matrix.component }}:${{ steps.tag.outputs.version }}
+          docker push ca-gip/kubi-${{ matrix.component }}:${{ steps.tag.outputs.version }}

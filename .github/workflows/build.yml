@@ -1,37 +1,36 @@
-name: build
+name: pr
 
 on:
   push:
-    branches:
-      - 'master'
-    tags:
-      - 'v*'
   pull_request:
-    branches:
-      - 'master'
+
+env:
+  REGISTRY: ghcr.io
 
 jobs:
-  release:
-    name: Create Build
+  pr-tests:
+    name: Build and test images
     runs-on: ubuntu-latest
     strategy:
       matrix:
         component: [webhook, api, operator]
+        arch: [amd64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: cagip/kubi-${{ matrix.component }}
+
+      - name: Find current tag version
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        id: tags
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+
       - name: run tests
         run: make test
+
       - uses: goreleaser/goreleaser-action@v6
-        if: github.event_name == 'pull_request'
         with:
           distribution: goreleaser
           version: v2.5.0
@@ -40,18 +39,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ORG: ${{ github.REPOSITORY_OWNER }}
 
-      - name: Login to DockerHub
+      - name: Login to container registry
+        # Pull requests are targetting ca-gip/kubi and should not push an image
+        # Only push images for the fork's repository
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: goreleaser/goreleaser-action@v6
+      - name: Push development image into ghcr (packages)
+        # Pull requests are targetting ca-gip/kubi and should not push an image
+        # Only push images for the fork's repository
         if: github.event_name != 'pull_request'
-        with:
-          distribution: goreleaser
-          version: v2.5.0
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ github.REPOSITORY_OWNER }}/kubi-${{ matrix.component }}:${{ steps.tags.outputs.sha_short }}-${{ matrix.arch }}
