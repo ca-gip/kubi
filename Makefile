@@ -1,37 +1,33 @@
-.PHONY: clean dependecy test test-only codegen dependency build build-operator build-api build-webhook
+.PHONY: clean test deps build build-operator build-auth bootstrap-tools
 
-REPO= github.com/ca-gip/kubi
-IMAGE= kubi
-DOCKER_REPO= cagip
+HACKDIR=./hack/bin
+GORELEASER_CMD=$(HACKDIR)/goreleaser
+ORG ?= ca-gip
+VERSION=$(shell git rev-parse --short HEAD)
+
+$(HACKDIR):
+	mkdir -p $(HACKDIR)
+
+bootstrap-tools: $(HACKDIR)
+	command -v $(HACKDIR)/goreleaser || VERSION=v1.24.0 TMPDIR=$(HACKDIR) bash hack/goreleaser-install.sh
+	command -v staticcheck || go install honnef.co/go/tools/cmd/staticcheck@latest
+	chmod +x $(HACKDIR)/goreleaser
 
 clean:
 	rm -rf vendor build/*
 
-dependency:
+build: bootstrap-tools deps
+	ORG=${ORG} $(GORELEASER_CMD) build --clean --snapshot
+
+deps:
+	go mod tidy
 	go mod vendor
-
-codegen: dependency
 	bash hack/update-codegen.sh
+	go mod tidy
 
-test: codegen
-	 GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils
+test: bootstrap-tools
+	go test ./...
+	staticcheck ./...
 
-test-only:
-	@echo "-> Test only kubi operator binary"
-	GOARCH=amd64 go test ./internal/services ./pkg/types ./internal/utils
-
-build-operator: test
-	@echo "-> Building kubi operator"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-operator $(GOPATH)/src/$(REPO)/cmd/operator/main.go
-
-build-api: test
-	@echo "-> Building kubi api"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-api $(GOPATH)/src/$(REPO)/cmd/api/main.go
-
-build-webhook: test
-	@echo "-> Building kubi authorization webhook"
-	CGO_ENABLED=0 GOARCH=amd64 go build -a -ldflags '-extldflags "-static"' -v -o ./build/kubi-webhook $(GOPATH)/src/$(REPO)/cmd/authorization-webhook/main.go
-
-build: build-webhook build-operator build-api
-
-
+image:
+	ORG=${ORG} $(GORELEASER_CMD) release --clean --snapshot

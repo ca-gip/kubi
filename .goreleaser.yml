@@ -1,0 +1,114 @@
+project_name: kubi
+before:
+  hooks:
+    - make clean
+    - make deps
+builds:
+  - main: ./cmd/api/main.go
+    id: api
+    binary: kubi-api
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+    ldflags:
+      - -s -w -X main.version={{ if .IsSnapshot }}{{ .ShortCommit }}{{ else }}{{ .Version }}{{ end }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+
+  - main: ./cmd/authorization-webhook/main.go
+    id: webhook
+    binary: kubi-webhook
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+    ldflags:
+      - -s -w -X main.version={{ if .IsSnapshot }}{{ .ShortCommit }}{{ else }}{{ .Version }}{{ end }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+
+  - main: ./cmd/operator/main.go
+    id: operator
+    binary: kubi-operator
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+    ldflags:
+      - -s -w -X main.version={{ if .IsSnapshot }}{{ .ShortCommit }}{{ else }}{{ .Version }}{{ end }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+
+dockers:
+  - id: docker-operator
+    ids:
+      - operator
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--build-arg=BINARYNAME=operator"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.source=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    image_templates:
+    - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-operator:{{.ShortCommit}}-amd64"
+
+  - id: docker-api
+    ids:
+      - api
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--build-arg=BINARYNAME=api"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.source=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    image_templates:
+    - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-api:{{.ShortCommit}}-amd64"
+
+  - id: docker-webhook
+    ids:
+      - webhook
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--build-arg=BINARYNAME=webhook"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.source=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    image_templates:
+    - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-webhook:{{.ShortCommit}}-amd64"
+
+snapshot:
+  name_template: "{{ .ShortCommit }}"
+
+release:
+  disable: true
+
+changelog:
+  skip: true
