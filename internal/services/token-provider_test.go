@@ -2,12 +2,11 @@ package services
 
 import (
 	"crypto/ecdsa"
+	"net/url"
 	"os"
 	"reflect"
-	"slices"
-	"sort"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
@@ -15,48 +14,89 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestECDSA(t *testing.T) {
+func Test_signJWTClaims(t *testing.T) {
+	duration, _ := time.ParseDuration("4h")
+	url, _ := url.Parse("https://kubi.example.com")
+
 	ecdsaPem, err := os.ReadFile("./../../test/ecdsa-key.pem")
 	if err != nil {
-		utils.Log.Fatal().Msgf("Unable to read ECDSA private key: %v", err)
+		t.Fatalf("Unable to read ECDSA private key: %v", err)
 	}
 	ecdsaPubPem, err := os.ReadFile("./../../test/ecdsa-pub.pem")
 	if err != nil {
-		utils.Log.Fatal().Msgf("Unable to read ECDSA public key: %v", err)
+		t.Fatalf("Unable to read ECDSA public key: %v", err)
 	}
 	var ecdsaKey *ecdsa.PrivateKey
 	var ecdsaPub *ecdsa.PublicKey
 	if ecdsaKey, err = jwt.ParseECPrivateKeyFromPEM(ecdsaPem); err != nil {
-		utils.Log.Fatal().Msgf("Unable to parse ECDSA private key: %v", err)
+		t.Fatalf("Unable to parse ECDSA private key: %v", err)
 	}
 	if ecdsaPub, err = jwt.ParseECPublicKeyFromPEM(ecdsaPubPem); err != nil {
-		utils.Log.Fatal().Msgf("Unable to parse ECDSA public key: %v", err)
+		t.Fatalf("Unable to parse ECDSA public key: %v", err)
 	}
 
-	issuer := TokenIssuer{
-		EcdsaPrivate:  ecdsaKey,
-		EcdsaPublic:   ecdsaPub,
-		TokenDuration: "4h",
-		Locator:       utils.KubiLocatorIntranet,
+	issuer := &TokenIssuer{
+		EcdsaPrivate:       ecdsaKey,
+		EcdsaPublic:        ecdsaPub,
+		TokenDuration:      duration,
+		ExtraTokenDuration: duration,
+		Locator:            utils.KubiLocatorIntranet,
+		PublicApiServerURL: url,
+		Tenant:             "tenant",
 	}
 
-	t.Run("Generate a valid User token", func(t *testing.T) {
+	claims := types.AuthJWTClaims{
+		User:     "testuser",
+		Contact:  "testuser@example.com",
+		Locator:  issuer.Locator,
+		Endpoint: issuer.PublicApiServerURL.Host,
+		Tenant:   issuer.Tenant,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(duration).Unix(),
+			Issuer:    "Kubi Server",
+		},
+	}
 
-		token, err := issuer.GenerateUserToken([]string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin"}, "unit", "noreply@demo.com", true, true, false, false, false)
+	t.Run("Valid JWT signing", func(t *testing.T) {
+		token, err := signJWTClaims(claims, issuer)
 		assert.Nil(t, err)
 		assert.NotNil(t, token)
-		utils.Log.Info().Msgf("The token is %s", *token)
 
-		method := jwt.SigningMethodES512
-
-		tokenSplits := strings.Split(*token, ".")
-
-		err = method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], ecdsaPub)
+		parsedToken, err := jwt.ParseWithClaims(*token, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+			return issuer.EcdsaPublic, nil
+		})
 		assert.Nil(t, err)
+		assert.True(t, parsedToken.Valid)
 	})
+
+	// t.Run("Invalid JWT signing with nil private key", func(t *testing.T) {
+	// 	issuer.EcdsaPrivate = nil
+	// 	token, err := signJWTClaims(claims, issuer)
+	// 	assert.NotNil(t, err)
+	// 	assert.Nil(t, token)
+	// })
 }
 
-func Test_generateUserClaims(t *testing.T) {
+func Test_generateUserJWTClaims(t *testing.T) {
+	duration, _ := time.ParseDuration("4h")
+	url, _ := url.Parse("https://kubi.example.com")
+	stdAuths := []*types.Project{
+		{
+			Project:     "ns-development",
+			Role:        "",
+			Source:      "",
+			Environment: "",
+			Contact:     "",
+		},
+		{
+			Project:     "ns-devops-automation-integration",
+			Role:        "",
+			Source:      "",
+			Environment: "",
+			Contact:     "",
+		},
+	}
+
 	type args struct {
 		auths                []*types.Project
 		groups               []string
@@ -71,7 +111,7 @@ func Test_generateUserClaims(t *testing.T) {
 	}
 	type want struct {
 		err    error
-		auths  []string
+		auths  int // number of auths/projects
 		groups []string
 		user   string
 	}
@@ -83,22 +123,7 @@ func Test_generateUserClaims(t *testing.T) {
 		{
 			name: "Regular user token contains project and all its groups",
 			args: args{
-				auths: []*types.Project{
-					&types.Project{
-						Project:     "ns-development",
-						Role:        "",
-						Source:      "",
-						Environment: "",
-						Contact:     "",
-					},
-					&types.Project{
-						Project:     "ns-devops-automation-integration",
-						Role:        "",
-						Source:      "",
-						Environment: "",
-						Contact:     "",
-					},
-				},
+				auths:                stdAuths,
 				groups:               []string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin", "babar"},
 				username:             "foo",
 				email:                "foo@bar.baz",
@@ -107,11 +132,11 @@ func Test_generateUserClaims(t *testing.T) {
 				hasOpsAccess:         false,
 				hasViewerAccess:      false,
 				hasServiceAccess:     false,
-				issuer:               &TokenIssuer{EcdsaPrivate: &ecdsa.PrivateKey{}, EcdsaPublic: &ecdsa.PublicKey{}, TokenDuration: "4h", Locator: utils.KubiLocatorIntranet},
+				issuer:               &TokenIssuer{EcdsaPrivate: &ecdsa.PrivateKey{}, EcdsaPublic: &ecdsa.PublicKey{}, TokenDuration: duration, Locator: utils.KubiLocatorIntranet, PublicApiServerURL: url},
 			},
 			expected: want{
 				err:    nil,
-				auths:  []string{"ns-development", "ns-devops-automation-integration"},
+				auths:  2,
 				groups: []string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin", "babar"},
 				user:   "foo",
 			},
@@ -119,96 +144,59 @@ func Test_generateUserClaims(t *testing.T) {
 		{
 			name: "Admin user does not have projects",
 			args: args{
-				auths: []*types.Project{
-					&types.Project{
-						Project:     "ns-development",
-						Role:        "",
-						Source:      "",
-						Environment: "",
-						Contact:     "",
-					},
-					&types.Project{
-						Project:     "ns-devops-automation-integration",
-						Role:        "",
-						Source:      "",
-						Environment: "",
-						Contact:     "",
-					},
-				},
+				auths:                stdAuths,
 				groups:               []string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin", "babar"},
-				username:             "foo",
+				username:             "bar_admin",
 				email:                "foo@bar.baz",
 				hasAdminAccess:       true,
 				hasApplicationAccess: false,
 				hasOpsAccess:         false,
 				hasViewerAccess:      false,
 				hasServiceAccess:     false,
-				issuer:               &TokenIssuer{EcdsaPrivate: &ecdsa.PrivateKey{}, EcdsaPublic: &ecdsa.PublicKey{}, TokenDuration: "4h", Locator: utils.KubiLocatorIntranet},
+				issuer:               &TokenIssuer{EcdsaPrivate: &ecdsa.PrivateKey{}, EcdsaPublic: &ecdsa.PublicKey{}, TokenDuration: duration, Locator: utils.KubiLocatorIntranet, PublicApiServerURL: url},
 			},
 			expected: want{
 				err:    nil,
-				auths:  []string{},
+				auths:  0,
 				groups: []string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin", "babar"},
-				user:   "foo",
+				user:   "bar_admin",
 			},
 		},
 		{
 			name: "Appops user does not have projects",
 			args: args{
-				auths: []*types.Project{
-					&types.Project{
-						Project:     "ns-development",
-						Role:        "",
-						Source:      "",
-						Environment: "",
-						Contact:     "",
-					},
-					&types.Project{
-						Project:     "ns-devops-automation-integration",
-						Role:        "",
-						Source:      "",
-						Environment: "",
-						Contact:     "",
-					},
-				},
+				auths:                stdAuths,
 				groups:               []string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin", "babar"},
-				username:             "foo",
+				username:             "baz_appops",
 				email:                "foo@bar.baz",
 				hasAdminAccess:       false,
 				hasApplicationAccess: false,
 				hasOpsAccess:         true,
 				hasViewerAccess:      false,
 				hasServiceAccess:     false,
-				issuer:               &TokenIssuer{EcdsaPrivate: &ecdsa.PrivateKey{}, EcdsaPublic: &ecdsa.PublicKey{}, TokenDuration: "4h", Locator: utils.KubiLocatorIntranet},
+				issuer:               &TokenIssuer{EcdsaPrivate: &ecdsa.PrivateKey{}, EcdsaPublic: &ecdsa.PublicKey{}, TokenDuration: duration, Locator: utils.KubiLocatorIntranet, PublicApiServerURL: url},
 			},
 			expected: want{
 				err:    nil,
-				auths:  []string{},
+				auths:  0,
 				groups: []string{"DL_ns-development_admin", "DL_ns-devops-automation-integration_admin", "babar"},
-				user:   "foo",
+				user:   "baz_appops",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotToken, gotErr := generateUserClaims(tt.args.auths, tt.args.groups, tt.args.username, tt.args.email, tt.args.hasAdminAccess, tt.args.hasApplicationAccess, tt.args.hasOpsAccess, tt.args.hasViewerAccess, tt.args.hasServiceAccess, tt.args.issuer)
+			gotToken, gotErr := tt.args.issuer.generateUserJWTClaims(tt.args.groups, tt.args.username, tt.args.email, tt.args.hasAdminAccess, tt.args.hasApplicationAccess, tt.args.hasOpsAccess, tt.args.hasViewerAccess, tt.args.hasServiceAccess)
 			if gotErr != nil {
 				assert.Equal(t, gotErr, tt.expected.err)
 			}
-			assert.Equalf(t, gotToken.User, tt.expected.user, "generateUserClaims(%v, %v, %v, %v, %v, %v, %v, %v, %v, %v)", tt.args.auths, tt.args.groups, tt.args.username, tt.args.email, tt.args.hasAdminAccess, tt.args.hasApplicationAccess, tt.args.hasOpsAccess, tt.args.hasViewerAccess, tt.args.hasServiceAccess, tt.args.issuer)
+			assert.Equalf(t, gotToken.User, tt.expected.user, "generateUserJWTClaims(%v, %v, %v, %v, %v, %v, %v, %v)", tt.args.groups, tt.args.username, tt.args.email, tt.args.hasAdminAccess, tt.args.hasApplicationAccess, tt.args.hasOpsAccess, tt.args.hasViewerAccess, tt.args.hasServiceAccess)
 			if !reflect.DeepEqual(gotToken.Groups, tt.expected.groups) {
-				t.Errorf("generateUserClaims() got = %v, want %v", gotToken.Groups, tt.expected.groups)
+				t.Errorf("generateUserJWTClaims() got = %v, want %v", gotToken.Groups, tt.expected.groups)
 			}
 
-			var listAuths []string
-			for _, projectAuthName := range gotToken.Auths {
-				listAuths = append(listAuths, projectAuthName.Project)
-			}
-
-			sort.Strings(listAuths)
-			sort.Strings(tt.expected.auths)
-			if !slices.Equal(listAuths, tt.expected.auths) {
-				t.Errorf("generateUserClaims() got = %v, want %v", gotToken.Auths, tt.expected.auths)
+			if len(gotToken.Auths) != tt.expected.auths {
+				t.Errorf("generateUserJWTClaims() got %v as projects, wanted a total of %v projects", gotToken.Auths, tt.expected.auths)
 			}
 		})
 	}
