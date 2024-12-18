@@ -20,34 +20,55 @@ import (
 type TokenIssuer struct {
 	EcdsaPrivate       *ecdsa.PrivateKey
 	EcdsaPublic        *ecdsa.PublicKey
-	TokenDuration      string
-	ExtraTokenDuration string
+	TokenDuration      time.Duration
+	ExtraTokenDuration time.Duration
 	Locator            string
-	PublicApiServerURL string
+	PublicApiServerURL *url.URL
 	Tenant             string
 }
 
+func NewTokenIssuer(privateKey []byte, publicKey []byte, tokenDuration string, extraTokenDuration string, locator string, publicApiServerURL string, tenant string) (*TokenIssuer, error) {
+	duration, err := time.ParseDuration(tokenDuration)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse duration %s", tokenDuration)
+	}
+
+	extraDuration, err := time.ParseDuration(extraTokenDuration)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse extra Token duration %s", extraTokenDuration)
+	}
+	apiURL, err := url.Parse(publicApiServerURL)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse url %s", publicApiServerURL)
+	}
+
+	var ecdsaKey *ecdsa.PrivateKey
+	var ecdsaPub *ecdsa.PublicKey
+	if ecdsaKey, err = jwt.ParseECPrivateKeyFromPEM(privateKey); err != nil {
+		return nil, fmt.Errorf("unable to parse ECDSA private key: %v", err)
+	}
+	if ecdsaPub, err = jwt.ParseECPublicKeyFromPEM(publicKey); err != nil {
+		return nil, fmt.Errorf("unable to parse ECDSA public key: %v", err)
+	}
+
+	return &TokenIssuer{
+		EcdsaPrivate:       ecdsaKey,
+		EcdsaPublic:        ecdsaPub,
+		TokenDuration:      duration,
+		ExtraTokenDuration: extraDuration,
+		Locator:            locator,
+		PublicApiServerURL: apiURL,
+		Tenant:             tenant,
+	}, nil
+}
+
 // Generate an service token from a user account
-// The semantic of this token should be hold by the target backend, ex: service api, promotion api...
-// Only user with transversal access can generate extra tokens
-func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, scopes string) (*string, error) {
+// The semantic of this token is held by the target backend, ex: service api, promotion api...
+// Only users with "transverse" access can generate extra tokens
+func (issuer *TokenIssuer) generateServiceJWTClaims(username string, email string, scopes string) (types.AuthJWTClaims, error) {
 
-	duration, err := time.ParseDuration(issuer.ExtraTokenDuration)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
-	}
-	expiration := time.Now().Add(duration)
-	url, err := url.Parse(issuer.PublicApiServerURL)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse url %s", issuer.PublicApiServerURL)
-	}
-
-	if !(hasAdminAccess || hasApplicationAccess || hasOpsAccess) {
-		utils.Log.Info().Msgf("The user %s don't have transversal access ( admin: %v, application: %v, ops: %v ).", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
-		return nil, nil
-	} else {
-		utils.Log.Info().Msgf("Generating extra token with scope %s ", scopes)
-	}
+	expiration := time.Now().Add(issuer.ExtraTokenDuration)
+	utils.Log.Info().Msgf("Generating extra token with scope %s ", scopes)
 
 	// Create the Claims
 	claims := types.AuthJWTClaims{
@@ -55,7 +76,7 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 		User:     username,
 		Contact:  email,
 		Locator:  issuer.Locator,
-		Endpoint: url.Host,
+		Endpoint: issuer.PublicApiServerURL.Host,
 		Tenant:   issuer.Tenant,
 		Scopes:   scopes,
 		StandardClaims: jwt.StandardClaims{
@@ -64,57 +85,27 @@ func (issuer *TokenIssuer) GenerateExtraToken(username string, email string, has
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
-	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
-	if err != nil {
-		return nil, err
-	}
-	return &signedToken, err
+	return claims, nil
 }
 
-func (issuer *TokenIssuer) GenerateUserToken(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (*string, error) {
+// Generate a user token from a user account
+func (issuer *TokenIssuer) generateUserJWTClaims(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (types.AuthJWTClaims, error) {
 
-	var auths = GetUserNamespaces(groups)
-	claims, err := generateUserClaims(auths, groups, username, email, hasAdminAccess, hasApplicationAccess, hasOpsAccess, hasViewerAccess, hasServiceAccess, issuer)
-	if err != nil {
-		return nil, err
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
-	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
-	if err != nil {
-		return nil, err
-	}
-	return &signedToken, err
-}
-
-func generateUserClaims(auths []*types.Project, groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool, issuer *TokenIssuer) (types.AuthJWTClaims, error) {
-
-	var emptyClaims types.AuthJWTClaims
-	duration, err := time.ParseDuration(issuer.TokenDuration)
-	if err != nil {
-		return emptyClaims, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
-	}
-	expirationTime := time.Now().Add(duration)
-
-	url, err := url.Parse(issuer.PublicApiServerURL)
-	if err != nil {
-		return emptyClaims, fmt.Errorf("unable to parse url %s", issuer.PublicApiServerURL)
+	var auths = []*types.Project{}
+	if hasAdminAccess || hasApplicationAccess || hasOpsAccess || hasServiceAccess {
+		utils.Log.Info().Msgf("The user %s will have transversal access, removing all the projects (admin: %v, application: %v, ops: %v, service: %v)", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess, hasServiceAccess)
+	} else {
+		auths = GetUserNamespaces(groups)
+		utils.Log.Info().Msgf("The user %s will have access to the projects %v", username, auths)
 	}
 
-	if hasAdminAccess || hasApplicationAccess || hasOpsAccess {
-		utils.Log.Info().Msgf("The user %s will have transversal access ( admin: %v, application: %v, ops: %v )", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess)
-		auths = []*types.Project{}
-	}
+	var expirationTime time.Time
 
-	if hasServiceAccess {
-		utils.Log.Info().Msgf("The user %s will have transversal service access ( service: %v )", username, hasServiceAccess)
-		auths = []*types.Project{}
-		duration, err = time.ParseDuration(issuer.ExtraTokenDuration)
-		if err != nil {
-			return emptyClaims, fmt.Errorf("unable to parse duration %s", issuer.ExtraTokenDuration)
-		}
-		expirationTime = time.Now().Add(duration)
-		utils.Log.Info().Msgf("A specific token with duration %v would be issued.", duration.String())
+	switch hasServiceAccess {
+	case true:
+		expirationTime = time.Now().Add(issuer.ExtraTokenDuration)
+	default:
+		expirationTime = time.Now().Add(issuer.TokenDuration)
 	}
 
 	// Create the Claims
@@ -129,7 +120,7 @@ func generateUserClaims(auths []*types.Project, groups []string, username string
 		ServiceAccess:     hasServiceAccess,
 		ViewerAccess:      hasViewerAccess,
 		Locator:           issuer.Locator,
-		Endpoint:          url.Host,
+		Endpoint:          issuer.PublicApiServerURL.Host,
 		Tenant:            issuer.Tenant,
 
 		StandardClaims: jwt.StandardClaims{
@@ -138,7 +129,16 @@ func generateUserClaims(auths []*types.Project, groups []string, username string
 		},
 	}
 
-	return claims, err
+	return claims, nil
+}
+
+func signJWTClaims(claims types.AuthJWTClaims, issuer *TokenIssuer) (*string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
+	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
+	if err != nil {
+		return nil, err
+	}
+	return &signedToken, err
 }
 
 func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*string, error) {
@@ -149,21 +149,44 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 	}
 
 	groups, err := ldap.GetUserGroups(*userDN)
+	utils.Log.Info().Msgf("The user %s is part of the groups %v", auth.Username, groups)
 	if err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
+
+	isAdmin := ldap.HasAdminAccess(*userDN)
+	isApplication := ldap.HasApplicationAccess(*userDN)
+	isOps := ldap.HasOpsAccess(*userDN)
+	isViewer := ldap.HasViewerAccess(*userDN)
+	isService := ldap.HasServiceAccess(*userDN)
 
 	var token *string = nil
 	if len(scopes) > 0 {
-		token, err = issuer.GenerateExtraToken(auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), scopes)
+		if !(isAdmin || isApplication || isOps) {
+			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", auth.Username, isAdmin, isApplication, isOps)
+		}
+		claims, err := issuer.generateServiceJWTClaims(auth.Username, *mail, scopes)
+		if err != nil {
+			utils.TokenCounter.WithLabelValues("token_error").Inc()
+			return nil, fmt.Errorf("unable to generate the token %v", err)
+		}
+		token, err = signJWTClaims(claims, issuer)
+		if err != nil {
+			utils.TokenCounter.WithLabelValues("token_error").Inc()
+			return nil, fmt.Errorf("unable to sign the token %v", err)
+		}
 	} else {
-		token, err = issuer.GenerateUserToken(groups, auth.Username, *mail, ldap.HasAdminAccess(*userDN), ldap.HasApplicationAccess(*userDN), ldap.HasOpsAccess(*userDN), ldap.HasViewerAccess(*userDN), ldap.HasServiceAccess(*userDN))
-	}
-
-	if err != nil {
-		utils.TokenCounter.WithLabelValues("token_error").Inc()
-		return nil, err
+		claims, err := issuer.generateUserJWTClaims(groups, auth.Username, *mail, isAdmin, isApplication, isOps, isViewer, isService)
+		if err != nil {
+			utils.TokenCounter.WithLabelValues("token_error").Inc()
+			return nil, fmt.Errorf("unable to generate the token %v", err)
+		}
+		token, err = signJWTClaims(claims, issuer)
+		if err != nil {
+			utils.TokenCounter.WithLabelValues("token_error").Inc()
+			return nil, fmt.Errorf("unable to sign the token %v", err)
+		}
 	}
 
 	if token != nil {
