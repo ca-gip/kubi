@@ -1,13 +1,11 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"net/http"
 	"os"
 
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
@@ -31,23 +29,10 @@ func main() {
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to read ECDSA public key: %v", err)
 	}
-	var ecdsaKey *ecdsa.PrivateKey
-	var ecdsaPub *ecdsa.PublicKey
-	if ecdsaKey, err = jwt.ParseECPrivateKeyFromPEM(ecdsaPem); err != nil {
-		utils.Log.Fatal().Msgf("Unable to parse ECDSA private key: %v", err)
-	}
-	if ecdsaPub, err = jwt.ParseECPublicKeyFromPEM(ecdsaPubPem); err != nil {
-		utils.Log.Fatal().Msgf("Unable to parse ECDSA public key: %v", err)
-	}
 
-	tokenIssuer := &services.TokenIssuer{
-		EcdsaPrivate:       ecdsaKey,
-		EcdsaPublic:        ecdsaPub,
-		TokenDuration:      utils.Config.TokenLifeTime,
-		ExtraTokenDuration: utils.Config.ExtraTokenLifeTime,
-		Locator:            utils.Config.Locator,
-		PublicApiServerURL: utils.Config.PublicApiServerURL,
-		Tenant:             utils.Config.Tenant,
+	tokenIssuer, err := services.NewTokenIssuer(ecdsaPem, ecdsaPubPem, utils.Config.TokenLifeTime, utils.Config.ExtraTokenLifeTime, utils.Config.Locator, utils.Config.PublicApiServerURL, utils.Config.Tenant)
+	if err != nil {
+		utils.Log.Fatal().Msgf("Unable to create token issuer: %v", err)
 	}
 
 	router := mux.NewRouter()
