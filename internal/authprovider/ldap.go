@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ca-gip/kubi/internal/utils"
+	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/ldap.v2"
@@ -64,27 +65,39 @@ func GetAllGroups() ([]string, error) {
 
 // Authenticate a user through LDAP or LDS
 // return if bind was ok, the userDN for next usage, and error if occurred
-func AuthenticateUser(username string, password string) (*string, *string, error) {
+// TODO: Probably worth splitting this function to take the search domain as a parameter
+func AuthenticateUser(username string, password string) (types.User, error) {
 
 	if len(password) == 0 {
-		return nil, nil, errors.New("Empty password, you must give a password.")
+		return types.User{}, errors.New("Empty password, you must give a password.")
 	}
 
 	// Get User Distinguished Name for Standard User
 	userDN, mail, err := getUserDN(utils.Config.Ldap.UserBase, username)
 
 	if err == nil {
-		return &userDN, &mail, checkAuthenticate(userDN, password)
-	} else if len(utils.Config.Ldap.AdminUserBase) > 0 {
-		userDN, _, err := getUserDN(utils.Config.Ldap.AdminUserBase, username)
-		if err != nil {
-			return &userDN, &mail, err
-		}
-		return &userDN, &mail, checkAuthenticate(userDN, password)
-	} else {
-		utils.Log.Error().Msg(err.Error())
-		return nil, &mail, err
+		return types.User{
+			Username: username,
+			UserDN:   userDN,
+			Email:    mail,
+		}, checkAuthenticate(userDN, password)
 	}
+
+	if len(utils.Config.Ldap.AdminUserBase) <= 0 {
+		return types.User{}, fmt.Errorf("cannot find user %s in LDAP", username)
+	}
+
+	// Retry as admin
+	userDN, mail, err = getUserDN(utils.Config.Ldap.AdminUserBase, username)
+	if err != nil {
+		return types.User{}, fmt.Errorf("cannot find admin user %s in LDAP", username)
+	}
+	return types.User{
+		Username: username,
+		UserDN:   userDN,
+		Email:    mail,
+	}, checkAuthenticate(userDN, password)
+
 }
 
 func checkAuthenticate(userDN string, password string) error {
