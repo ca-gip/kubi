@@ -227,6 +227,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 // GenerateConfig generates a config in yaml, including JWT token
 // and cluster information. It can be directly used out of the box
 // by kubectl. It returns a well formatted yaml
+// TODO: Refactor to use the same code as GenerateJWT
 func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request) {
 
 	userContext := r.Context().Value(userContextKey)
@@ -255,6 +256,18 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	utils.Log.Info().Msgf("Granting token for user %v", user.Username)
 
 	// Create a DNS 1123 cluster name and user name
+	yml, err := generateKubeConfig(user, token)
+	if err != nil {
+		utils.Log.Error().Err(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(yml)
+}
+
+func generateKubeConfig(user types.User, token *string) ([]byte, error) {
 	clusterName := strings.TrimPrefix(utils.Config.PublicApiServerURL, "https://api.")
 	username := fmt.Sprintf("%s_%s", user.Username, clusterName)
 
@@ -288,12 +301,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	}
 
 	yml, err := yaml.Marshal(config)
-
-	utils.Log.Error().Err(err)
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "text/x-yaml; charset=utf-8")
-	w.Write(yml)
-
+	return yml, err
 }
 
 func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, error) {
