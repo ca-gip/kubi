@@ -19,6 +19,11 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 		// will be false.
 		username, password, ok := r.BasicAuth()
 		if ok {
+			if len(password) == 0 {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
 			user, err := ldap.AuthenticateUser(username, password)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
