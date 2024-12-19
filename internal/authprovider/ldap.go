@@ -63,41 +63,45 @@ func GetAllGroups() ([]string, error) {
 	return groups, nil
 }
 
+func getUser(base string, username string, password string) (types.User, error) {
+	userDN, mail, err := getUserDN(base, username)
+	if err != nil {
+		return types.User{}, fmt.Errorf("cannot find user %s in LDAP", username)
+	}
+
+	if err := checkAuthenticate(userDN, password); err != nil {
+		return types.User{}, fmt.Errorf("cannot authenticate user %s in LDAP", username)
+	}
+
+	return types.User{
+		Username: username,
+		UserDN:   userDN,
+		Email:    mail,
+	}, nil
+}
+
 // Authenticate a user through LDAP or LDS
 // return if bind was ok, the userDN for next usage, and error if occurred
-// TODO: Probably worth splitting this function to take the search domain as a parameter
 func AuthenticateUser(username string, password string) (types.User, error) {
 
-	if len(password) == 0 {
-		return types.User{}, errors.New("Empty password, you must give a password.")
-	}
-
 	// Get User Distinguished Name for Standard User
-	userDN, mail, err := getUserDN(utils.Config.Ldap.UserBase, username)
-
+	user, err := getUser(utils.Config.Ldap.UserBase, username, password)
 	if err == nil {
-		return types.User{
-			Username: username,
-			UserDN:   userDN,
-			Email:    mail,
-		}, checkAuthenticate(userDN, password)
+		return user, nil
 	}
 
+	// Now handling errors to get standard user, falling back to admin user, if
+	// config allows it
 	if len(utils.Config.Ldap.AdminUserBase) <= 0 {
 		return types.User{}, fmt.Errorf("cannot find user %s in LDAP", username)
 	}
 
 	// Retry as admin
-	userDN, mail, err = getUserDN(utils.Config.Ldap.AdminUserBase, username)
+	user, err = getUser(utils.Config.Ldap.AdminUserBase, username, password)
 	if err != nil {
 		return types.User{}, fmt.Errorf("cannot find admin user %s in LDAP", username)
 	}
-	return types.User{
-		Username: username,
-		UserDN:   userDN,
-		Email:    mail,
-	}, checkAuthenticate(userDN, password)
-
+	return user, nil
 }
 
 func checkAuthenticate(userDN string, password string) error {
