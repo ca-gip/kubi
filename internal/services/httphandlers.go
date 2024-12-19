@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	ldap "github.com/ca-gip/kubi/internal/authprovider"
-	"github.com/ca-gip/kubi/pkg/types"
 )
 
 type contextKey string
@@ -20,18 +19,12 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 		// will be false.
 		username, password, ok := r.BasicAuth()
 		if ok {
-			// TODO: Improve authenticateUser to return a boolean, and a type containing the user data.
-			// for that, use the user struct here below.
-			userDN, mail, err := ldap.AuthenticateUser(username, password)
+			user, err := ldap.AuthenticateUser(username, password)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			user := types.User{
-				Username: username,
-				UserDN:   *userDN,
-				Email:    *mail,
-			}
+
 			ctx := context.WithValue(r.Context(), userContextKey, user) // This is ugly, but at least it cleans up the code and matches the usual patterns.
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
