@@ -143,3 +143,9 @@ type BlackWhitelist struct {
 	Blacklist []string `json:"blacklist"`
 	Whitelist []string `json:"whitelist"`
 }
+
+type User struct {
+	Username string
+	UserDN   string
+	Email    string
+}

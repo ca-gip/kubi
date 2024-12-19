@@ -43,8 +43,8 @@ func main() {
 	})
 
 	router.HandleFunc("/ca", services.CA).Methods(http.MethodGet)
-	router.HandleFunc("/config", tokenIssuer.GenerateConfig).Methods(http.MethodGet)
-	router.HandleFunc("/token", tokenIssuer.GenerateJWT).Methods(http.MethodGet)
+	router.HandleFunc("/config", services.WithBasicAuth(tokenIssuer.GenerateConfig)).Methods(http.MethodGet)
+	router.HandleFunc("/token", services.WithBasicAuth(tokenIssuer.GenerateJWT)).Methods(http.MethodGet)
 	router.Handle("/metrics", promhttp.Handler())
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
