@@ -55,6 +55,8 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 				groups = append(groups, fmt.Sprintf("%s-%s", auth.Namespace(), auth.Role))
 			}
 
+			groups = append(groups, token.Groups...)
+
 			if token.AdminAccess {
 				groups = append(groups, utils.AdminGroup)
 			}
