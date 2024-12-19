@@ -296,14 +296,8 @@ func (issuer *TokenIssuer) VerifyToken(usertoken string) (*types.AuthJWTClaims, 
 	token, err := jwt.ParseWithClaims(usertoken, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return issuer.EcdsaPublic, nil
 	})
-
-	tokenSplits := strings.Split(usertoken, ".")
-	if len(tokenSplits) != 3 {
-		return nil, fmt.Errorf("the token %s is not a JWT token", usertoken)
-	}
-
 	if err != nil {
-		utils.Log.Info().Msgf("Bad token: %v. The public token part is %s", err.Error(), tokenSplits[1])
+		utils.Log.Info().Msgf("Bad token: %v", err.Error())
 		return nil, err
 	}
 
@@ -314,26 +308,3 @@ func (issuer *TokenIssuer) VerifyToken(usertoken string) (*types.AuthJWTClaims, 
 		return nil, err
 	}
 }
-
-// func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
-// 	method := jwt.SigningMethodES512
-// 	tokenSplits := strings.Split(usertoken, ".")
-// 	if len(tokenSplits) != 3 {
-// 		return fmt.Errorf("the token %s is not a JWT token", usertoken)
-// 	}
-// 	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
-// }
-
-// func (issuer *TokenIssuer) basicAuth(r *http.Request) (*types.Auth, error) {
-// 	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-
-// 	if len(auth) != 2 || auth[0] != "Basic" {
-// 		return nil, fmt.Errorf("invalid auth")
-// 	}
-// 	payload, err := base64.StdEncoding.DecodeString(auth[1])
-// 	if err != nil {
-// 		return nil, fmt.Errorf("not valid base64 string %v - %w", auth[1], err)
-// 	}
-// 	pair := strings.SplitN(string(payload), ":", 2)
-// 	return &types.Auth{Username: pair[0], Password: pair[1]}, nil
-// }
