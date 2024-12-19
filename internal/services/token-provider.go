@@ -2,7 +2,6 @@ package services
 
 import (
 	"crypto/ecdsa"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -144,32 +143,28 @@ func (issuer *TokenIssuer) signJWTClaims(claims types.AuthJWTClaims) (*string, e
 	return &signedToken, err
 }
 
-func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*string, error) {
+func (issuer *TokenIssuer) baseGenerateToken(user types.User, scopes string) (*string, error) {
 
-	userDN, mail, err := ldap.AuthenticateUser(auth.Username, auth.Password)
-	if err != nil {
-		return nil, err
-	}
-
-	groups, err := ldap.GetUserGroups(*userDN)
-	utils.Log.Info().Msgf("The user %s is part of the groups %v", auth.Username, groups)
+	groups, err := ldap.GetUserGroups(user.UserDN)
+	utils.Log.Info().Msgf("The user %s is part of the groups %v", user.Username, groups)
 	if err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
 
-	isAdmin := ldap.HasAdminAccess(*userDN)
-	isApplication := ldap.HasApplicationAccess(*userDN)
-	isOps := ldap.HasOpsAccess(*userDN)
-	isViewer := ldap.HasViewerAccess(*userDN)
-	isService := ldap.HasServiceAccess(*userDN)
+	isAdmin := ldap.HasAdminAccess(user.UserDN)
+	isApplication := ldap.HasApplicationAccess(user.UserDN)
+	isOps := ldap.HasOpsAccess(user.UserDN)
+	isViewer := ldap.HasViewerAccess(user.UserDN)
+	isService := ldap.HasServiceAccess(user.UserDN)
 
 	var token *string = nil
 	if len(scopes) > 0 {
 		if !(isAdmin || isApplication || isOps) {
-			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", auth.Username, isAdmin, isApplication, isOps)
+			utils.TokenCounter.WithLabelValues("token_error").Inc()
+			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", user.Username, isAdmin, isApplication, isOps)
 		}
-		claims, err := issuer.generateServiceJWTClaims(auth.Username, *mail, scopes)
+		claims, err := issuer.generateServiceJWTClaims(user.Username, user.Email, scopes)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
@@ -180,7 +175,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 			return nil, fmt.Errorf("unable to sign the token %v", err)
 		}
 	} else {
-		claims, err := issuer.generateUserJWTClaims(groups, auth.Username, *mail, isAdmin, isApplication, isOps, isViewer, isService)
+		claims, err := issuer.generateUserJWTClaims(groups, user.Username, user.Email, isAdmin, isApplication, isOps, isViewer, isService)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
@@ -200,29 +195,31 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 }
 
 func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
-	auth, err := issuer.basicAuth(r)
-	if err != nil {
-		utils.Log.Info().Err(err)
+
+	userContext := r.Context().Value(userContextKey)
+	if userContext == nil {
+		utils.Log.Error().Msgf("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, "Basic Auth: Invalid credentials")
+		return
 	}
-
+	user := userContext.(types.User)
 	scopes := r.URL.Query().Get("scopes")
-	token, err := issuer.baseGenerateToken(*auth, scopes)
+
+	token, err := issuer.baseGenerateToken(user, scopes)
 
 	if err != nil {
-		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
+		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if token == nil {
-		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
+		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
+	utils.Log.Info().Msgf("Granting token for user %v", user.Username)
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, *token)
 }
@@ -231,31 +228,35 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 // and cluster information. It can be directly used out of the box
 // by kubectl. It returns a well formatted yaml
 func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request) {
-	auth, err := issuer.basicAuth(r)
 
-	if err != nil {
-		utils.Log.Info().Msg(err.Error())
-		w.WriteHeader(http.StatusUnauthorized)
-		io.WriteString(w, "Basic Auth: Invalid credentials")
-		return
-	}
-
-	token, err := issuer.baseGenerateToken(*auth, utils.Empty)
-	if err == nil {
-		utils.Log.Info().Msgf("Granting token for user %v", auth.Username)
-	} else {
-		utils.Log.Error().Msgf("Granting token fail for user %v", auth.Username)
-	}
-
-	if err != nil {
-		utils.Log.Info().Err(err)
+	userContext := r.Context().Value(userContextKey)
+	if userContext == nil {
+		utils.Log.Error().Msgf("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+	user := userContext.(types.User)
+
+	token, err := issuer.baseGenerateToken(user, utils.Empty)
+
+	// No reason to generate a config if the token is wrong.
+	if token == nil {
+		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	if err != nil {
+		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	utils.Log.Info().Msgf("Granting token for user %v", user.Username)
 
 	// Create a DNS 1123 cluster name and user name
 	clusterName := strings.TrimPrefix(utils.Config.PublicApiServerURL, "https://api.")
-	username := fmt.Sprintf("%s_%s", auth.Username, clusterName)
+	username := fmt.Sprintf("%s_%s", user.Username, clusterName)
 
 	config := &types.KubeConfig{
 		ApiVersion: "v1",
@@ -328,16 +329,16 @@ func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
 	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
 }
 
-func (issuer *TokenIssuer) basicAuth(r *http.Request) (*types.Auth, error) {
-	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+// func (issuer *TokenIssuer) basicAuth(r *http.Request) (*types.Auth, error) {
+// 	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
 
-	if len(auth) != 2 || auth[0] != "Basic" {
-		return nil, fmt.Errorf("invalid auth")
-	}
-	payload, err := base64.StdEncoding.DecodeString(auth[1])
-	if err != nil {
-		return nil, fmt.Errorf("not valid base64 string %v - %w", auth[1], err)
-	}
-	pair := strings.SplitN(string(payload), ":", 2)
-	return &types.Auth{Username: pair[0], Password: pair[1]}, nil
-}
+// 	if len(auth) != 2 || auth[0] != "Basic" {
+// 		return nil, fmt.Errorf("invalid auth")
+// 	}
+// 	payload, err := base64.StdEncoding.DecodeString(auth[1])
+// 	if err != nil {
+// 		return nil, fmt.Errorf("not valid base64 string %v - %w", auth[1], err)
+// 	}
+// 	pair := strings.SplitN(string(payload), ":", 2)
+// 	return &types.Auth{Username: pair[0], Password: pair[1]}, nil
+// }
