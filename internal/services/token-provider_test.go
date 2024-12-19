@@ -58,7 +58,7 @@ func Test_signJWTClaims(t *testing.T) {
 	}
 
 	t.Run("Valid JWT signing", func(t *testing.T) {
-		token, err := signJWTClaims(claims, issuer)
+		token, err := issuer.signJWTClaims(claims)
 		assert.Nil(t, err)
 		assert.NotNil(t, token)
 
@@ -69,12 +69,12 @@ func Test_signJWTClaims(t *testing.T) {
 		assert.True(t, parsedToken.Valid)
 	})
 
-	// t.Run("Invalid JWT signing with nil private key", func(t *testing.T) {
-	// 	issuer.EcdsaPrivate = nil
-	// 	token, err := signJWTClaims(claims, issuer)
-	// 	assert.NotNil(t, err)
-	// 	assert.Nil(t, token)
-	// })
+	t.Run("Invalid JWT signing with nil private key", func(t *testing.T) {
+		issuer.EcdsaPrivate = nil
+		token, err := issuer.signJWTClaims(claims)
+		assert.NotNil(t, err)
+		assert.Nil(t, token)
+	})
 }
 
 func Test_generateUserJWTClaims(t *testing.T) {

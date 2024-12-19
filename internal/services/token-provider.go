@@ -132,8 +132,11 @@ func (issuer *TokenIssuer) generateUserJWTClaims(groups []string, username strin
 	return claims, nil
 }
 
-func signJWTClaims(claims types.AuthJWTClaims, issuer *TokenIssuer) (*string, error) {
+func (issuer *TokenIssuer) signJWTClaims(claims types.AuthJWTClaims) (*string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
+	if issuer.EcdsaPrivate == nil {
+		return nil, fmt.Errorf("the private key is nil") // should not happen, avoid panic.
+	}
 	signedToken, err := token.SignedString(issuer.EcdsaPrivate)
 	if err != nil {
 		return nil, err
@@ -171,7 +174,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
 		}
-		token, err = signJWTClaims(claims, issuer)
+		token, err = issuer.signJWTClaims(claims)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to sign the token %v", err)
@@ -182,7 +185,7 @@ func (issuer *TokenIssuer) baseGenerateToken(auth types.Auth, scopes string) (*s
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
 		}
-		token, err = signJWTClaims(claims, issuer)
+		token, err = issuer.signJWTClaims(claims)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to sign the token %v", err)
