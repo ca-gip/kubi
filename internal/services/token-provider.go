@@ -143,7 +143,7 @@ func (issuer *TokenIssuer) signJWTClaims(claims types.AuthJWTClaims) (*string, e
 	return &signedToken, err
 }
 
-func (issuer *TokenIssuer) baseGenerateToken(user types.User, scopes string) (*string, error) {
+func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*string, error) {
 
 	groups, err := ldap.GetUserGroups(user.UserDN)
 	utils.Log.Info().Msgf("The user %s is part of the groups %v", user.Username, groups)
@@ -158,39 +158,38 @@ func (issuer *TokenIssuer) baseGenerateToken(user types.User, scopes string) (*s
 	isViewer := ldap.HasViewerAccess(user.UserDN)
 	isService := ldap.HasServiceAccess(user.UserDN)
 
+	var claims types.AuthJWTClaims
+
 	var token *string = nil
 	if len(scopes) > 0 {
 		if !(isAdmin || isApplication || isOps) {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", user.Username, isAdmin, isApplication, isOps)
 		}
-		claims, err := issuer.generateServiceJWTClaims(user.Username, user.Email, scopes)
+		claims, err = issuer.generateServiceJWTClaims(user.Username, user.Email, scopes)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
-		}
-		token, err = issuer.signJWTClaims(claims)
-		if err != nil {
-			utils.TokenCounter.WithLabelValues("token_error").Inc()
-			return nil, fmt.Errorf("unable to sign the token %v", err)
 		}
 	} else {
-		claims, err := issuer.generateUserJWTClaims(groups, user.Username, user.Email, isAdmin, isApplication, isOps, isViewer, isService)
+		claims, err = issuer.generateUserJWTClaims(groups, user.Username, user.Email, isAdmin, isApplication, isOps, isViewer, isService)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
 		}
-		token, err = issuer.signJWTClaims(claims)
-		if err != nil {
-			utils.TokenCounter.WithLabelValues("token_error").Inc()
-			return nil, fmt.Errorf("unable to sign the token %v", err)
-		}
 	}
 
-	if token != nil {
-		utils.TokenCounter.WithLabelValues("token_success").Inc()
+	token, err = issuer.signJWTClaims(claims)
+	if err != nil {
+		utils.TokenCounter.WithLabelValues("token_error").Inc()
+		return nil, fmt.Errorf("unable to sign the token %v", err)
 	}
 
+	if token == nil {
+		utils.TokenCounter.WithLabelValues("token_error").Inc()
+		return nil, fmt.Errorf("the token is nil")
+	}
+	utils.TokenCounter.WithLabelValues("token_success").Inc()
 	return token, nil
 }
 
@@ -205,17 +204,11 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	user := userContext.(types.User)
 	scopes := r.URL.Query().Get("scopes")
 
-	token, err := issuer.baseGenerateToken(user, scopes)
+	token, err := issuer.createAccessToken(user, scopes)
 
 	if err != nil {
 		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
 		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	if token == nil {
-		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
-		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -238,15 +231,8 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	}
 	user := userContext.(types.User)
 
-	token, err := issuer.baseGenerateToken(user, utils.Empty)
-
-	// No reason to generate a config if the token is wrong.
-	if token == nil {
-		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-
+	token, err := issuer.createAccessToken(user, utils.Empty)
+	// no need to generate config if the user cannot access it.
 	if err != nil {
 		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
 		w.WriteHeader(http.StatusUnauthorized)
@@ -304,8 +290,9 @@ func generateKubeConfig(user types.User, token *string) ([]byte, error) {
 	return yml, err
 }
 
-func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, error) {
+func (issuer *TokenIssuer) VerifyToken(usertoken string) (*types.AuthJWTClaims, error) {
 
+	// this verifies the token and its signature
 	token, err := jwt.ParseWithClaims(usertoken, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return issuer.EcdsaPublic, nil
 	})
@@ -328,14 +315,14 @@ func (issuer *TokenIssuer) CurrentJWT(usertoken string) (*types.AuthJWTClaims, e
 	}
 }
 
-func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
-	method := jwt.SigningMethodES512
-	tokenSplits := strings.Split(usertoken, ".")
-	if len(tokenSplits) != 3 {
-		return fmt.Errorf("the token %s is not a JWT token", usertoken)
-	}
-	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
-}
+// func (issuer *TokenIssuer) VerifyToken(usertoken string) error {
+// 	method := jwt.SigningMethodES512
+// 	tokenSplits := strings.Split(usertoken, ".")
+// 	if len(tokenSplits) != 3 {
+// 		return fmt.Errorf("the token %s is not a JWT token", usertoken)
+// 	}
+// 	return method.Verify(strings.Join(tokenSplits[0:2], "."), tokenSplits[2], issuer.EcdsaPublic)
+// }
 
 // func (issuer *TokenIssuer) basicAuth(r *http.Request) (*types.Auth, error) {
 // 	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
