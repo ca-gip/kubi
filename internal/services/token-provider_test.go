@@ -82,17 +82,17 @@ func Test_generateUserJWTClaims(t *testing.T) {
 	url, _ := url.Parse("https://kubi.example.com")
 	stdAuths := []*types.Project{
 		{
-			Project:     "ns-development",
-			Role:        "",
+			Project:     "ns",
+			Role:        "admin",
 			Source:      "",
-			Environment: "",
+			Environment: "development",
 			Contact:     "",
 		},
 		{
-			Project:     "ns-devops-automation-integration",
-			Role:        "",
+			Project:     "ns-devops-automation",
+			Role:        "admin",
 			Source:      "",
-			Environment: "",
+			Environment: "integration",
 			Contact:     "",
 		},
 	}
@@ -186,7 +186,7 @@ func Test_generateUserJWTClaims(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotToken, gotErr := tt.args.issuer.generateUserJWTClaims(tt.args.groups, tt.args.username, tt.args.email, tt.args.hasAdminAccess, tt.args.hasApplicationAccess, tt.args.hasOpsAccess, tt.args.hasViewerAccess, tt.args.hasServiceAccess)
+			gotToken, gotErr := tt.args.issuer.generateUserJWTClaims(stdAuths, tt.args.groups, tt.args.username, tt.args.email, tt.args.hasAdminAccess, tt.args.hasApplicationAccess, tt.args.hasOpsAccess, tt.args.hasViewerAccess, tt.args.hasServiceAccess)
 			if gotErr != nil {
 				assert.Equal(t, gotErr, tt.expected.err)
 			}

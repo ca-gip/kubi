@@ -7,10 +7,123 @@ import (
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"gopkg.in/ldap.v2"
 )
 
+type UserMemberships struct {
+	AdminAccess         []*ldap.Entry
+	AppOpsAccess        []*ldap.Entry
+	CustomerOpsAccess   []*ldap.Entry
+	ViewerAccess        []*ldap.Entry
+	ServiceAccess       []*ldap.Entry
+	CloudOpsAccess      []*ldap.Entry
+	ClusterGroupsAccess []*ldap.Entry // This represents the groups that are cluster-scoped (=projects)
+}
+
+// Constructing UserMemberships struct with all the special groups the user is member of.
+// This does not include the standard groups like "authenticated" or "system:authenticated"
+// or cluster based groups.
+func (m *UserMemberships) FromUserDN(userDN string) error {
+	var err error
+	m.AdminAccess, err = getGroupsContainingUser(utils.Config.Ldap.AdminGroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting admin access")
+	}
+
+	m.AppOpsAccess, err = getGroupsContainingUser(utils.Config.Ldap.AppMasterGroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting app ops access")
+	}
+
+	m.CustomerOpsAccess, err = getGroupsContainingUser(utils.Config.Ldap.CustomerOpsGroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting customer ops access")
+	}
+
+	m.ViewerAccess, err = getGroupsContainingUser(utils.Config.Ldap.ViewerGroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting viewer access")
+	}
+
+	m.ServiceAccess, err = getGroupsContainingUser(utils.Config.Ldap.ServiceGroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting service access")
+	}
+
+	m.CloudOpsAccess, err = getGroupsContainingUser(utils.Config.Ldap.OpsMasterGroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting cloud ops access")
+	}
+
+	// This is better than binding directly to the userDN and querying memberOf:
+	// in case of nested groups or other complex group structures, the memberOf
+	// attribute may not be populated correctly.
+	m.ClusterGroupsAccess, err = getGroupsContainingUser(utils.Config.Ldap.GroupBase, userDN)
+	if err != nil {
+		return errors.Wrap(err, "error getting cluster groups access")
+	}
+
+	return nil
+}
+
+// ListGroups retuns a slice for all the group names the user is member of,
+// rather than their full LDAP entries.
+func (m *UserMemberships) ListGroups() []string {
+	var groups []string
+	for _, entry := range m.AdminAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	for _, entry := range m.AppOpsAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	for _, entry := range m.CustomerOpsAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	for _, entry := range m.ViewerAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	for _, entry := range m.ServiceAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	for _, entry := range m.CloudOpsAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	groups = append(groups, m.ListClusterGroups()...)
+	return groups
+}
+
+// ListClusterGroups is a convenience method to return the cluster-scoped groups
+// rather than full membership entries.
+func (m *UserMemberships) ListClusterGroups() []string {
+	var groups []string
+	for _, entry := range m.ClusterGroupsAccess {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	return groups
+}
+
+func getGroupsContainingUser(groupBaseDN string, userDN string) ([]*ldap.Entry, error) {
+	if len(groupBaseDN) == 0 {
+		return []*ldap.Entry{}, nil
+	}
+	req := ldap.NewSearchRequest(
+		groupBaseDN,
+		ldap.ScopeWholeSubtree,
+		ldap.NeverDerefAliases, 1, 30, false,
+		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
+		[]string{"cn"},
+		nil,
+	)
+
+	res, err := ldapQuery(*req)
+	if err != nil {
+		return nil, errors.Wrap(err, "error querying for group memberships")
+	}
+
+	return res.Entries, nil
+}
+
+// Query LDAP with default credentials and paging parameters
 func ldapQuery(request ldap.SearchRequest) (*ldap.SearchResult, error) {
 	conn, err := ldapConnectAndBind(utils.Config.Ldap.BindDN, utils.Config.Ldap.BindPassword)
 	if err != nil {
@@ -25,41 +138,20 @@ func ldapQuery(request ldap.SearchRequest) (*ldap.SearchResult, error) {
 
 }
 
-// Authenticate a user through LDAP or LDS
-// return if bind was ok, the userDN for next usage, and error if occurred
-func GetUserGroups(userDN string) ([]string, error) {
-
-	// This is better than binding directly to the userDN and querying memberOf:
-	// in case of nested groups or other complex group structures, the memberOf
-	// attribute may not be populated correctly.
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.GroupBase,
-		ldap.ScopeWholeSubtree,
-		ldap.NeverDerefAliases, 0, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-	results, err := ldapQuery(*req)
-	if err != nil {
-		return nil, fmt.Errorf("error searching base %v with filter %v due to %w", req.BaseDN, req.Filter, err)
-	}
-
-	// TODO: REMOVE THIS, ONLY DEBUGGING PURPOSES
-	utils.Log.Debug().Msg(fmt.Sprintf("User %s is in groups %v", userDN, results.Entries))
-
-	var groups []string
-	for _, entry := range results.Entries {
-		groups = append(groups, entry.GetAttributeValue("cn"))
-	}
-	return groups, nil
-}
-
-// Authenticate a user through LDAP or LDS
-// return if bind was ok, the userDN for next usage, and error if occurred
+// Get All groups for the cluster from LDAP
 func GetAllGroups() ([]string, error) {
 
-	request := newGroupSearchRequest()
+	request := &ldap.SearchRequest{
+		BaseDN:       utils.Config.Ldap.GroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		SizeLimit:    0, // limit number of entries in result, 0 values means no limitations
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       "(|(objectClass=groupOfNames)(objectClass=group))", // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+
 	results, err := ldapQuery(*request)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error searching all groups")
@@ -98,13 +190,14 @@ func AuthenticateUser(username string, password string) (types.User, error) {
 
 // Finds an user and check if its password is correct.
 func validateUserCredentials(base string, username string, password string) (types.User, error) {
+	req := ldap.NewSearchRequest(base, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 2, 10, false, fmt.Sprintf(utils.Config.Ldap.UserFilter, username), []string{"dn", "mail"}, nil)
+
 	conn, err := ldapConnectAndBind(utils.Config.Ldap.BindDN, utils.Config.Ldap.BindPassword)
 	if err != nil {
 		return types.User{}, err
 	}
 	defer conn.Close()
 
-	req := ldap.NewSearchRequest(base, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 2, 10, false, fmt.Sprintf(utils.Config.Ldap.UserFilter, username), []string{"dn", "mail"}, nil)
 	res, err := conn.SearchWithPaging(req, utils.Config.Ldap.PageSize)
 
 	switch {
@@ -131,6 +224,7 @@ func validateUserCredentials(base string, username string, password string) (typ
 	return user, nil
 }
 
+// Connect to LDAP and bind with given credentials
 func ldapConnectAndBind(login string, password string) (*ldap.Conn, error) {
 	var (
 		err  error
@@ -165,181 +259,4 @@ func ldapConnectAndBind(login string, password string) (*ldap.Conn, error) {
 	}
 
 	return conn, nil
-}
-
-// Check if a user is in admin LDAP group
-// return true if it belong to AdminGroup, false otherwise (including errors or misconfiguration)
-// TODO: Work on the Has* functions - use composition?
-func HasAdminAccess(userDN string) bool {
-
-	// No need to go further, there is no Admin Group Base
-	if len(utils.Config.Ldap.AdminGroupBase) == 0 {
-		return false
-	}
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.AdminGroupBase,
-		ldap.ScopeWholeSubtree,
-		ldap.NeverDerefAliases, 1, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-
-	res, err := ldapQuery(*req)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("issue querying for admin access %v", err.Error()))
-		return false
-	}
-
-	return len(res.Entries) > 0
-}
-
-// Return true if the user manage application at cluster wide scope
-func HasApplicationAccess(userDN string) bool {
-	return hasApplicationAccess(userDN) || hasCustomerOpsAccess(userDN)
-}
-
-// Check if a user is in application LDAP group
-// return true if it belong to ApplicationGroup, false otherwise (including errors or misconfiguration)
-func hasApplicationAccess(userDN string) bool {
-
-	// No need to go further, there is no Application Group Base
-	if len(utils.Config.Ldap.AppMasterGroupBase) == 0 {
-		return false
-	}
-
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.AppMasterGroupBase,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-
-	res, err := ldapQuery(*req)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("issue querying for application access %v", err.Error()))
-		return false
-	}
-
-	return len(res.Entries) > 0
-}
-
-// Check if a user is in customer ops LDAP group
-// return true if it belong to CustomerOpsGroup, false otherwise (including errors or misconfiguration)
-func hasCustomerOpsAccess(userDN string) bool {
-
-	// No need to go further, there is no Application Group Base
-	if len(utils.Config.Ldap.CustomerOpsGroupBase) == 0 {
-		return false
-	}
-
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.CustomerOpsGroupBase,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-
-	res, err := ldapQuery(*req)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("issue querying for customer ops access %v", err.Error()))
-		return false
-	}
-
-	return len(res.Entries) > 0
-}
-
-// Check if a user is in viewer LDAP group
-// return true if it belong to viewerGroup, false otherwise (including errors or misconfiguration)
-func HasViewerAccess(userDN string) bool {
-
-	// No need to go further, there is no Application Group Base
-	if len(utils.Config.Ldap.ViewerGroupBase) == 0 {
-		return false
-	}
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.ViewerGroupBase,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-	res, err := ldapQuery(*req)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("issue querying for viewer access %v", err.Error()))
-		return false
-	}
-
-	return len(res.Entries) > 0
-}
-
-// Check if a user is in service LDAP group
-// return true if it belong to ServiceGroup, false otherwise (including errors or misconfiguration)
-// Service is map to a service cluster role ( which must be deploy beside ) # ?!? I don't understand this comment
-// Service user must be in LDAP_ADMIN_USERBASE or LDAP_USERBASE
-func HasServiceAccess(userDN string) bool {
-
-	// No need to go further, there is no Application Group Base
-	if len(utils.Config.Ldap.ServiceGroupBase) == 0 {
-		log.Debug().Msgf("Using ldap groupbase %s", utils.Config.Ldap.ServiceGroupBase)
-		return false
-	}
-
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.ServiceGroupBase,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-
-	res, err := ldapQuery(*req)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("issue querying for service access %v", err.Error()))
-		return false
-	}
-
-	return len(res.Entries) > 0
-}
-
-// Check if a user is in cloudops LDAP group
-// return true if it belong to OpsGroup, false otherwise (including errors or misconfiguration)
-func HasOpsAccess(userDN string) bool {
-
-	// No need to go further, there is no Application Group Base
-	if len(utils.Config.Ldap.OpsMasterGroupBase) == 0 {
-		return false
-	}
-
-	req := ldap.NewSearchRequest(
-		utils.Config.Ldap.OpsMasterGroupBase,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
-		[]string{"cn"},
-		nil,
-	)
-
-	res, err := ldapQuery(*req)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("issue querying for ops access %v", err.Error()))
-		return false
-	}
-
-	return len(res.Entries) > 0
-}
-
-// request to get group list ( for all namespaces )
-func newGroupSearchRequest() *ldap.SearchRequest {
-	return &ldap.SearchRequest{
-		BaseDN:       utils.Config.Ldap.GroupBase,
-		Scope:        ldap.ScopeWholeSubtree,
-		DerefAliases: ldap.NeverDerefAliases,
-		SizeLimit:    0, // limit number of entries in result, 0 values means no limitations
-		TimeLimit:    30,
-		TypesOnly:    false,
-		Filter:       "(|(objectClass=groupOfNames)(objectClass=group))", // filter default format : (&(objectClass=groupOfNames)(member=%s))
-		Attributes:   []string{"cn"},
-	}
 }

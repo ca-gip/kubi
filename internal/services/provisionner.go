@@ -44,15 +44,15 @@ func GenerateResources() error {
 	api := clientSet.CoreV1()
 	blackWhiteList := types.BlackWhitelist{}
 
-	groups, err := ldap.GetAllGroups()
+	allClusterGroups, err := ldap.GetAllGroups()
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return err
 	}
-	if len(groups) == 0 {
+	if len(allClusterGroups) == 0 {
 		return fmt.Errorf("no ldap groups found")
 	}
-	auths := GetUserNamespaces(groups)
+	auths := GetAllProjects(allClusterGroups)
 
 	blacklistCM, errRB := GetBlackWhitelistCM(api)
 	if errRB != nil {
