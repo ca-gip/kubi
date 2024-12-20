@@ -42,14 +42,16 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 
 		var groups []string
 		groups = append(groups, utils.AuthenticatedGroup)
+
+		// LEGACY GROUPS, only for comptability purposes
+		// TODO: After this version of kubi is released, wait for a month (expiration
+		// of the service token) and remove the following groups.
+		// Ensure it is also done on the argocd's dex kubi plugin.
 		groups = append(groups, fmt.Sprintf(utils.KubiClusterRoleBindingReaderName))
 
-		// Other ldap group are injected
 		for _, auth := range token.Auths {
 			groups = append(groups, fmt.Sprintf("%s-%s", auth.Namespace(), auth.Role))
 		}
-
-		groups = append(groups, token.Groups...)
 
 		if token.AdminAccess {
 			groups = append(groups, utils.AdminGroup)
@@ -70,6 +72,10 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		if token.ViewerAccess {
 			groups = append(groups, utils.ApplicationViewer)
 		}
+
+		// New Group mapping: In the future, we just expose the token's groups.
+		// Filtering will be made solely on the kubi API server side in the future.
+		groups = append(groups, token.Groups...)
 
 		resp := v1beta1.TokenReview{
 			Status: v1beta1.TokenReviewStatus{

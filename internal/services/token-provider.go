@@ -152,6 +152,8 @@ func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*s
 		return nil, err
 	}
 
+	// to keep for historical reasons: We continue to issue tokens with old data until
+	// ArgoCD + promote + other? is updated to use the new groups.
 	isAdmin := ldap.HasAdminAccess(user.UserDN)
 	isApplication := ldap.HasApplicationAccess(user.UserDN)
 	isOps := ldap.HasOpsAccess(user.UserDN)
