@@ -67,7 +67,6 @@ func NewTokenIssuer(privateKey []byte, publicKey []byte, tokenDuration string, e
 func (issuer *TokenIssuer) generateServiceJWTClaims(username string, email string, scopes string) (types.AuthJWTClaims, error) {
 
 	expiration := time.Now().Add(issuer.ExtraTokenDuration)
-	utils.Log.Info().Msgf("Generating extra token with scope %s ", scopes)
 
 	// Create the Claims
 	claims := types.AuthJWTClaims{
@@ -88,22 +87,24 @@ func (issuer *TokenIssuer) generateServiceJWTClaims(username string, email strin
 }
 
 // Generate a user token from a user account
-func (issuer *TokenIssuer) generateUserJWTClaims(groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (types.AuthJWTClaims, error) {
+// TODO evrardjp: Pass User as parameters.
+func (issuer *TokenIssuer) generateUserJWTClaims(auths []*types.Project, groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (types.AuthJWTClaims, error) {
 
-	var auths = []*types.Project{}
 	if hasAdminAccess || hasApplicationAccess || hasOpsAccess || hasServiceAccess {
-		utils.Log.Info().Msgf("The user %s will have transversal access, removing all the projects (admin: %v, application: %v, ops: %v, service: %v)", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess, hasServiceAccess)
+		utils.Log.Debug().Msgf("The user %s will have transversal access, removing all the projects (admin: %v, application: %v, ops: %v, service: %v)", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess, hasServiceAccess)
+		// To be removed when ppl will have the right to have both transversal and project access
+		// Currently removed because too many groups.
+		auths = []*types.Project{}
 	} else {
-		auths = GetUserNamespaces(groups)
-		utils.Log.Info().Msgf("The user %s will have access to the projects %v", username, auths)
+		utils.Log.Debug().Msgf("The user %s will have access to the projects %v", username, auths)
 	}
 
 	var expirationTime time.Time
 
-	switch hasServiceAccess {
-	case true:
+	if hasServiceAccess {
+		utils.Log.Debug().Msgf("The user %s will have an extra token duration of %v", username, issuer.ExtraTokenDuration)
 		expirationTime = time.Now().Add(issuer.ExtraTokenDuration)
-	default:
+	} else {
 		expirationTime = time.Now().Add(issuer.TokenDuration)
 	}
 
@@ -145,28 +146,30 @@ func (issuer *TokenIssuer) signJWTClaims(claims types.AuthJWTClaims) (*string, e
 
 func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*string, error) {
 
-	groups, err := ldap.GetUserGroups(user.UserDN)
-	utils.Log.Info().Msgf("The user %s is part of the groups %v", user.Username, groups)
-	if err != nil {
+	memberships := &ldap.UserMemberships{}
+	if err := memberships.FromUserDN(user.UserDN); err != nil {
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, err
 	}
+	groups := memberships.ListGroups()
+	utils.Log.Info().Msgf("The user %s is part of the groups %v", user.Username, groups)
 
 	// to keep for historical reasons: We continue to issue tokens with old data until
 	// ArgoCD + promote + other? is updated to use the new groups.
-	isAdmin := ldap.HasAdminAccess(user.UserDN)
-	isApplication := ldap.HasApplicationAccess(user.UserDN)
-	isOps := ldap.HasOpsAccess(user.UserDN)
-	isViewer := ldap.HasViewerAccess(user.UserDN)
-	isService := ldap.HasServiceAccess(user.UserDN)
+	isAdmin := len(memberships.AdminAccess) > 0
+	isAppOps := (len(memberships.AppOpsAccess) > 0) || (len(memberships.CustomerOpsAccess) > 0)
+	isViewer := len(memberships.ViewerAccess) > 0
+	isService := len(memberships.ServiceAccess) > 0
+	isCloudOps := len(memberships.CloudOpsAccess) > 0
 
 	var claims types.AuthJWTClaims
-
+	var err error
 	var token *string = nil
+
 	if len(scopes) > 0 {
-		if !(isAdmin || isApplication || isOps) {
+		if !(isAdmin || isAppOps || isCloudOps) {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
-			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", user.Username, isAdmin, isApplication, isOps)
+			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", user.Username, isAdmin, isAppOps, isCloudOps)
 		}
 		claims, err = issuer.generateServiceJWTClaims(user.Username, user.Email, scopes)
 		if err != nil {
@@ -174,7 +177,10 @@ func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*s
 			return nil, fmt.Errorf("unable to generate the token %v", err)
 		}
 	} else {
-		claims, err = issuer.generateUserJWTClaims(groups, user.Username, user.Email, isAdmin, isApplication, isOps, isViewer, isService)
+		// Do not pass the full group list, as they wont parse as Projects.
+		projectAccesses := GetAllProjects(memberships.ListClusterGroups())
+
+		claims, err = issuer.generateUserJWTClaims(projectAccesses, groups, user.Username, user.Email, isAdmin, isAppOps, isCloudOps, isViewer, isService)
 		if err != nil {
 			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
@@ -191,6 +197,7 @@ func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*s
 		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, fmt.Errorf("the token is nil")
 	}
+	// TODO: Expose a metric or a log about the type of token generated (its scope)
 	utils.TokenCounter.WithLabelValues("token_success").Inc()
 	return token, nil
 }
@@ -214,7 +221,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.Log.Info().Msgf("Granting token for user %v", user.Username)
+	utils.Log.Info().Msgf("Granting token for user %v with scopes %v", user.Username, scopes)
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, *token)
 }
