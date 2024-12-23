@@ -10,6 +10,11 @@ import (
 	"k8s.io/api/authentication/v1beta1"
 )
 
+const (
+	AdminGroup    = "system:masters"
+	ServiceMaster = "service:masters"
+)
+
 // Authenticate service for kubernetes Api Server
 // https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication
 func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
@@ -53,8 +58,13 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			groups = append(groups, fmt.Sprintf("%s-%s", auth.Namespace(), auth.Role))
 		}
 
+		// Hard coded special groups
+		if token.ServiceAccess {
+			groups = append(groups, ServiceMaster)
+		}
+
 		if token.AdminAccess {
-			groups = append(groups, utils.AdminGroup)
+			groups = append(groups, AdminGroup)
 		}
 
 		if token.OpsAccess {
@@ -63,10 +73,6 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 
 		if token.ApplicationAccess {
 			groups = append(groups, utils.ApplicationMaster)
-		}
-
-		if token.ServiceAccess {
-			groups = append(groups, utils.ServiceMaster)
 		}
 
 		if token.ViewerAccess {
