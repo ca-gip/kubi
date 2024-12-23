@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	ldap "github.com/ca-gip/kubi/internal/authprovider"
+	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/dgrijalva/jwt-go"

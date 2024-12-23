@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	ldap "github.com/ca-gip/kubi/internal/authprovider"
+	"github.com/ca-gip/kubi/internal/ldap"
 )
 
 type contextKey string
