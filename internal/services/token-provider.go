@@ -241,7 +241,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	}
 	user := userContext.(types.User)
 
-	token, err := issuer.createAccessToken(user, utils.Empty)
+	token, err := issuer.createAccessToken(user, "")
 	// no need to generate config if the user cannot access it.
 	if err != nil {
 		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)

@@ -13,8 +13,6 @@ const (
 )
 
 const (
-	Empty = ""
-
 	KubiResourcePrefix = "kubi"
 
 	KubiClusterRoleBindingReaderName = "kubi-reader"
