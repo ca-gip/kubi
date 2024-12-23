@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	ldap "github.com/ca-gip/kubi/internal/authprovider"
+	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/utils"
 	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
