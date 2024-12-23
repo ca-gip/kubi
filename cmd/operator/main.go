@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/middlewares"
@@ -17,8 +17,7 @@ func main() {
 
 	config, err := utils.MakeConfig()
 	if err != nil {
-		log.Fatal().Msg("Config error")
-		os.Exit(1)
+		log.Fatal().Msg(fmt.Sprintf("Config error: %v", err))
 	}
 	utils.Config = config
 

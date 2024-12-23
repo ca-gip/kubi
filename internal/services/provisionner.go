@@ -107,6 +107,15 @@ func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhite
 	return createdProjects, deletedProjects, ignoredProjects
 }
 
+func appendIfMissing(slice []string, i string) []string {
+	for _, ele := range slice {
+		if ele == i {
+			return slice
+		}
+	}
+	return append(slice, i)
+}
+
 // generate a project config or update it if exists
 func generateProject(projectInfos *types.Project) {
 	kconfig, _ := rest.InClusterConfig()
@@ -183,7 +192,7 @@ func generateProject(projectInfos *types.Project) {
 			existingProject.Spec.Tenant = project.Spec.Tenant
 		}
 		for _, stage := range project.Spec.Stages {
-			existingProject.Spec.Stages = utils.AppendIfMissing(existingProject.Spec.Stages, stage)
+			existingProject.Spec.Stages = appendIfMissing(existingProject.Spec.Stages, stage)
 		}
 		existingProject.Spec.SourceEntity = projectInfos.Source
 		existingProject.Spec.SourceDN = fmt.Sprintf("CN=%s,%s", projectInfos.Source, utils.Config.Ldap.GroupBase)
@@ -506,6 +515,14 @@ func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) erro
 	return nil
 }
 
+// Join two maps by value copy non-recursively
+func union(a map[string]string, b map[string]string) map[string]string {
+	for k, v := range b {
+		a[k] = v
+	}
+	return a
+}
+
 // Generate CustomLabels that should be applied on Kubi's Namespaces
 func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
 
@@ -518,12 +535,12 @@ func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
 		"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
 		"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
 	}
-
-	return utils.Union(defaultLabels, utils.Config.CustomLabels)
+	// Todo: Decide whether this is still worth a separate function for testability.
+	return union(defaultLabels, utils.Config.CustomLabels)
 }
 
 func GetPodSecurityStandardName(namespace string) string {
-	if utils.IsInPrivilegedNsList(namespace) {
+	if slices.Contains(utils.Config.PrivilegedNamespaces, namespace) {
 		utils.Log.Warn().Msgf("Namespace %v is labeled as privileged", namespace)
 		return string(podSecurity.LevelPrivileged)
 	}
@@ -832,19 +849,21 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *v12.NetworkPol
 		_, err := api.NetworkPolicies(namespace).Create(context.TODO(), networkpolicy, metav1.CreateOptions{})
 		if err != nil {
 			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
+			// Todo: Wrap this error correctly and use slog.
+			utils.Log.Error().Msg(fmt.Sprintf("error creating netpol %v", err.Error()))
 		} else {
 			utils.NetworkPolicyCreation.WithLabelValues("created", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
 		}
-		utils.Check(err)
 		return
 	} else {
 		_, err := api.NetworkPolicies(namespace).Update(context.TODO(), networkpolicy, metav1.UpdateOptions{})
 		if err != nil {
 			utils.NetworkPolicyCreation.WithLabelValues("error", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
+			// Todo: Wrap this error correctly and use slog.
+			utils.Log.Error().Msg(fmt.Sprintf("error updating netpol %v", err.Error()))
 		} else {
 			utils.NetworkPolicyCreation.WithLabelValues("updated", namespace, utils.KubiDefaultNetworkPolicyName).Inc()
 		}
-		utils.Check(err)
 		return
 	}
 }

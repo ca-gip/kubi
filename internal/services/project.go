@@ -25,7 +25,18 @@ var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
 // This is a convenience function for test purposes
 func namespaceParser(namespaceInput string) (projectName string, environment string) {
 
-	if !utils.HasSuffixes(namespaceInput, utils.AllEnvironments) {
+	var namespaceHasSuffix bool
+
+	// check whether any of our environments names (short and longs)
+	// are part of the namespace given in input
+	for _, environmentSuffix := range utils.AllEnvironments {
+		if strings.HasSuffix(namespaceInput, "-"+environmentSuffix) {
+			namespaceHasSuffix = true
+			break
+		}
+	}
+
+	if !namespaceHasSuffix {
 		projectName = namespaceInput
 		environment = ""
 		return
