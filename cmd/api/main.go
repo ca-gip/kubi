@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"os"
 
@@ -42,7 +43,11 @@ func main() {
 		utils.Log.Warn().Msgf("%d %s %s", http.StatusNotFound, req.Method, req.URL.String())
 	})
 
-	router.HandleFunc("/ca", services.CA).Methods(http.MethodGet)
+	router.HandleFunc("/ca", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		io.WriteString(w, config.KubeCaText)
+	}).Methods(http.MethodGet)
+
 	router.HandleFunc("/config", services.WithBasicAuth(tokenIssuer.GenerateConfig)).Methods(http.MethodGet)
 	router.HandleFunc("/token", services.WithBasicAuth(tokenIssuer.GenerateJWT)).Methods(http.MethodGet)
 	router.Handle("/metrics", promhttp.Handler())
