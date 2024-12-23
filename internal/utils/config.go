@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/ca-gip/kubi/pkg/types"
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
@@ -166,8 +168,22 @@ func MakeConfig() (*types.Config, error) {
 		BlackWhitelistNamespace:         getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
 	}
 
-	err = validateConfig(config)
-	errLdap := validateLdapConfig(&ldapConfig)
+	// TODO: Remove validation through ozzo-validation
+	err = validation.ValidateStruct(config,
+		validation.Field(&config.KubeToken, validation.Required),
+		validation.Field(&config.KubeCa, validation.Required, is.Base64),
+		validation.Field(&config.PublicApiServerURL, validation.Required, is.URL),
+	)
+	// TODO: Get rid of Check method
+	Check(err)
+
+	errLdap := validation.ValidateStruct(&ldapConfig,
+		validation.Field(&ldapConfig.UserBase, validation.Required, validation.Length(2, 200)),
+		validation.Field(&ldapConfig.GroupBase, validation.Required, validation.Length(2, 200)),
+		validation.Field(&ldapConfig.Host, validation.Required, is.URL),
+		validation.Field(&ldapConfig.BindDN, validation.Required, validation.Length(2, 200)),
+		validation.Field(&ldapConfig.BindPassword, validation.Required, validation.Length(2, 200)),
+	)
 
 	if err != nil {
 		Log.Error().Msgf(strings.Replace(err.Error(), "; ", "\n", -1))
@@ -175,7 +191,7 @@ func MakeConfig() (*types.Config, error) {
 	}
 	if errLdap != nil {
 		Log.Error().Msgf(strings.Replace(errLdap.Error(), "; ", "\n", -1))
-		return nil, errLdap
+		return nil, err
 	}
 	return config, nil
 }
