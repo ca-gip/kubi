@@ -217,7 +217,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	token, err := issuer.createAccessToken(user, scopes)
 
 	if err != nil {
-		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
+		utils.Log.Error().Msgf("Granting token fail for user %v, %v ", user.Username, err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -244,7 +244,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	token, err := issuer.createAccessToken(user, "")
 	// no need to generate config if the user cannot access it.
 	if err != nil {
-		utils.Log.Error().Msgf("Granting token fail for user %v", user.Username)
+		utils.Log.Error().Msgf("Granting token fail for user %v, %v", user.Username, err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
