@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -17,8 +18,7 @@ func main() {
 
 	config, err := utils.MakeConfig()
 	if err != nil {
-		log.Fatal().Msg("Config error")
-		os.Exit(1)
+		log.Fatal().Msg(fmt.Sprintf("Config error: %v", err))
 	}
 	// TODO Remove this aberration - L17 should be a constructor and we should
 	// use the config as live object instead of mutating it.
