@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ca-gip/kubi/internal/middlewares"
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/gorilla/mux"
@@ -30,7 +31,7 @@ func main() {
 		log.Error().Err(err)
 	}
 	router := mux.NewRouter()
-	router.Use(utils.PrometheusMiddleware)
+	router.Use(middlewares.Prometheus)
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		utils.Log.Warn().Msgf("%d %s %s", http.StatusNotFound, req.Method, req.URL.String())

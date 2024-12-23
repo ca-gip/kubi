@@ -1,4 +1,4 @@
-package services
+package middlewares
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 type contextKey string
 
-const userContextKey contextKey = "user"
+const UserContextKey contextKey = "user"
 
 func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +30,7 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), userContextKey, user) // This is ugly, but at least it cleans up the code and matches the usual patterns.
+			ctx := context.WithValue(r.Context(), UserContextKey, user) // This is ugly, but at least it cleans up the code and matches the usual patterns.
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

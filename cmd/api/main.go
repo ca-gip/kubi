@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ca-gip/kubi/internal/middlewares"
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/gorilla/mux"
@@ -19,6 +20,8 @@ func main() {
 		log.Fatal().Msg("Config error")
 		os.Exit(1)
 	}
+	// TODO Remove this aberration - L17 should be a constructor and we should
+	// use the config as live object instead of mutating it.
 	utils.Config = config
 
 	// TODO Move to config ( for validation )
@@ -37,7 +40,7 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Use(utils.PrometheusMiddleware)
+	router.Use(middlewares.Prometheus)
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		utils.Log.Warn().Msgf("%d %s %s", http.StatusNotFound, req.Method, req.URL.String())
@@ -48,8 +51,8 @@ func main() {
 		io.WriteString(w, config.KubeCaText)
 	}).Methods(http.MethodGet)
 
-	router.HandleFunc("/config", services.WithBasicAuth(tokenIssuer.GenerateConfig)).Methods(http.MethodGet)
-	router.HandleFunc("/token", services.WithBasicAuth(tokenIssuer.GenerateJWT)).Methods(http.MethodGet)
+	router.HandleFunc("/config", middlewares.WithBasicAuth(tokenIssuer.GenerateConfig)).Methods(http.MethodGet)
+	router.HandleFunc("/token", middlewares.WithBasicAuth(tokenIssuer.GenerateJWT)).Methods(http.MethodGet)
 	router.Handle("/metrics", promhttp.Handler())
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
