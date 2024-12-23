@@ -98,6 +98,7 @@ type KubeConfigUserToken struct {
 type AuthJWTClaims struct {
 	Auths             []*Project `json:"auths"`
 	User              string     `json:"user"`
+	Groups            []string   `json:"groups"`
 	Contact           string     `json:"email"`
 	AdminAccess       bool       `json:"adminAccess"`
 	ApplicationAccess bool       `json:"appAccess"`
@@ -141,4 +142,10 @@ type Auth struct {
 type BlackWhitelist struct {
 	Blacklist []string `json:"blacklist"`
 	Whitelist []string `json:"whitelist"`
+}
+
+type User struct {
+	Username string
+	UserDN   string
+	Email    string
 }

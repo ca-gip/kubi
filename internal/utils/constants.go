@@ -13,8 +13,6 @@ const (
 )
 
 const (
-	Empty = ""
-
 	KubiResourcePrefix = "kubi"
 
 	KubiClusterRoleBindingReaderName = "kubi-reader"
@@ -28,11 +26,10 @@ const (
 	KubiServiceAccountDefaultName = "default"
 
 	AuthenticatedGroup = "system:authenticated"
-	AdminGroup         = "system:masters"
-	ApplicationMaster  = "application:masters"
-	ServiceMaster      = "service:masters"
-	ApplicationViewer  = "application:view"
-	OPSMaster          = "ops:masters"
+
+	ApplicationMaster = "application:masters"
+	ApplicationViewer = "application:view"
+	OPSMaster         = "ops:masters"
 
 	KubiStageScratch = "scratch"
 	KubiStageStaging = "staging"
