@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ca-gip/kubi/internal/ldap"
+	"github.com/ca-gip/kubi/internal/middlewares"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/dgrijalva/jwt-go"
@@ -204,7 +205,7 @@ func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*s
 
 func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
-	userContext := r.Context().Value(userContextKey)
+	userContext := r.Context().Value(middlewares.UserContextKey)
 	if userContext == nil {
 		utils.Log.Error().Msgf("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -232,7 +233,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 // TODO: Refactor to use the same code as GenerateJWT
 func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request) {
 
-	userContext := r.Context().Value(userContextKey)
+	userContext := r.Context().Value(middlewares.UserContextKey)
 	if userContext == nil {
 		utils.Log.Error().Msgf("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
