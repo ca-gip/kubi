@@ -61,7 +61,7 @@ jobs:
       - name: Push development image into dockerhub
         run: |
           docker images #display currently built images to ensure next calls will happen correctly
-          docker tag ghcr.io/ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }} ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }}
-          docker push ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }}
-          docker tag ghcr.io/ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }} ca-gip/kubi-${{ matrix.component }}:${{ steps.tag.outputs.version }}
-          docker push ca-gip/kubi-${{ matrix.component }}:${{ steps.tag.outputs.version }}
+          docker tag ghcr.io/ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }} cagip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }}
+          docker push cagip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }}
+          docker tag ghcr.io/ca-gip/kubi-${{ matrix.component }}:${{ steps.sha.outputs.sha_short }}-${{ matrix.arch }} cagip/kubi-${{ matrix.component }}:${{ steps.tag.outputs.version }}
+          docker push cagip/kubi-${{ matrix.component }}:${{ steps.tag.outputs.version }}
