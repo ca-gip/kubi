@@ -1,10 +1,9 @@
-package services
+package project
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 )
 
@@ -30,7 +29,7 @@ func TestNamespaceParser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resultProjectName, resultEnvironmentName := namespaceParser(tt.input)
+			resultProjectName, resultEnvironmentName := parseNamespace(tt.input)
 			if tt.expectedProjectName != resultProjectName {
 				t.Errorf("expected %s, got %s", tt.expectedProjectName, resultProjectName)
 			}
@@ -132,12 +131,12 @@ func TestNewProject(t *testing.T) {
 		{
 			name:          "namespace_exceeds_max_length",
 			group:         "thisisaveryveryveryverylongnamespacethatexceedsthemaxallowedlength_ADMIN",
-			expectedError: fmt.Sprintf("the name for namespace cannot exceeded %v characters", utils.DNS1123LabelMaxLength),
+			expectedError: fmt.Sprintf("the name for namespace cannot exceeded %v characters", DNS1123LabelMaxLength),
 		},
 		{
 			name:          "role_exceeds_max_length",
 			group:         "DL_NATIVE_thisisaveryveryveryveryveryverylongrolethatexceedsthemaxallowedlength",
-			expectedError: fmt.Sprintf("the name for role cannot exceeded %v characters", utils.DNS1123LabelMaxLength),
+			expectedError: fmt.Sprintf("the name for role cannot exceeded %v characters", DNS1123LabelMaxLength),
 		},
 	}
 

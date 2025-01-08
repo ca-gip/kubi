@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/middlewares"
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
@@ -19,16 +20,15 @@ func main() {
 	if err != nil {
 		log.Fatal().Msg(fmt.Sprintf("Config error: %v", err))
 	}
+
+	ldapClient := ldap.NewLDAPClient(config.Ldap)
+
 	utils.Config = config
 
 	// Generate namespace and role binding for ldap groups
 	// no need to wait here
 	utils.Log.Info().Msg("Generating resources from LDAP groups")
 
-	err = services.GenerateResources()
-	if err != nil {
-		log.Error().Err(err)
-	}
 	router := mux.NewRouter()
 	router.Use(middlewares.Prometheus)
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -48,8 +48,12 @@ func main() {
 	go func() {
 		for t := range timerKubiRefresh.C {
 
-			utils.Log.Info().Msgf("Refreshing Projects at %s", t.String())
-			services.RefreshK8SResources()
+			utils.Log.Info().Msgf("Create or Update Projects at %s", t.String())
+			projects, err := ldapClient.ListProjects()
+			if err != nil {
+				utils.Log.Error().Msgf("cannot get project list from ldap: %v", err)
+			}
+			services.HandleProject(projects)
 		}
 	}()
 

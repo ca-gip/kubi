@@ -6,15 +6,15 @@ import (
 	"gopkg.in/ldap.v2"
 )
 
-func TestListGroups(t *testing.T) {
+func TestToGroupNames(t *testing.T) {
 	tests := []struct {
 		name     string
-		members  UserMemberships
+		members  LDAPMemberships
 		expected []string
 	}{
 		{
 			name: "All groups",
-			members: UserMemberships{
+			members: LDAPMemberships{
 				AdminAccess: []*ldap.Entry{
 					{DN: "cn=admin1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"admin1"}}}},
 					{DN: "cn=admin2", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"admin2"}}}},
@@ -42,7 +42,7 @@ func TestListGroups(t *testing.T) {
 		},
 		{
 			name: "No groups",
-			members: UserMemberships{
+			members: LDAPMemberships{
 				AdminAccess:         []*ldap.Entry{},
 				AppOpsAccess:        []*ldap.Entry{},
 				CustomerOpsAccess:   []*ldap.Entry{},
@@ -55,7 +55,7 @@ func TestListGroups(t *testing.T) {
 		},
 		{
 			name: "Some groups",
-			members: UserMemberships{
+			members: LDAPMemberships{
 				AdminAccess: []*ldap.Entry{
 					{DN: "cn=admin1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"admin1"}}}},
 				},
@@ -76,13 +76,13 @@ func TestListGroups(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.members.ListGroups()
+			got := tt.members.toGroupNames()
 			if len(got) != len(tt.expected) {
-				t.Errorf("ListGroups() = %v, want %v", got, tt.expected)
+				t.Errorf("toGroupNames() = %v, want %v", got, tt.expected)
 			}
 			for i, group := range got {
 				if group != tt.expected[i] {
-					t.Errorf("ListGroups() = %v, want %v", got, tt.expected)
+					t.Errorf("toGroupNames() = %v, want %v", got, tt.expected)
 				}
 			}
 		})

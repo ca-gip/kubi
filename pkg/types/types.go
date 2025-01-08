@@ -145,7 +145,14 @@ type BlackWhitelist struct {
 }
 
 type User struct {
-	Username string
-	UserDN   string
-	Email    string
+	Username        string
+	UserDN          string
+	Email           string
+	Groups          []string
+	IsAdmin         bool
+	IsAppOps        bool
+	IsCloudOps      bool
+	IsViewer        bool
+	IsService       bool
+	ProjectAccesses []string // Purposedly a string instead of a []*Project: This will allow the testing based on the project names instead of projects, but also makes it a very clean separation between the ldap package, and its implementation. This will allow further cleanup should another method be used later.
 }
