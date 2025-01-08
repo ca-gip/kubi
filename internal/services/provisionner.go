@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ca-gip/kubi/internal/ldap"
+	projectpkg "github.com/ca-gip/kubi/internal/project"
 	"github.com/ca-gip/kubi/internal/utils"
 	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
@@ -29,40 +29,22 @@ import (
 	podSecurity "k8s.io/pod-security-admission/api"
 )
 
-// Handler to regenerate all resources created by kubi
-func RefreshK8SResources() {
-	err := GenerateResources()
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-	}
-}
-
-// Generate Namespaces and Rolebinding from Ldap groups
-func GenerateResources() error {
+// HandleProject is the Main loop to create the projects and the associated resources
+func HandleProject(clusterProjects []*types.Project) error {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 	blackWhiteList := types.BlackWhitelist{}
 
-	allClusterGroups, err := ldap.GetAllGroups()
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-		return err
-	}
-	if len(allClusterGroups) == 0 {
-		return fmt.Errorf("no ldap groups found")
-	}
-	auths := GetAllProjects(allClusterGroups)
-
 	blacklistCM, errRB := GetBlackWhitelistCM(api)
 	if errRB != nil {
 		utils.Log.Info().Msg("Can't get Black&Whitelist")
-		return err
+		return errRB
 	} else {
-		blackWhiteList = MakeBlackWhitelist(blacklistCM.Data)
+		blackWhiteList = projectpkg.MakeBlackWhitelist(blacklistCM.Data)
 	}
 
-	createdproject, deletedprojects, ignoredProjects := GenerateProjects(auths, &blackWhiteList)
+	createdproject, deletedprojects, ignoredProjects := projectpkg.FilterProjects(utils.Config.Whitelist, clusterProjects, &blackWhiteList)
 	for _, project := range ignoredProjects {
 		utils.Log.Error().Msgf("Cannot find project %s in whitelist", project.Namespace())
 	}
@@ -76,35 +58,6 @@ func GenerateResources() error {
 		generateProject(project)
 	}
 	return nil
-}
-
-// A loop wrapper for generateProject
-// splitted for unit test !
-func GenerateProjects(context []*types.Project, blackWhiteList *types.BlackWhitelist) ([]*types.Project, []*types.Project, []*types.Project) {
-
-	var createdProjects, deletedProjects, ignoredProjects []*types.Project
-	for _, auth := range context {
-		isBlacklisted := slices.Contains(blackWhiteList.Blacklist, auth.Namespace())
-		isWhitelisted := slices.Contains(blackWhiteList.Whitelist, auth.Namespace())
-
-		switch {
-		//we treat blacklisted projects as a priority, project will be deleted
-		case blackWhiteList.Blacklist[0] != "" && isBlacklisted:
-			deletedProjects = append(deletedProjects, auth)
-			continue
-		// If whitelist is enabled, do not create project unless it's explictly mentioned
-		case utils.Config.Whitelist && isWhitelisted:
-			createdProjects = append(createdProjects, auth)
-		//project will be ignored if whitelist  is enabled and project not present on whitelisted projects
-		case utils.Config.Whitelist && !isWhitelisted:
-			ignoredProjects = append(ignoredProjects, auth)
-		//project will be created if whitelist is disabled and no projects in blacklist
-		default:
-			createdProjects = append(createdProjects, auth)
-		}
-	}
-
-	return createdProjects, deletedProjects, ignoredProjects
 }
 
 func appendIfMissing(slice []string, i string) []string {
@@ -149,15 +102,15 @@ func generateProject(projectInfos *types.Project) {
 	project.Spec.Environment = projectInfos.Environment
 
 	switch projectInfos.Environment {
-	case utils.KubiEnvironmentDevelopment:
+	case projectpkg.KubiEnvironmentDevelopment:
 		project.Spec.Stages = []string{utils.KubiStageScratch, utils.KubiStageStaging, utils.KubiStageStable}
-	case utils.KubiEnvironmentIntegration:
+	case projectpkg.KubiEnvironmentIntegration:
 		project.Spec.Stages = []string{utils.KubiStageStaging, utils.KubiStageStable}
-	case utils.KubiEnvironmentUAT:
+	case projectpkg.KubiEnvironmentUAT:
 		project.Spec.Stages = []string{utils.KubiStageStaging, utils.KubiStageStable}
-	case utils.KubiEnvironmentPreproduction:
+	case projectpkg.KubiEnvironmentPreproduction:
 		project.Spec.Stages = []string{utils.KubiStageStable}
-	case utils.KubiEnvironmentProduction:
+	case projectpkg.KubiEnvironmentProduction:
 		project.Spec.Stages = []string{utils.KubiStageStable}
 	default:
 		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace())

@@ -4,14 +4,19 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ca-gip/kubi/internal/ldap"
+	"github.com/ca-gip/kubi/pkg/types"
 )
 
 type contextKey string
 
 const UserContextKey contextKey = "user"
 
-func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
+type Authenticator interface {
+	AuthN(username, password string) (*types.User, error)
+	AuthZ(user *types.User) (*types.User, error)
+}
+
+func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract the username and password from the request
 		// Authorization header. If no Authentication header is present
@@ -24,7 +29,15 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			user, err := ldap.AuthenticateUser(username, password)
+			user, err := authenticator.AuthN(username, password)
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// If the username and password are correct, then search for the user's group,
+			// and only add the user and its group to the request context if successful.
+			user, err = authenticator.AuthZ(user)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return

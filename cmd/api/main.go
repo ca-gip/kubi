@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/middlewares"
 	"github.com/ca-gip/kubi/internal/services"
 	"github.com/ca-gip/kubi/internal/utils"
@@ -23,6 +24,8 @@ func main() {
 	// TODO Remove this aberration - L17 should be a constructor and we should
 	// use the config as live object instead of mutating it.
 	utils.Config = config
+
+	ldapClient := ldap.NewLDAPClient(config.Ldap)
 
 	// TODO Move to config ( for validation )
 	ecdsaPem, err := os.ReadFile(utils.ECDSAKeyPath)
@@ -51,8 +54,8 @@ func main() {
 		io.WriteString(w, config.KubeCaText)
 	}).Methods(http.MethodGet)
 
-	router.HandleFunc("/config", middlewares.WithBasicAuth(tokenIssuer.GenerateConfig)).Methods(http.MethodGet)
-	router.HandleFunc("/token", middlewares.WithBasicAuth(tokenIssuer.GenerateJWT)).Methods(http.MethodGet)
+	router.HandleFunc("/config", middlewares.WithBasicAuth(ldapClient, tokenIssuer.GenerateConfig)).Methods(http.MethodGet)
+	router.HandleFunc("/token", middlewares.WithBasicAuth(ldapClient, tokenIssuer.GenerateJWT)).Methods(http.MethodGet)
 	router.Handle("/metrics", promhttp.Handler())
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8000)
