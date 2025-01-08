@@ -1,14 +1,18 @@
-package services
+package project
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 )
+
+type ProjectLister interface {
+	ListProjects() ([]*types.Project, error)
+}
 
 // DNSParser is a regex to parse a group name into a namespace and a role.
 // Please note the underscore behaviour:
@@ -23,13 +27,13 @@ var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
 // - Environment
 // If environment not found, return the namespace as is
 // This is a convenience function for test purposes
-func namespaceParser(namespaceInput string) (projectName string, environment string) {
+func parseNamespace(namespaceInput string) (projectName string, environment string) {
 
 	var namespaceHasSuffix bool
 
 	// check whether any of our environments names (short and longs)
 	// are part of the namespace given in input
-	for _, environmentSuffix := range utils.AllEnvironments {
+	for _, environmentSuffix := range AllEnvironments {
 		if strings.HasSuffix(namespaceInput, "-"+environmentSuffix) {
 			namespaceHasSuffix = true
 			break
@@ -45,7 +49,7 @@ func namespaceParser(namespaceInput string) (projectName string, environment str
 	splits := strings.Split(namespaceInput, "-")
 
 	environment = splits[len(splits)-1]
-	if val, ok := utils.LdapMapping[environment]; ok {
+	if val, ok := EnvironmentNamesMapping[environment]; ok {
 		environment = val
 	}
 
@@ -70,7 +74,7 @@ func NewProject(group string) (*types.Project, error) {
 
 	rawNamespace, role := DnsParser.ReplaceAllString(lowerGroup, "${namespace}"), DnsParser.ReplaceAllString(lowerGroup, "${role}")
 	fmt.Println("namespace:", rawNamespace, "role:", role)
-	projectName, environment := namespaceParser(rawNamespace)
+	projectName, environment := parseNamespace(rawNamespace)
 	project := &types.Project{
 		Project:     projectName,
 		Role:        role,
@@ -78,18 +82,18 @@ func NewProject(group string) (*types.Project, error) {
 		Environment: environment,
 	}
 
-	isNamespaceValid, err := regexp.MatchString(utils.Dns1123LabelFmt, project.Namespace())
+	isNamespaceValid, err := regexp.MatchString(Dns1123LabelFmt, project.Namespace())
 	if err != nil {
 		return nil, err
 	}
-	isInBlacklistedNamespace := slices.Contains(utils.BlacklistedNamespaces, project.Namespace())
-	isRoleValid := slices.Contains(utils.WhitelistedRoles, project.Role)
+	isInBlacklistedNamespace := slices.Contains(BlacklistedNamespaces, project.Namespace())
+	isRoleValid := slices.Contains(WhitelistedRoles, project.Role)
 
 	switch {
-	case len(project.Namespace()) > utils.DNS1123LabelMaxLength:
-		return nil, fmt.Errorf("the name for namespace cannot exceeded %v characters", utils.DNS1123LabelMaxLength)
-	case len(role) > utils.DNS1123LabelMaxLength:
-		return nil, fmt.Errorf("the name for role cannot exceeded %v characters", utils.DNS1123LabelMaxLength)
+	case len(project.Namespace()) > DNS1123LabelMaxLength:
+		return nil, fmt.Errorf("the name for namespace cannot exceeded %v characters", DNS1123LabelMaxLength)
+	case len(role) > DNS1123LabelMaxLength:
+		return nil, fmt.Errorf("the name for role cannot exceeded %v characters", DNS1123LabelMaxLength)
 	case isInBlacklistedNamespace:
 		return nil, fmt.Errorf("the project from group %v cannot be created, its namespace %v is protected through blacklist", group, project.Namespace())
 	case !isNamespaceValid:
@@ -101,18 +105,15 @@ func NewProject(group string) (*types.Project, error) {
 	}
 }
 
-// GetAllProjects returns a slice of new projects from a list of groups
-// This is useful to see all the projects matching all the groups from the luster
-// Or to see all the projects a user has access to (based on the user's groups)
-func GetAllProjects(groups []string) []*types.Project {
-	res := make([]*types.Project, 0)
-	for _, groupname := range groups {
-		tupple, err := NewProject(groupname)
-		if err == nil {
-			res = append(res, tupple)
-		} else {
-			utils.Log.Error().Msg(err.Error())
+func GetProjectsFromGrouplist(groups []string) []*types.Project {
+	projects := make([]*types.Project, 0)
+	for _, projectGroup := range groups {
+		project, err := NewProject(projectGroup)
+		if err != nil {
+			slog.Error(fmt.Sprintf("Could not generate project name from group %v", projectGroup))
+			continue
 		}
+		projects = append(projects, project)
 	}
-	return res
+	return projects
 }

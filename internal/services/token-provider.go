@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/middlewares"
+	"github.com/ca-gip/kubi/internal/project"
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/dgrijalva/jwt-go"
@@ -147,58 +147,38 @@ func (issuer *TokenIssuer) signJWTClaims(claims types.AuthJWTClaims) (*string, e
 
 func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*string, error) {
 
-	memberships := &ldap.UserMemberships{}
-	if err := memberships.FromUserDN(user.UserDN); err != nil {
-		utils.TokenCounter.WithLabelValues("token_error").Inc()
-		return nil, err
-	}
-	groups := memberships.ListGroups()
-	utils.Log.Info().Msgf("The user %s is part of the groups %v", user.Username, groups)
-
-	// to keep for historical reasons: We continue to issue tokens with old data until
-	// ArgoCD + promote + other? is updated to use the new groups.
-	isAdmin := len(memberships.AdminAccess) > 0
-	isAppOps := (len(memberships.AppOpsAccess) > 0) || (len(memberships.CustomerOpsAccess) > 0)
-	isViewer := len(memberships.ViewerAccess) > 0
-	isService := len(memberships.ServiceAccess) > 0
-	isCloudOps := len(memberships.CloudOpsAccess) > 0
-
 	var claims types.AuthJWTClaims
 	var err error
 	var token *string = nil
 
 	if len(scopes) > 0 {
-		if !(isAdmin || isAppOps || isCloudOps) {
-			utils.TokenCounter.WithLabelValues("token_error").Inc()
-			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", user.Username, isAdmin, isAppOps, isCloudOps)
+		if !(user.IsAdmin || user.IsAppOps || user.IsCloudOps) {
+			return nil, fmt.Errorf("the user %s cannot generate extra token with no transversal access (admin: %v, application: %v, ops: %v)", user.Username, user.IsAdmin, user.IsAppOps, user.IsCloudOps)
 		}
 		claims, err = issuer.generateServiceJWTClaims(user.Username, user.Email, scopes)
 		if err != nil {
-			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
 		}
 	} else {
 		// Do not pass the full group list, as they wont parse as Projects.
-		projectAccesses := GetAllProjects(memberships.ListClusterGroups())
+		// When the Project Access will be removed, the createAccessToken will become a simple wrapper around generateUserJWTClaims and their signature.
+		// We can then use Factory or Strategy pattern to clean up the code further.
+		projects := project.GetProjectsFromGrouplist(user.ProjectAccesses)
 
-		claims, err = issuer.generateUserJWTClaims(projectAccesses, groups, user.Username, user.Email, isAdmin, isAppOps, isCloudOps, isViewer, isService)
+		claims, err = issuer.generateUserJWTClaims(projects, user.Groups, user.Username, user.Email, user.IsAdmin, user.IsAppOps, user.IsCloudOps, user.IsViewer, user.IsService)
 		if err != nil {
-			utils.TokenCounter.WithLabelValues("token_error").Inc()
 			return nil, fmt.Errorf("unable to generate the token %v", err)
 		}
 	}
 
 	token, err = issuer.signJWTClaims(claims)
 	if err != nil {
-		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, fmt.Errorf("unable to sign the token %v", err)
 	}
 
 	if token == nil {
-		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		return nil, fmt.Errorf("the token is nil")
 	}
-	// TODO: Expose a metric or a log about the type of token generated (its scope)
 	utils.TokenCounter.WithLabelValues("token_success").Inc()
 	return token, nil
 }
@@ -217,6 +197,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	token, err := issuer.createAccessToken(user, scopes)
 
 	if err != nil {
+		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		utils.Log.Error().Msgf("Granting token fail for user %v, %v ", user.Username, err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -244,6 +225,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	token, err := issuer.createAccessToken(user, "")
 	// no need to generate config if the user cannot access it.
 	if err != nil {
+		utils.TokenCounter.WithLabelValues("token_error").Inc()
 		utils.Log.Error().Msgf("Granting token fail for user %v, %v", user.Username, err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return

@@ -34,11 +34,11 @@ func main() {
 	tokenIssuer, err := services.NewTokenIssuer(
 		ecdsaPem,
 		ecdsaPubPem,
-		utils.Config.TokenLifeTime,
-		utils.Config.ExtraTokenLifeTime, // This had to be included in refactor. TODO: Check side effects
-		utils.Config.Locator,
-		utils.Config.PublicApiServerURL,
-		utils.Config.Tenant,
+		config.TokenLifeTime,
+		config.ExtraTokenLifeTime, // This had to be included in refactor. TODO: Check side effects
+		config.Locator,
+		config.PublicApiServerURL,
+		config.Tenant,
 	)
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to create token issuer: %v", err)
