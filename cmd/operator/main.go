@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/middlewares"
@@ -23,6 +22,8 @@ func main() {
 
 	ldapClient := ldap.NewLDAPClient(config.Ldap)
 
+	go services.RefreshProjectsFromLdap(ldapClient, config.Whitelist)
+
 	utils.Config = config
 
 	// Generate namespace and role binding for ldap groups
@@ -37,25 +38,13 @@ func main() {
 	})
 	router.Handle("/metrics", promhttp.Handler())
 
+	services.WatchProjects()
+
 	if config.NetworkPolicy {
 		services.WatchNetPolConfig()
 	} else {
 		utils.Log.Info().Msg("NetworkPolicies generation is disabled.")
 	}
-	services.WatchProjects()
-
-	timerKubiRefresh := time.NewTicker(10 * time.Minute)
-	go func() {
-		for t := range timerKubiRefresh.C {
-
-			utils.Log.Info().Msgf("Create or Update Projects at %s", t.String())
-			projects, err := ldapClient.ListProjects()
-			if err != nil {
-				utils.Log.Error().Msgf("cannot get project list from ldap: %v", err)
-			}
-			services.HandleProject(projects)
-		}
-	}()
 
 	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8002)
 	utils.Log.Info().Msg(http.ListenAndServeTLS(":8002", utils.TlsCertPath, utils.TlsKeyPath, router).Error())
