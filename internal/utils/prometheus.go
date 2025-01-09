@@ -20,11 +20,6 @@ var NamespaceCreation = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "Number of namespace created",
 }, []string{"status", "name"})
 
-var RoleBindingsCreation = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "kubi_rolebindings_creation",
-	Help: "Number of role bindings created",
-}, []string{"status", "target_namespace", "name"})
-
 var ServiceAccountCreation = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "kubi_service_account_creation",
 	Help: "Number of service account created",

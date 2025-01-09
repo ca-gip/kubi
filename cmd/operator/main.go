@@ -40,6 +40,8 @@ func main() {
 
 	services.WatchProjects()
 
+	// TODO, get rid of the guard and auto watch netpol config if that's
+	// relevant to keep.
 	if config.NetworkPolicy {
 		services.WatchNetPolConfig()
 	} else {

@@ -8,7 +8,7 @@ import (
 	"slices"
 
 	"github.com/ca-gip/kubi/internal/utils"
-	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +20,7 @@ import (
 
 // generateNamespace from a name
 // If it doesn't exist or the number of labels is different from what it should be
-func generateNamespace(project *v12.Project) (err error) {
+func generateNamespace(project *cagipv1.Project) (err error) {
 	if project == nil {
 		return errors.New("project reference is empty")
 	}
@@ -31,6 +31,7 @@ func generateNamespace(project *v12.Project) (err error) {
 
 	ns, errNs := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
 
+	//TODO: Cleanup and handle the case of errNS not nil and not is not found
 	if kerror.IsNotFound(errNs) {
 		err = createNamespace(project, api)
 	} else if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(project)) {
@@ -41,7 +42,7 @@ func generateNamespace(project *v12.Project) (err error) {
 	return
 }
 
-func createNamespace(project *v12.Project, api v13.CoreV1Interface) error {
+func createNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
 	utils.Log.Info().Msgf("Creating ns %v", project.Name)
 	ns := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
@@ -63,7 +64,7 @@ func createNamespace(project *v12.Project, api v13.CoreV1Interface) error {
 	return err
 }
 
-func updateExistingNamespace(project *v12.Project, api v13.CoreV1Interface) error {
+func updateExistingNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
 	utils.Log.Info().Msgf("Updating ns %v", project.Name)
 
 	ns, errns := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
@@ -98,7 +99,7 @@ func union(a map[string]string, b map[string]string) map[string]string {
 }
 
 // Generate CustomLabels that should be applied on Kubi's Namespaces
-func generateNamespaceLabels(project *v12.Project) (labels map[string]string) {
+func generateNamespaceLabels(project *cagipv1.Project) (labels map[string]string) {
 
 	defaultLabels := map[string]string{
 		"name":                               project.Name,

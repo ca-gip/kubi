@@ -3,200 +3,145 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/ca-gip/kubi/internal/utils"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	v1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
-	v14 "k8s.io/client-go/kubernetes/typed/rbac/v1"
+	rbacv1 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/rest"
 )
 
-// GenerateRolebinding from tupple
-// If exists, nothing is done, only creating !
-func GenerateUserRoleBinding(namespace string, role string) {
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, _ := kubernetes.NewForConfig(kconfig)
-	api := clientSet.RbacV1()
+var RoleBindingsCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_rolebindings_creation",
+	Help: "Number of role bindings created",
+}, []string{"status", "target_namespace", "name"})
 
-	roleBinding(fmt.Sprintf("%s-%s", "namespaced", role), api, namespace, subjectAdmin(namespace, role))
-	roleBinding("view", api, namespace, subjectView())
-}
-
-func subjectView() []v1.Subject {
-	subjectView := []v1.Subject{
-		{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Group",
-			Name:     utils.ApplicationViewer,
-		},
-	}
-	return subjectView
-}
-
-func subjectAdmin(namespace string, role string) []v1.Subject {
-	subjectAdmin := []v1.Subject{
-		{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Group",
-			Name:     fmt.Sprintf("%s-%s", namespace, role),
-		},
-		{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Group",
-			Name:     utils.ApplicationMaster,
-		},
-		{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Group",
-			Name:     utils.OPSMaster,
-		},
-	}
-	return subjectAdmin
-}
-
-func roleBinding(roleBindingName string, api v14.RbacV1Interface, namespace string, subjectAdmin []v1.Subject) {
-
-	newRoleBinding := v1.RoleBinding{
+// generateRoleBinding is convenience function for readability, returning a properly formatted rolebinding object.
+func newRoleBinding(name string, namespace string, clusterRole string, subjects []v1.Subject) *v1.RoleBinding {
+	return &v1.RoleBinding{
 		RoleRef: v1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     roleBindingName,
+			Name:     clusterRole,
 		},
-		Subjects: subjectAdmin,
+		Subjects: subjects,
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleBindingName,
+			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"name":    roleBindingName,
+				"name":    name,
 				"creator": "kubi",
 				"version": "v3",
 			},
 		},
 	}
-
-	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), roleBindingName, metav1.GetOptions{})
-	if errRB != nil {
-		_, err := api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
-		if err != nil {
-			utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
-			utils.Log.Error().Msg(err.Error())
-		}
-		utils.ServiceAccountCreation.WithLabelValues("created", namespace, roleBindingName).Inc()
-		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
-		return
-	}
-	_, err := api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-		utils.RoleBindingsCreation.WithLabelValues("error", namespace, roleBindingName).Inc()
-		return
-	}
-	utils.RoleBindingsCreation.WithLabelValues("updated", namespace, roleBindingName).Inc()
-	utils.Log.Info().Msgf("rolebinding %v has been updated for namespace %v and roleBindingName %v", roleBindingName, namespace, roleBindingName)
 }
 
-func GenerateAppRoleBinding(namespace string) {
+// createOrUpdateRoleBinding applies the roleBinding into the cluster?
+func createOrUpdateRoleBinding(api rbacv1.RbacV1Interface, roleBinding *v1.RoleBinding) error {
+	_, err := api.RoleBindings(roleBinding.ObjectMeta.Namespace).Get(context.TODO(), roleBinding.ObjectMeta.Name, metav1.GetOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		RoleBindingsCreation.WithLabelValues("error", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name).Inc()
+		return fmt.Errorf("unknown error %v", err)
+	}
+	if err != nil && k8serrors.IsNotFound(err) {
+		_, err := api.RoleBindings(roleBinding.ObjectMeta.Namespace).Create(context.TODO(), roleBinding, metav1.CreateOptions{})
+		if err != nil {
+			RoleBindingsCreation.WithLabelValues("error", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name).Inc()
+			return fmt.Errorf("error while creating new rolebinding %v/%v: %v", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name, err)
+		}
+		RoleBindingsCreation.WithLabelValues("created", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name).Inc()
+		return err
+	}
+	// Exists, force update.
+	if _, err := api.RoleBindings(roleBinding.ObjectMeta.Namespace).Update(context.TODO(), roleBinding, metav1.UpdateOptions{}); err != nil {
+		RoleBindingsCreation.WithLabelValues("error", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name).Inc()
+		return fmt.Errorf("unable to update rolebinding %v/%v: %v", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name, err)
+	}
+	RoleBindingsCreation.WithLabelValues("updated", roleBinding.ObjectMeta.Namespace, roleBinding.ObjectMeta.Name).Inc()
+	return nil
+}
+
+// generateRoleBindings handles ALL the rolebindings for a namespace.
+func generateRoleBindings(namespace string, defaultServiceAccountRole string) {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
 
-	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingAppName, metav1.GetOptions{})
-
-	newRoleBinding := v1.RoleBinding{
-		RoleRef: v1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     utils.KubiClusterRoleAppName,
-		},
-		Subjects: []v1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      utils.KubiServiceAccountAppName,
-				Namespace: namespace,
+	roleBindings := []struct {
+		name        string
+		clusterRole string
+		subjects    []v1.Subject
+	}{
+		{
+			name:        "namespaced-admin",
+			clusterRole: "namespaced-admin",
+			subjects: []v1.Subject{
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     fmt.Sprintf("%s-%s", namespace, "admin"),
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     utils.ApplicationMaster,
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     utils.OPSMaster,
+				},
 			},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.KubiRoleBindingAppName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"name":    utils.KubiRoleBindingAppName,
-				"creator": "kubi",
-				"version": "v3",
+		{
+			name:        "view",
+			clusterRole: "view",
+			subjects: []v1.Subject{
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     utils.ApplicationViewer,
+				},
+			},
+		},
+		{
+			name:        utils.KubiRoleBindingAppName,
+			clusterRole: utils.KubiClusterRoleAppName,
+			subjects: []v1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      utils.KubiServiceAccountAppName,
+					Namespace: namespace,
+				},
+			},
+		},
+		{
+			name:        utils.KubiRoleBindingDefaultName,
+			clusterRole: defaultServiceAccountRole,
+			subjects: []v1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      utils.KubiServiceAccountDefaultName,
+					Namespace: namespace,
+				},
 			},
 		},
 	}
-
-	if errRB != nil {
-		_, err := api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
-		if err != nil {
-			utils.Log.Error().Msg(err.Error())
-			utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
-			return
+	for _, rb := range roleBindings {
+		// For the rare (ancient!) case where the default clusterRole
+		// was empty (before it was pod-reader). If we want to remove it, we can.
+		if rb.clusterRole == "" {
+			continue
 		}
-		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
-		return
-	}
-
-	_, err := api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-		utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
-		return
-	}
-	utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
-	utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
-}
-
-func GenerateDefaultRoleBinding(namespace string) {
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, _ := kubernetes.NewForConfig(kconfig)
-	api := clientSet.RbacV1()
-
-	_, errRB := api.RoleBindings(namespace).Get(context.TODO(), utils.KubiRoleBindingDefaultName, metav1.GetOptions{})
-
-	newRoleBinding := v1.RoleBinding{
-		RoleRef: v1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     utils.Config.DefaultPermission,
-		},
-		Subjects: []v1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      utils.KubiServiceAccountDefaultName,
-				Namespace: namespace,
-			},
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      utils.KubiRoleBindingDefaultName,
-			Namespace: namespace,
-			Labels: map[string]string{
-				"name":    utils.KubiRoleBindingDefaultName,
-				"creator": "kubi",
-				"version": "v3",
-			},
-		},
-	}
-
-	if errRB != nil {
-		_, err := api.RoleBindings(namespace).Create(context.TODO(), &newRoleBinding, metav1.CreateOptions{})
+		err := createOrUpdateRoleBinding(api, newRoleBinding(rb.name, namespace, rb.clusterRole, rb.subjects))
 		if err != nil {
-			utils.Log.Error().Msg(err.Error())
-			utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
-			return
+			slog.Error(fmt.Sprintf("could not handle rolebinding %v/%v, %v", namespace, rb.name, err))
 		}
-		utils.Log.Info().Msgf("Rolebinding %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
-		utils.RoleBindingsCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-		return
 	}
-	_, err := api.RoleBindings(namespace).Update(context.TODO(), &newRoleBinding, metav1.UpdateOptions{})
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-		utils.RoleBindingsCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
-		return
-	}
-	utils.Log.Info().Msgf("Rolebinding %v has been update for namespace %v", utils.KubiServiceAccountAppName, namespace)
-	utils.RoleBindingsCreation.WithLabelValues("updated", namespace, utils.KubiServiceAccountAppName).Inc()
 }
