@@ -201,3 +201,69 @@ func Test_generateUserJWTClaims(t *testing.T) {
 		})
 	}
 }
+func Test_generateServiceJWTClaims(t *testing.T) {
+	duration, _ := time.ParseDuration("4h")
+	extraDuration, _ := time.ParseDuration("8h")
+	url, _ := url.Parse("https://kubi.example.com")
+
+	ecdsaPem, err := os.ReadFile("./../../test/ecdsa-key.pem")
+	if err != nil {
+		t.Fatalf("Unable to read ECDSA private key: %v", err)
+	}
+	ecdsaPubPem, err := os.ReadFile("./../../test/ecdsa-pub.pem")
+	if err != nil {
+		t.Fatalf("Unable to read ECDSA public key: %v", err)
+	}
+	var ecdsaKey *ecdsa.PrivateKey
+	var ecdsaPub *ecdsa.PublicKey
+	if ecdsaKey, err = jwt.ParseECPrivateKeyFromPEM(ecdsaPem); err != nil {
+		t.Fatalf("Unable to parse ECDSA private key: %v", err)
+	}
+	if ecdsaPub, err = jwt.ParseECPublicKeyFromPEM(ecdsaPubPem); err != nil {
+		t.Fatalf("Unable to parse ECDSA public key: %v", err)
+	}
+
+	issuer := &TokenIssuer{
+		EcdsaPrivate:       ecdsaKey,
+		EcdsaPublic:        ecdsaPub,
+		TokenDuration:      duration,
+		ExtraTokenDuration: extraDuration,
+		Locator:            utils.KubiLocatorIntranet,
+		PublicApiServerURL: url,
+		Tenant:             "tenant",
+	}
+
+	t.Run("Valid service JWT claims generation", func(t *testing.T) {
+		username := "testuser"
+		email := "testuser@example.com"
+		scopes := "promote"
+
+		claims, err := issuer.generateServiceJWTClaims(username, email, scopes)
+		assert.Nil(t, err)
+		assert.Equal(t, username, claims.User)
+		assert.Equal(t, email, claims.Contact)
+		assert.Equal(t, issuer.Locator, claims.Locator)
+		assert.Equal(t, issuer.PublicApiServerURL.Host, claims.Endpoint)
+		assert.Equal(t, issuer.Tenant, claims.Tenant)
+		assert.Equal(t, scopes, claims.Scopes)
+		assert.WithinDuration(t, time.Now().Add(extraDuration), time.Unix(claims.ExpiresAt, 0), time.Minute)
+		assert.Equal(t, "Kubi Server", claims.Issuer)
+	})
+
+	t.Run("Empty scopes in service JWT claims generation", func(t *testing.T) {
+		username := "testuser"
+		email := "testuser@example.com"
+		scopes := ""
+
+		claims, err := issuer.generateServiceJWTClaims(username, email, scopes)
+		assert.Nil(t, err)
+		assert.Equal(t, username, claims.User)
+		assert.Equal(t, email, claims.Contact)
+		assert.Equal(t, issuer.Locator, claims.Locator)
+		assert.Equal(t, issuer.PublicApiServerURL.Host, claims.Endpoint)
+		assert.Equal(t, issuer.Tenant, claims.Tenant)
+		assert.Equal(t, scopes, claims.Scopes)
+		assert.WithinDuration(t, time.Now().Add(extraDuration), time.Unix(claims.ExpiresAt, 0), time.Minute)
+		assert.Equal(t, "Kubi Server", claims.Issuer)
+	})
+}
