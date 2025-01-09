@@ -75,6 +75,6 @@ func createOrUpdateProjectResources(project *cagipv1.Project) {
 	}
 
 	GenerateAppServiceAccount(project.Name)
-	generateRoleBindings(project.Name, utils.Config.DefaultPermission)
+	generateRoleBindings(project, utils.Config.DefaultPermission)
 
 }
