@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -18,11 +19,13 @@ import (
 )
 
 func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool) {
+	slog.Info("Generating resources from LDAP groups")
+
 	timerKubiRefresh := time.NewTicker(10 * time.Minute)
 
 	for t := range timerKubiRefresh.C {
 
-		utils.Log.Info().Msgf("Create or Update Projects from LDAP %s", t.String())
+		utils.Log.Info().Msgf("new tick, now creating or updating projects from LDAP %s", t.String())
 		clusterProjects, err := ldapClient.ListProjects()
 		if err != nil {
 			utils.Log.Error().Msgf("cannot get project list from ldap: %v", err)

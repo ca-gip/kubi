@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
-	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -36,52 +36,29 @@ func WatchNetPolConfig() cache.Store {
 
 	resyncPeriod := 30 * time.Minute
 
-	store, controller := cache.NewInformer(watchlist, &v12.NetworkPolicyConfig{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
+	store, controller := cache.NewInformer(watchlist, &cagipv1.NetworkPolicyConfig{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
 		AddFunc:    networkPolicyConfigCreated,
-		DeleteFunc: networkPolicyConfigDelete,
-		UpdateFunc: networkPolicyConfigUpdate,
+		DeleteFunc: networkPolicyConfigDeleted,
+		UpdateFunc: networkPolicyConfigUpdated,
 	})
 
 	go controller.Run(wait.NeverStop)
 
 	return store
 }
-
-func networkPolicyConfigUpdate(old interface{}, new interface{}) {
-	netpolconfig := new.(*v12.NetworkPolicyConfig)
-	utils.Log.Info().Msgf("Operator: the network config %v has changed, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
-
-	kconfig, err := rest.InClusterConfig()
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
-		return
-	}
-
-	clientSet, err := versioned.NewForConfig(kconfig)
-	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
-		return
-	}
-
-	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
-
-	if err != nil {
-		utils.Log.Error().Msg(err.Error())
-		return
-	}
-
-	for _, project := range projects.Items {
-		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
-		if utils.Config.NetworkPolicy {
-			generateNetworkPolicy(project.Name, netpolconfig)
-		}
-	}
-
-}
-
 func networkPolicyConfigCreated(obj interface{}) {
-	netpolconfig := obj.(*v12.NetworkPolicyConfig)
+	netpolconfig := obj.(*cagipv1.NetworkPolicyConfig)
 	utils.Log.Info().Msgf("Operator: the network config %v has been created, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
+	createOrUpdateNetpols(netpolconfig)
+}
+
+func networkPolicyConfigUpdated(old interface{}, new interface{}) {
+	netpolconfig := new.(*cagipv1.NetworkPolicyConfig)
+	utils.Log.Info().Msgf("Operator: the network config %v has changed, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
+	createOrUpdateNetpols(netpolconfig)
+}
+
+func createOrUpdateNetpols(netpolconfig *cagipv1.NetworkPolicyConfig) {
 
 	kconfig, err := rest.InClusterConfig()
 	if err != nil {
@@ -96,6 +73,7 @@ func networkPolicyConfigCreated(obj interface{}) {
 	}
 
 	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
+
 	if err != nil {
 		utils.Log.Error().Msg(err.Error())
 		return
@@ -103,13 +81,12 @@ func networkPolicyConfigCreated(obj interface{}) {
 
 	for _, project := range projects.Items {
 		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
-		if utils.Config.NetworkPolicy {
-			generateNetworkPolicy(project.Name, netpolconfig)
-		}
+		generateNetworkPolicy(project.Name, netpolconfig)
 	}
+
 }
 
-func networkPolicyConfigDelete(obj interface{}) {
-	netpolconfig := obj.(*v12.NetworkPolicyConfig)
+func networkPolicyConfigDeleted(obj interface{}) {
+	netpolconfig := obj.(*cagipv1.NetworkPolicyConfig)
 	utils.Log.Info().Msgf("Operator: the network config %v has been deleted, please delete networkpolicies for all kubi's namespaces. Be careful !", netpolconfig.Name)
 }

@@ -2,11 +2,10 @@ package services
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
-	v12 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -35,43 +34,34 @@ func WatchProjects() cache.Store {
 	watchlist := cache.NewFilteredListWatchFromClient(v3.CagipV1().RESTClient(), "projects", metav1.NamespaceAll, utils.DefaultWatchOptionModifier)
 	resyncPeriod := 30 * time.Minute
 
-	store, controller := cache.NewInformer(watchlist, &v12.Project{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
+	store, controller := cache.NewInformer(watchlist, &cagipv1.Project{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
 		AddFunc:    projectCreated,
-		DeleteFunc: projectDelete,
-		UpdateFunc: projectUpdate,
+		DeleteFunc: projectDeleted,
+		UpdateFunc: projectUpdated,
 	})
 
 	go controller.Run(wait.NeverStop)
 
 	return store
 }
-
-func projectUpdate(old interface{}, new interface{}) {
-	newProject := new.(*v12.Project)
-	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", newProject.Name)
-
-	err := generateNamespace(newProject)
-	if err != nil {
-		utils.Log.Warn().Msgf("Unexpected error %s", err)
-		return
-	}
-
-	if utils.Config.NetworkPolicy {
-		generateNetworkPolicy(newProject.Name, nil)
-	}
-	// TODO: Refactor with a non static list of roles
-	GenerateUserRoleBinding(newProject.Name, "admin")
-	GenerateAppServiceAccount(newProject.Name)
-	GenerateAppRoleBinding(newProject.Name)
-	if !strings.EqualFold(utils.Config.DefaultPermission, "") {
-		GenerateDefaultRoleBinding(newProject.Name)
-	}
-
+func projectCreated(obj interface{}) {
+	project := obj.(*cagipv1.Project)
+	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
+	createOrUpdateProjectResources(project)
 }
 
-func projectCreated(obj interface{}) {
-	project := obj.(*v12.Project)
-	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
+func projectUpdated(old interface{}, new interface{}) {
+	project := new.(*cagipv1.Project)
+	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", project.Name)
+	createOrUpdateProjectResources(project)
+}
+
+func projectDeleted(obj interface{}) {
+	project := obj.(*cagipv1.Project)
+	utils.Log.Info().Msgf("Operator: the project %v has been deleted, Kubi won't delete anything, please delete the namespace %v manualy", project.Name, project.Name)
+}
+
+func createOrUpdateProjectResources(project *cagipv1.Project) {
 
 	err := generateNamespace(project)
 	if err != nil {
@@ -79,21 +69,12 @@ func projectCreated(obj interface{}) {
 		return
 	}
 
+	// TODO: Get rid of the guard, and automatically add netpol
 	if utils.Config.NetworkPolicy {
 		generateNetworkPolicy(project.Name, nil)
 	}
 
-	// TODO: Refactor with a non static list of roles
-	GenerateUserRoleBinding(project.Name, "admin")
 	GenerateAppServiceAccount(project.Name)
-	GenerateAppRoleBinding(project.Name)
-	if !strings.EqualFold(utils.Config.DefaultPermission, "") {
-		GenerateDefaultRoleBinding(project.Name)
-	}
+	generateRoleBindings(project.Name, utils.Config.DefaultPermission)
 
-}
-
-func projectDelete(obj interface{}) {
-	project := obj.(*v12.Project)
-	utils.Log.Info().Msgf("Operator: the project %v has been deleted, Kubi won't delete anything, please delete the namespace %v manualy", project.Name, project.Name)
 }
