@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/ca-gip/kubi/internal/utils"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	v1 "k8s.io/api/rbac/v1"
@@ -68,7 +69,8 @@ func createOrUpdateRoleBinding(api rbacv1.RbacV1Interface, roleBinding *v1.RoleB
 }
 
 // generateRoleBindings handles ALL the rolebindings for a namespace.
-func generateRoleBindings(namespace string, defaultServiceAccountRole string) {
+func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole string) {
+	namespace := project.Name
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.RbacV1()
@@ -96,6 +98,11 @@ func generateRoleBindings(namespace string, defaultServiceAccountRole string) {
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
 					Name:     utils.OPSMaster,
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     project.Spec.SourceEntity,
 				},
 			},
 		},
