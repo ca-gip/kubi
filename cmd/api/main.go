@@ -37,7 +37,15 @@ func main() {
 		utils.Log.Fatal().Msgf("Unable to read ECDSA public key: %v", err)
 	}
 
-	tokenIssuer, err := services.NewTokenIssuer(ecdsaPem, ecdsaPubPem, utils.Config.TokenLifeTime, utils.Config.ExtraTokenLifeTime, utils.Config.Locator, utils.Config.PublicApiServerURL, utils.Config.Tenant)
+	tokenIssuer, err := services.NewTokenIssuer(
+		ecdsaPem,
+		ecdsaPubPem,
+		config.TokenLifeTime,
+		config.ExtraTokenLifeTime,
+		config.Locator,
+		config.PublicApiServerURL,
+		config.Tenant,
+	)
 	if err != nil {
 		utils.Log.Fatal().Msgf("Unable to create token issuer: %v", err)
 	}
