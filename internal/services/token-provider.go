@@ -292,7 +292,10 @@ func generateKubeConfig(serverURL string, CA string, user types.User, token *str
 func (issuer *TokenIssuer) VerifyToken(usertoken string) (*types.AuthJWTClaims, error) {
 
 	// this verifies the token and its signature
-	token, err := jwt.ParseWithClaims(usertoken, &types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(usertoken, types.AuthJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if issuer.EcdsaPublic == nil {
+			return nil, fmt.Errorf("the public key is nil")
+		}
 		return issuer.EcdsaPublic, nil
 	})
 	if err != nil {
