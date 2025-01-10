@@ -5,11 +5,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-var TokenCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "kubi_valid_token_total",
-	Help: "Total number of tokens issued",
-}, []string{"status"})
-
 var ProjectCreation = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "kubi_project_creation",
 	Help: "Number of project created",
