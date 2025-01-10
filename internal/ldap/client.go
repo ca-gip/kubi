@@ -66,12 +66,12 @@ func (c *LDAPClient) AuthZ(user *types.User) (*types.User, error) {
 
 	user.Groups = ldapMemberships.toGroupNames()
 
+	// To be removed in final stage
 	user.IsAdmin = len(ldapMemberships.AdminAccess) > 0
 	user.IsAppOps = (len(ldapMemberships.AppOpsAccess) > 0) || (len(ldapMemberships.CustomerOpsAccess) > 0)
 	user.IsCloudOps = len(ldapMemberships.CloudOpsAccess) > 0
 	user.IsViewer = len(ldapMemberships.ViewerAccess) > 0
 	user.IsService = len(ldapMemberships.ServiceAccess) > 0
-
 	user.ProjectAccesses = ldapMemberships.toProjectNames()
 
 	return user, nil

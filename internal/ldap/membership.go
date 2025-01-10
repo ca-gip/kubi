@@ -1,18 +1,22 @@
 package ldap
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
+	"regexp"
+	"strings"
+
 	"gopkg.in/ldap.v2"
 )
 
 type LDAPMemberships struct {
-	AdminAccess         []*ldap.Entry
+	AdminAccess         []*ldap.Entry // Contains the groups considered for admin, to be removed in the future
 	AppOpsAccess        []*ldap.Entry
 	CustomerOpsAccess   []*ldap.Entry
 	ViewerAccess        []*ldap.Entry
 	ServiceAccess       []*ldap.Entry
 	CloudOpsAccess      []*ldap.Entry
 	ClusterGroupsAccess []*ldap.Entry // This represents the groups that are cluster-scoped (=projects)
+	NonSpecificGroups   []*ldap.Entry // This contains all the groups of the user, AFTER filtering
 }
 
 // Constructing LDAPMemberships struct with all the special groups the user is member of.
@@ -22,71 +26,81 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 	m := &LDAPMemberships{}
 
 	var err error
-	m.AdminAccess, err = c.getGroupsContainingUser(c.AdminGroupBase, userDN)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting admin access")
-	}
 
-	m.AppOpsAccess, err = c.getGroupsContainingUser(c.AppMasterGroupBase, userDN)
+	// TODO Evaluate whether we could use the memberOf of userDN instead.
+	entries, err := c.getGroupsContainingUser(c.AllGroupsBase, userDN)
 	if err != nil {
-		return nil, errors.Wrap(err, "error getting app ops access")
+		return nil, fmt.Errorf("could not get groups %v", err)
 	}
-
-	m.CustomerOpsAccess, err = c.getGroupsContainingUser(c.CustomerOpsGroupBase, userDN)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting customer ops access")
+	for _, entry := range entries {
+		switch strings.ToUpper(entry.DN) {
+		// The following will be able to get removed when we will
+		// have removed the specific accesses.
+		case strings.ToUpper(c.AdminGroupBase):
+			m.AdminAccess = append(m.AdminAccess, entry)
+		case strings.ToUpper(c.AppMasterGroupBase):
+			m.AppOpsAccess = append(m.AppOpsAccess, entry)
+		case strings.ToUpper(c.CustomerOpsGroupBase):
+			m.CustomerOpsAccess = append(m.CustomerOpsAccess, entry)
+		case strings.ToUpper(c.ViewerGroupBase):
+			m.ViewerAccess = append(m.ViewerAccess, entry)
+		case strings.ToUpper(c.ServiceGroupBase):
+			m.ServiceAccess = append(m.ServiceAccess, entry)
+		case strings.ToUpper(c.OpsMasterGroupBase):
+			m.CloudOpsAccess = append(m.CloudOpsAccess, entry)
+		case strings.ToUpper(c.GroupBase):
+			m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
+		}
+		// Matches against all regexp included in LDAPAllGroupsAllowList
+		for _, pattern := range c.AllGroupsAllowList {
+			matched, err := regexp.MatchString(pattern, strings.ToUpper(entry.DN))
+			if err != nil {
+				return nil, fmt.Errorf("error matching pattern %v: %v", pattern, err)
+			}
+			if matched {
+				m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
+				break
+			}
+		}
 	}
-
-	m.ViewerAccess, err = c.getGroupsContainingUser(c.ViewerGroupBase, userDN)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting viewer access")
-	}
-
-	m.ServiceAccess, err = c.getGroupsContainingUser(c.ServiceGroupBase, userDN)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting service access")
-	}
-
-	m.CloudOpsAccess, err = c.getGroupsContainingUser(c.OpsMasterGroupBase, userDN)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting cloud ops access")
-	}
-
-	// This is better than binding directly to the userDN and querying memberOf:
-	// in case of nested groups or other complex group structures, the memberOf
-	// attribute may not be populated correctly.
-	m.ClusterGroupsAccess, err = c.getGroupsContainingUser(c.GroupBase, userDN)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting cluster groups access")
-	}
-
 	return m, nil
 }
 
 // toGroupNames returns a slice for all the group names the user is member of,
 // rather than their full LDAP entries.
+// Ensuring uniqueness through map of 0 bytes structs as sets do not exist in go std lib
+// This is necessary, because we know the groups in specific access (like adminAccess)
+// are also present in the big blob of groups (="NonSpecificGroups")
 func (m *LDAPMemberships) toGroupNames() []string {
-	var groups []string
+	groupMap := make(map[string]struct{})
 	for _, entry := range m.AdminAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
 	}
 	for _, entry := range m.AppOpsAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
 	}
 	for _, entry := range m.CustomerOpsAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
 	}
 	for _, entry := range m.ViewerAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
 	}
 	for _, entry := range m.ServiceAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
 	}
 	for _, entry := range m.CloudOpsAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
 	}
 	for _, entry := range m.ClusterGroupsAccess {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
+	}
+	for _, entry := range m.NonSpecificGroups {
+		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
+	}
+
+	var groups []string
+	for group := range groupMap {
+		groups = append(groups, group)
 	}
 	return groups
 }
