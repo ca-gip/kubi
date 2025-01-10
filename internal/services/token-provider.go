@@ -14,6 +14,8 @@ import (
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gopkg.in/yaml.v2"
 )
 
@@ -26,6 +28,11 @@ type TokenIssuer struct {
 	PublicApiServerURL *url.URL
 	Tenant             string
 }
+
+var TokenCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_valid_token_total",
+	Help: "Total number of tokens issued",
+}, []string{"status"})
 
 func NewTokenIssuer(privateKey []byte, publicKey []byte, tokenDuration string, extraTokenDuration string, locator string, publicApiServerURL string, tenant string) (*TokenIssuer, error) {
 	duration, err := time.ParseDuration(tokenDuration)
@@ -179,7 +186,7 @@ func (issuer *TokenIssuer) createAccessToken(user types.User, scopes string) (*s
 	if token == nil {
 		return nil, fmt.Errorf("the token is nil")
 	}
-	utils.TokenCounter.WithLabelValues("token_success").Inc()
+	TokenCounter.WithLabelValues("token_success").Inc()
 	return token, nil
 }
 
@@ -197,7 +204,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	token, err := issuer.createAccessToken(user, scopes)
 
 	if err != nil {
-		utils.TokenCounter.WithLabelValues("token_error").Inc()
+		TokenCounter.WithLabelValues("token_error").Inc()
 		utils.Log.Error().Msgf("Granting token fail for user %v, %v ", user.Username, err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -225,7 +232,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	token, err := issuer.createAccessToken(user, "")
 	// no need to generate config if the user cannot access it.
 	if err != nil {
-		utils.TokenCounter.WithLabelValues("token_error").Inc()
+		TokenCounter.WithLabelValues("token_error").Inc()
 		utils.Log.Error().Msgf("Granting token fail for user %v, %v", user.Username, err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
