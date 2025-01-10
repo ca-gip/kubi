@@ -63,8 +63,22 @@ func MakeConfig() (*types.Config, error) {
 	case ldapGroupBase == "":
 		return nil, errors.New("groupBase is required")
 	case len(ldapGroupBase) < 2 || len(ldapGroupBase) > 200:
-		return nil, fmt.Errorf("length for LDAP_GROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapUserBase, len(ldapUserBase))
+		return nil, fmt.Errorf("length for LDAP_GROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapGroupBase, len(ldapGroupBase))
 	}
+
+	ldapAllGroupsBase := os.Getenv("LDAP_ALLGROUPSBASE")
+	switch {
+	case ldapAllGroupsBase == "":
+		return nil, errors.New("groupBase is required")
+	case len(ldapAllGroupsBase) < 2 || len(ldapAllGroupsBase) > 200:
+		return nil, fmt.Errorf("length for LDAP_ALLGROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapAllGroupsBase, len(ldapAllGroupsBase))
+	}
+
+	concatenatedAllowList := os.Getenv("LDAP_ALLGROUPS_ALLOWLIST")
+	if concatenatedAllowList == "" {
+		return nil, errors.New("LDAP_ALLGROUPS_ALLOWLIST env var is mandatory")
+	}
+	ldapAllGroupsAllowList := strings.Split(concatenatedAllowList, "~")
 
 	ldapServer := os.Getenv("LDAP_SERVER")
 	if ldapServer == "" {
@@ -189,6 +203,8 @@ func MakeConfig() (*types.Config, error) {
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
 		Ldap: types.LdapConfig{
 			UserBase:             ldapUserBase,
+			AllGroupsBase:        ldapAllGroupsBase,
+			AllGroupsAllowList:   ldapAllGroupsAllowList,
 			GroupBase:            ldapGroupBase,
 			AppMasterGroupBase:   getEnv("LDAP_APP_GROUPBASE", ""),
 			CustomerOpsGroupBase: getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
