@@ -1,6 +1,7 @@
 package ldap
 
 import (
+	"sort"
 	"testing"
 
 	"gopkg.in/ldap.v2"
@@ -80,9 +81,11 @@ func TestToGroupNames(t *testing.T) {
 			if len(got) != len(tt.expected) {
 				t.Errorf("toGroupNames() = %v, want %v", got, tt.expected)
 			}
+			sort.Strings(got)
+			sort.Strings(tt.expected)
 			for i, group := range got {
 				if group != tt.expected[i] {
-					t.Errorf("toGroupNames() = %v, want %v", got, tt.expected)
+					t.Errorf("toGroupNames()[%d] = %v, want %v", i, group, tt.expected[i])
 				}
 			}
 		})
