@@ -241,7 +241,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	utils.Log.Info().Msgf("Granting token for user %v", user.Username)
 
 	// Create a DNS 1123 cluster name and user name
-	yml, err := generateKubeConfig(user, token)
+	yml, err := generateKubeConfig(issuer.PublicApiServerURL.String(), utils.Config.KubeCa, user, token)
 	if err != nil {
 		utils.Log.Error().Err(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -252,8 +252,8 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	w.Write(yml)
 }
 
-func generateKubeConfig(user types.User, token *string) ([]byte, error) {
-	clusterName := strings.TrimPrefix(utils.Config.PublicApiServerURL, "https://api.")
+func generateKubeConfig(serverURL string, CA string, user types.User, token *string) ([]byte, error) {
+	clusterName := strings.TrimPrefix(serverURL, "https://api.")
 	username := fmt.Sprintf("%s_%s", user.Username, clusterName)
 
 	config := &types.KubeConfig{
@@ -263,8 +263,8 @@ func generateKubeConfig(user types.User, token *string) ([]byte, error) {
 			{
 				Name: clusterName,
 				Cluster: types.KubeConfigClusterData{
-					Server:          utils.Config.PublicApiServerURL,
-					CertificateData: utils.Config.KubeCa,
+					Server:          serverURL,
+					CertificateData: CA,
 				},
 			},
 		},
