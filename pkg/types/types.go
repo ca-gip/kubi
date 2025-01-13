@@ -12,7 +12,7 @@ import (
 type LdapConfig struct {
 	UserBase             string
 	AllGroupsBase        string   // base path for all the groups in the org, superset of GroupBase
-	AllGroupsAllowList   []string // list of DNs that will be allowed to pass through auth.
+	AllowedGroupRegexps  []string // list of DNs that will be allowed to pass through auth.
 	GroupBase            string   // base path for all the cluster's project groups
 	AppMasterGroupBase   string
 	CustomerOpsGroupBase string
