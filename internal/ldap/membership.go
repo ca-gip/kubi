@@ -2,7 +2,6 @@ package ldap
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"gopkg.in/ldap.v2"
@@ -16,7 +15,7 @@ type LDAPMemberships struct {
 	ServiceAccess       []*ldap.Entry
 	CloudOpsAccess      []*ldap.Entry
 	ClusterGroupsAccess []*ldap.Entry // This represents the groups that are cluster-scoped (=projects)
-	NonSpecificGroups   []*ldap.Entry // This contains all the groups of the user, AFTER filtering
+	NonSpecificGroups   []*ldap.Entry // This contains all the non-specific and non-project groups, unfiltered.
 }
 
 // Constructing LDAPMemberships struct with all the special groups the user is member of.
@@ -32,6 +31,7 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not get groups %v", err)
 	}
+	// special groups, to be removed when we're ready to do so.
 	for _, entry := range entries {
 		switch strings.ToUpper(entry.DN) {
 		// The following will be able to get removed when we will
@@ -50,17 +50,8 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 			m.CloudOpsAccess = append(m.CloudOpsAccess, entry)
 		case strings.ToUpper(c.GroupBase):
 			m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
-		}
-		// Matches against all regexp included in LDAPAllGroupsAllowList
-		for _, pattern := range c.AllGroupsAllowList {
-			matched, err := regexp.MatchString(pattern, strings.ToUpper(entry.DN))
-			if err != nil {
-				return nil, fmt.Errorf("error matching pattern %v: %v", pattern, err)
-			}
-			if matched {
-				m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
-				break
-			}
+		default:
+			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 		}
 	}
 	return m, nil

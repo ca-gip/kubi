@@ -74,11 +74,11 @@ func MakeConfig() (*types.Config, error) {
 		return nil, fmt.Errorf("length for LDAP_ALLGROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapAllGroupsBase, len(ldapAllGroupsBase))
 	}
 
-	concatenatedAllowList := os.Getenv("LDAP_ALLGROUPS_ALLOWLIST")
+	concatenatedAllowList := os.Getenv("LDAP_ALLOWED_GROUPS_REGEXPS")
 	if concatenatedAllowList == "" {
-		return nil, errors.New("LDAP_ALLGROUPS_ALLOWLIST env var is mandatory")
+		return nil, errors.New("LDAP_ALLOWED_GROUPS_REGEXPS env var is mandatory")
 	}
-	ldapAllGroupsAllowList := strings.Split(concatenatedAllowList, "~")
+	ldapAllowedGroupRegexps := strings.Split(concatenatedAllowList, "~")
 
 	ldapServer := os.Getenv("LDAP_SERVER")
 	if ldapServer == "" {
@@ -204,7 +204,7 @@ func MakeConfig() (*types.Config, error) {
 		Ldap: types.LdapConfig{
 			UserBase:             ldapUserBase,
 			AllGroupsBase:        ldapAllGroupsBase,
-			AllGroupsAllowList:   ldapAllGroupsAllowList,
+			AllowedGroupRegexps:  ldapAllowedGroupRegexps,
 			GroupBase:            ldapGroupBase,
 			AppMasterGroupBase:   getEnv("LDAP_APP_GROUPBASE", ""),
 			CustomerOpsGroupBase: getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
