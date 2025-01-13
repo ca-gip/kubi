@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
@@ -24,13 +25,19 @@ var RoleBindingsCreation = promauto.NewCounterVec(prometheus.CounterOpts{
 
 // generateRoleBinding is convenience function for readability, returning a properly formatted rolebinding object.
 func newRoleBinding(name string, namespace string, clusterRole string, subjects []v1.Subject) *v1.RoleBinding {
+	var validSubjects []v1.Subject
+	for _, subject := range subjects {
+		if subject.Name != "" {
+			validSubjects = append(validSubjects, subject)
+		}
+	}
 	return &v1.RoleBinding{
 		RoleRef: v1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     clusterRole,
 		},
-		Subjects: subjects,
+		Subjects: validSubjects,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -102,7 +109,22 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     project.Spec.SourceEntity,
+					Name:     project.Spec.SourceEntity, // the equivalent of $namespace-admin
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     toSubject(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     toSubject(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     toSubject(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
 				},
 			},
 		},
@@ -114,6 +136,11 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
 					Name:     utils.ApplicationViewer,
+				},
+				{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     "Group",
+					Name:     toSubject(utils.Config.Ldap.ViewerGroupBase),
 				},
 			},
 		},
@@ -151,4 +178,18 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 			slog.Error(fmt.Sprintf("could not handle rolebinding %v/%v, %v", namespace, rb.name, err))
 		}
 	}
+}
+
+// Quick and hacky way to parse DN from config, without having to load an ldap parser or doing any query
+// if not valid, return an empty string, which does not get applied in the list of subjects, as:
+// 1. it's not valid to not have a name
+// 2. We check whether we have a name in the generation of the rolebinding object.
+func toSubject(DN string) string {
+	parts := strings.Split(DN, ",")
+	for _, part := range parts {
+		if strings.HasPrefix(part, "CN=") {
+			return strings.TrimPrefix(part, "CN=")
+		}
+	}
+	return ""
 }
