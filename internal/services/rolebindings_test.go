@@ -60,3 +60,39 @@ func TestNewRoleBinding(t *testing.T) {
 		})
 	}
 }
+func TestToSubject(t *testing.T) {
+	tests := []struct {
+		DN       string
+		expected string
+	}{
+		{
+			DN:       "CN=test-user,OU=Users,DC=example,DC=com",
+			expected: "test-user",
+		},
+		{
+			DN:       "OU=Users,CN=test-user,DC=example,DC=com",
+			expected: "test-user",
+		},
+		{
+			DN:       "OU=Users,DC=example,DC=com",
+			expected: "",
+		},
+		{
+			DN:       "CN=test-user",
+			expected: "test-user",
+		},
+		{
+			DN:       "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.DN, func(t *testing.T) {
+			result := toSubject(tt.DN)
+			if result != tt.expected {
+				t.Errorf("toSubject(%v) = %v, expected %v", tt.DN, result, tt.expected)
+			}
+		})
+	}
+}
