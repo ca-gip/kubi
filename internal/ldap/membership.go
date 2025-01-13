@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"gopkg.in/ldap.v2"
@@ -104,4 +105,33 @@ func (m *LDAPMemberships) toProjectNames() []string {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}
 	return groups
+}
+
+func (m *LDAPMemberships) isUserAllowedOnCluster(regexpPatterns []string) (bool, error) {
+	var allowedInCluster bool
+	// To get access, the user needs at least one of the following:
+	// - Be granted access to at least one project
+	// - Have special rights
+	// - Have their group listed in an extra group allowlist
+	if len(m.AdminAccess) > 0 || len(m.AppOpsAccess) > 0 || len(m.CustomerOpsAccess) > 0 || len(m.ViewerAccess) > 0 || len(m.ServiceAccess) > 0 || len(m.CloudOpsAccess) > 0 || len(m.ClusterGroupsAccess) > 0 {
+		allowedInCluster = true
+	} else { // else is not mandatory it's just an optimisation: don't browse all groups if we already know the user has the rights to the cluster
+		for _, groupName := range m.NonSpecificGroups {
+			for _, pattern := range regexpPatterns {
+				matched, err := regexp.MatchString(strings.ToUpper(pattern), strings.ToUpper(groupName.DN)) // we match on full DN rather than CN because nobody prevents the ppl in the different entities to create a CN identical as the one used for adminGroup. This is purely out of precaution. In the future, we might want to change the regexp to match only the cn of the groups if we have the guarantee the users will not create groups that are duplicate.
+				if err != nil {
+					return false, fmt.Errorf("error matching pattern %v: %v", pattern, err)
+				}
+				if matched {
+					allowedInCluster = true
+					break
+				}
+			}
+			if allowedInCluster {
+				slog.Info("not evaluating further group patterns, the user has access to the cluster")
+				break
+			}
+		}
+	}
+	return allowedInCluster, nil
 }

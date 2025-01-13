@@ -64,6 +64,20 @@ func (c *LDAPClient) AuthZ(user *types.User) (*types.User, error) {
 		return &types.User{}, fmt.Errorf("cannot get memberships for user %s in LDAP", user.Username)
 	}
 
+	// We now have all the user details (including special groups).
+	// we can check if the user has the basic right to get a token.
+	// If they do, it means we trust the user, and we'll rely on the authorization db of each asset
+	// (dex+kubi plugin+argocm for argcd, kubernetes+kubiwebhook+rolebindings for kube api, promote...)
+
+	allowedInCluster, err := ldapMemberships.isUserAllowedOnCluster(c.AllowedGroupRegexps)
+	if err != nil {
+		return nil, fmt.Errorf("user is not autorised in this cluster due to an regex error %v, %v", user.UserDN, err)
+	}
+	if !allowedInCluster {
+		return nil, fmt.Errorf("user is not allowed in this cluster %v", user.UserDN)
+	}
+
+	// now create the user data accordingly.
 	user.Groups = ldapMemberships.toGroupNames()
 
 	// To be removed in final stage
@@ -73,19 +87,6 @@ func (c *LDAPClient) AuthZ(user *types.User) (*types.User, error) {
 	user.IsViewer = len(ldapMemberships.ViewerAccess) > 0
 	user.IsService = len(ldapMemberships.ServiceAccess) > 0
 	user.ProjectAccesses = ldapMemberships.toProjectNames()
-
-	// We now have all the user details (including special groups).
-	// we can check if the user has the basic right to get a token.
-	// If they do, it means we trust the user, and we'll rely on the authorization db of each asset
-	// (dex+kubi plugin+argocm for argcd, kubernetes+kubiwebhook+rolebindings for kube api, promote...)
-
-	allowedInCluster, err := isAllowed(user, c.AllowedGroupRegexps)
-	if err != nil {
-		return nil, fmt.Errorf("user is not autorised in this cluster due to an regex error %v, %v", user.UserDN, err)
-	}
-	if !allowedInCluster {
-		return nil, fmt.Errorf("user is not allowed in this cluster %v", user.UserDN)
-	}
 
 	return user, nil
 }
