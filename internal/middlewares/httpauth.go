@@ -2,6 +2,8 @@ package middlewares
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/ca-gip/kubi/pkg/types"
@@ -31,6 +33,7 @@ func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.Hand
 
 			user, err := authenticator.AuthN(username, password)
 			if err != nil {
+				slog.Info(fmt.Sprintf("user %v failed to authenticate, %v", username, err))
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
@@ -39,6 +42,8 @@ func WithBasicAuth(authenticator Authenticator, next http.HandlerFunc) http.Hand
 			// and only add the user and its group to the request context if successful.
 			user, err = authenticator.AuthZ(user)
 			if err != nil {
+				// todo, log context r.url.
+				slog.Warn(fmt.Sprintf("user %v failed authorization, logging for auditing purposes, reason:  %v", username, err))
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
