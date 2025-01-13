@@ -80,7 +80,7 @@ func (c *LDAPClient) getGroupsContainingUser(groupBaseDN string, userDN string) 
 	req := ldap.NewSearchRequest(
 		groupBaseDN,
 		ldap.ScopeWholeSubtree,
-		ldap.NeverDerefAliases, 1, 30, false,
+		ldap.NeverDerefAliases, 0, 30, false,
 		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
 		[]string{"cn"},
 		nil,
