@@ -25,7 +25,7 @@ func (c *LDAPClient) getProjectGroups() ([]string, error) {
 	}
 
 	var groups []string
-	for _, entry := range results.Entries {
+	for _, entry := range results {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}
 	return groups, nil

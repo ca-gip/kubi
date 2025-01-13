@@ -51,18 +51,26 @@ func (c *LDAPClient) ldapConnectAndBind(login string, password string) (*ldap.Co
 }
 
 // Query LDAP with default credentials and paging parameters
-func (c *LDAPClient) Query(request ldap.SearchRequest) (*ldap.SearchResult, error) {
+func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 	conn, err := c.ldapConnectAndBind(c.BindDN, c.BindPassword)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	results, err := conn.SearchWithPaging(&request, c.PageSize)
-	if err != nil {
-		return nil, fmt.Errorf("error searching in LDAP with request %v, %v", request, err)
-	}
-	return results, nil
 
+	var allResults []*ldap.Entry
+	for {
+		results, err := conn.SearchWithPaging(&request, c.PageSize)
+		if err != nil {
+			return nil, fmt.Errorf("error searching in LDAP with request %v, %v", request, err)
+		}
+		allResults = append(allResults, results.Entries...)
+		if len(results.Entries) < int(c.PageSize) {
+			break
+		}
+		request.Controls = results.Controls
+	}
+	return allResults, nil
 }
 
 func (c *LDAPClient) getGroupsContainingUser(groupBaseDN string, userDN string) ([]*ldap.Entry, error) {
@@ -83,5 +91,5 @@ func (c *LDAPClient) getGroupsContainingUser(groupBaseDN string, userDN string) 
 		return nil, errors.Wrap(err, "error querying for group memberships")
 	}
 
-	return res.Entries, nil
+	return res, nil
 }
