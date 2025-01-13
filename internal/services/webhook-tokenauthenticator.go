@@ -97,6 +97,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 
 		jwtTokenString, marshallError := json.Marshal(resp)
 		if marshallError == nil {
+			// todo, remove this logging
 			utils.Log.Debug().Msgf("%v", string(jwtTokenString))
 		} else {
 			utils.Log.Error().Msgf("Errot serializing json to token review: %s", marshallError.Error())

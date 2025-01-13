@@ -110,7 +110,7 @@ func GetProjectsFromGrouplist(groups []string) []*types.Project {
 	for _, projectGroup := range groups {
 		project, err := NewProject(projectGroup)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Could not generate project name from group %v", projectGroup))
+			slog.Error("Could not generate project name from group name", "group", projectGroup, "reason", err)
 			continue
 		}
 		projects = append(projects, project)

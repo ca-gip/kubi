@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 
@@ -122,6 +123,7 @@ func (m *LDAPMemberships) isUserAllowedOnCluster(regexpPatterns []string) (bool,
 				if err != nil {
 					return false, fmt.Errorf("error matching pattern %v: %v", pattern, err)
 				}
+				slog.Info("Result of regexp match between config pattern and the following user's group", "match", matched, "pattern", pattern, "groupDN", groupName.DN)
 				if matched {
 					allowedInCluster = true
 					break
