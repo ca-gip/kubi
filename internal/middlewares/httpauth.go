@@ -30,7 +30,7 @@ func WithBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserContextKey, user) // This is ugly, but at least it cleans up the code and matches the usual patterns.
+			ctx := context.WithValue(r.Context(), UserContextKey, *user) // Store the user value directly in the context.
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}
