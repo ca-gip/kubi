@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/middlewares"
@@ -10,14 +11,16 @@ import (
 	"github.com/ca-gip/kubi/internal/utils"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/zerolog/log"
 )
 
 func main() {
 
+	utils.InitLogger(os.Stdout)
+
 	config, err := utils.MakeConfig()
 	if err != nil {
-		log.Fatal().Msg(fmt.Sprintf("Config error: %v", err))
+		slog.Error("config error", "error", err)
+		os.Exit(1)
 	}
 
 	ldapClient := ldap.NewLDAPClient(config.Ldap)
@@ -28,13 +31,13 @@ func main() {
 
 	// Generate namespace and role binding for ldap groups
 	// no need to wait here
-	utils.Log.Info().Msg("Generating resources from LDAP groups")
+	slog.Info("generating resources from LDAP groups")
 
 	router := mux.NewRouter()
 	router.Use(middlewares.Prometheus)
 	router.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		utils.Log.Warn().Msgf("%d %s %s", http.StatusNotFound, req.Method, req.URL.String())
+		slog.Info("endpoint not routed", "method", req.Method, "url", req.URL.String())
 	})
 	router.Handle("/metrics", promhttp.Handler())
 
@@ -45,10 +48,12 @@ func main() {
 	if config.NetworkPolicy {
 		services.WatchNetPolConfig()
 	} else {
-		utils.Log.Info().Msg("NetworkPolicies generation is disabled.")
+		slog.Info("networkPolicies generation is disabled")
 	}
 
-	utils.Log.Info().Msgf(" Preparing to serve request, port: %d", 8002)
-	utils.Log.Info().Msg(http.ListenAndServeTLS(":8002", utils.TlsCertPath, utils.TlsKeyPath, router).Error())
+	slog.Info("starting server", "port", 8002)
+	if err := http.ListenAndServeTLS(":8002", utils.TlsCertPath, utils.TlsKeyPath, router); err != nil {
+		slog.Error("server failed to start", "error", err)
+	}
 
 }

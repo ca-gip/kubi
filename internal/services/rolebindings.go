@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -76,7 +75,9 @@ func createOrUpdateRoleBinding(api rbacv1.RbacV1Interface, roleBinding *v1.RoleB
 }
 
 // generateRoleBindings handles ALL the rolebindings for a namespace.
-func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole string) {
+func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole string) error {
+	var errors []error
+
 	namespace := project.Name
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
@@ -175,9 +176,13 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 		}
 		err := createOrUpdateRoleBinding(api, newRoleBinding(rb.name, namespace, rb.clusterRole, rb.subjects))
 		if err != nil {
-			slog.Error(fmt.Sprintf("could not handle rolebinding %v/%v, %v", namespace, rb.name, err))
+			errors = append(errors, fmt.Errorf("could not handle rolebinding %v/%v, %v", namespace, rb.name, err))
 		}
 	}
+	if len(errors) > 0 {
+		return fmt.Errorf("encountered the following errors in rolebindings create or update: %v", errors)
+	}
+	return nil
 }
 
 // Quick and hacky way to parse DN from config, without having to load an ldap parser or doing any query

@@ -1,7 +1,7 @@
 package services
 
 import (
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -21,13 +21,13 @@ import (
 func WatchProjects() cache.Store {
 	kconfig, err := rest.InClusterConfig()
 	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		slog.Error("failed to create in cluster config", "error", err)
 		return nil
 	}
 
 	v3, err := versioned.NewForConfig(kconfig)
 	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		slog.Error("failed to create kubernetes clientset", "error", err)
 		return nil
 	}
 
@@ -46,35 +46,56 @@ func WatchProjects() cache.Store {
 }
 func projectCreated(obj interface{}) {
 	project := obj.(*cagipv1.Project)
-	utils.Log.Info().Msgf("Operator: the project %v has been created, generating associated resources: namespace, networkpolicies.", project.Name)
+	slog.Info("project has been created, creating associated resources", "project", project.Name)
 	createOrUpdateProjectResources(project)
 }
 
 func projectUpdated(old interface{}, new interface{}) {
 	project := new.(*cagipv1.Project)
-	utils.Log.Info().Msgf("Operator: the project %v has been updated, updating associated resources: namespace, networkpolicies.", project.Name)
+	slog.Info("project has been updated, creating associated resources", "project", project.Name)
 	createOrUpdateProjectResources(project)
 }
 
 func projectDeleted(obj interface{}) {
 	project := obj.(*cagipv1.Project)
-	utils.Log.Info().Msgf("Operator: the project %v has been deleted, Kubi won't delete anything, please delete the namespace %v manualy", project.Name, project.Name)
+	slog.Warn("Operator: a project was deleted, Kubi won't delete anything, please delete the namespace manualy", "namespace", project.Name)
 }
 
 func createOrUpdateProjectResources(project *cagipv1.Project) {
 
-	err := generateNamespace(project)
-	if err != nil {
-		utils.Log.Warn().Msgf("Unexpected error %s", err)
+	if err := generateNamespace(project); err != nil {
+		slog.Error("generate namespace failed", "error", err)
+		NamespaceCreation.WithLabelValues("error", project.Name).Inc()
 		return
 	}
+	slog.Debug("namespace created", "namespace", project.Name)
+	NamespaceCreation.WithLabelValues("ok", project.Name).Inc()
 
 	// TODO: Get rid of the guard, and automatically add netpol
 	if utils.Config.NetworkPolicy {
-		generateNetworkPolicy(project.Name, nil)
+		err := generateNetworkPolicy(project.Name, nil)
+		if err != nil {
+			slog.Error("cannot generate network policy", "namespace", project.Name, "error", err)
+			NetworkPolicyCreation.WithLabelValues("error", project.Name, utils.KubiDefaultNetworkPolicyName).Inc()
+		}
+		slog.Debug("network policy created", "object", utils.KubiDefaultNetworkPolicyName, "namespace", project.Name)
+		NetworkPolicyCreation.WithLabelValues("updated", project.Name, utils.KubiDefaultNetworkPolicyName).Inc()
 	}
 
-	GenerateAppServiceAccount(project.Name)
-	generateRoleBindings(project, utils.Config.DefaultPermission)
+	if err := GenerateAppServiceAccount(project.Name); err != nil {
+		slog.Error("generate service account error", "error", err)
+		ServiceAccountCreation.WithLabelValues("error", project.Name).Inc()
+		return
+	}
+	slog.Debug("service Account created", "object", utils.KubiServiceAccountAppName, "namespace", project.Name)
+	ServiceAccountCreation.WithLabelValues("ok", project.Name).Inc()
+
+	if err := generateRoleBindings(project, utils.Config.DefaultPermission); err != nil {
+		slog.Error("generate role binding error", "error", err)
+		RoleBindingsCreation.WithLabelValues("error", project.Name).Inc()
+		return
+	}
+	slog.Debug("role bindings created", "namespace", project.Name)
+	RoleBindingsCreation.WithLabelValues("ok", project.Name).Inc()
 
 }

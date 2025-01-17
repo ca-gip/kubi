@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"slices"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	corev1 "k8s.io/api/core/v1"
 	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +20,12 @@ import (
 	"k8s.io/client-go/rest"
 	podSecurity "k8s.io/pod-security-admission/api"
 )
+
+// todo: remove namespace: high cardinality, no value
+var NamespaceCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_namespace_creation",
+	Help: "Number of namespace created",
+}, []string{"status", "name"})
 
 // generateNamespace from a name
 // If it doesn't exist or the number of labels is different from what it should be
@@ -31,19 +40,23 @@ func generateNamespace(project *cagipv1.Project) (err error) {
 
 	ns, errNs := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
 
-	//TODO: Cleanup and handle the case of errNS not nil and not is not found
-	if kerror.IsNotFound(errNs) {
-		err = createNamespace(project, api)
-	} else if errNs == nil && !reflect.DeepEqual(ns.Labels, generateNamespaceLabels(project)) {
-		err = updateExistingNamespace(project, api)
-	} else {
-		utils.NamespaceCreation.WithLabelValues("ok", project.Name).Inc()
+	isNsUptodate := reflect.DeepEqual(ns.Labels, generateNamespaceLabels(project))
+
+	switch {
+	case errNs != nil && kerror.IsNotFound(errNs):
+		slog.Info("creating namespace", "namespace", project.Name)
+		return createNamespace(project, api)
+	case errNs != nil:
+		return errNs
+	case errNs == nil && !isNsUptodate:
+		slog.Info("updating namespace", "namespace", project.Name)
+		return updateExistingNamespace(project, api)
+	default:
+		return nil
 	}
-	return
 }
 
 func createNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
-	utils.Log.Info().Msgf("Creating ns %v", project.Name)
 	ns := &corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -56,22 +69,15 @@ func createNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
 	}
 	_, err := api.Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 	if err != nil {
-		utils.Log.Error().Err(err)
-		utils.NamespaceCreation.WithLabelValues("error", project.Name).Inc()
-	} else {
-		utils.NamespaceCreation.WithLabelValues("created", project.Name).Inc()
+		return fmt.Errorf("failed to api call create namespace on ns %v, %v", project.Name, err)
 	}
 	return err
 }
 
 func updateExistingNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
-	utils.Log.Info().Msgf("Updating ns %v", project.Name)
-
 	ns, errns := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
 	if errns != nil {
-		msgError := fmt.Errorf("could not get namespace in updating ns in updateExistingNamespace() %v", errns)
-		utils.Log.Error().Err(msgError)
-		return msgError
+		return fmt.Errorf("k8s api error while fetching ns %v for its update, %v", ns, errns)
 	}
 
 	ns.Name = project.Name
@@ -79,14 +85,8 @@ func updateExistingNamespace(project *cagipv1.Project, api v13.CoreV1Interface) 
 
 	_, err := api.Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
 	if err != nil {
-		msgError := fmt.Errorf("could not update ns in updateExistingNamespace() %v", errns)
-		utils.Log.Error().Err(msgError)
-		utils.NamespaceCreation.WithLabelValues("error", project.Name).Inc()
-		return msgError
+		return fmt.Errorf("k8s api error while updating ns %v, %v", ns, errns)
 	}
-
-	utils.NamespaceCreation.WithLabelValues("updated", project.Name).Inc()
-
 	return nil
 }
 
@@ -116,7 +116,7 @@ func generateNamespaceLabels(project *cagipv1.Project) (labels map[string]string
 
 func GetPodSecurityStandardName(namespace string) string {
 	if slices.Contains(utils.Config.PrivilegedNamespaces, namespace) {
-		utils.Log.Warn().Msgf("Namespace %v is labeled as privileged", namespace)
+		slog.Warn("namespace is labeled as privileged", "namespace", namespace)
 		return string(podSecurity.LevelPrivileged)
 	}
 	return string(utils.Config.PodSecurityAdmissionEnforcement)

@@ -16,19 +16,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
+
+var ProjectCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_project_creation",
+	Help: "Number of project created",
+}, []string{"status", "name"})
 
 func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool) {
 	slog.Info("Generating resources from LDAP groups")
 
-	timerKubiRefresh := time.NewTicker(10 * time.Minute)
-
-	for t := range timerKubiRefresh.C {
-
-		utils.Log.Info().Msgf("new tick, now creating or updating projects from LDAP %s", t.String())
+	for {
+		slog.Info("new tick, now creating or updating projects from LDAP")
 		clusterProjects, err := ldapClient.ListProjects()
 		if err != nil {
-			utils.Log.Error().Msgf("cannot get project list from ldap: %v", err)
+			slog.Error("cannot get project list from ldap", "error", err)
 		}
 		kconfig, _ := rest.InClusterConfig()
 		clientSet, _ := kubernetes.NewForConfig(kconfig)
@@ -37,24 +42,28 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 
 		blacklistCM, errRB := GetBlackWhitelistCM(api)
 		if errRB != nil {
-			utils.Log.Info().Msg("Can't get Black&Whitelist")
-		} else {
-			blackWhiteList = projectpkg.MakeBlackWhitelist(blacklistCM.Data)
+			slog.Error("Can't get configmap containing the blacklist or whitelist, retrying in a minute", "error", errRB)
+			// instead of waiting a full 10 minute tick in case an api server is slow, just retry a minute later.
+			time.Sleep(time.Minute)
+			continue
 		}
+
+		blackWhiteList = projectpkg.MakeBlackWhitelist(blacklistCM.Data)
 
 		createdproject, deletedprojects, ignoredProjects := projectpkg.FilterProjects(whitelistEnabled, clusterProjects, &blackWhiteList)
 		for _, project := range ignoredProjects {
-			utils.Log.Error().Msgf("Cannot find project %s in whitelist", project.Namespace())
+			slog.Error("Cannot find project in whitelist", "namespace", project.Namespace())
 		}
 		for _, project := range deletedprojects {
-			utils.Log.Info().Msgf("delete project %s in blacklist", project.Namespace())
+			slog.Info("deleting project in blacklist", "namespace", project.Namespace())
 			deleteProject(project)
 		}
 		// now that the project is well categorized we know that a project cannot be at the same  time to be deleted and to be generated
 		for _, project := range createdproject {
-			utils.Log.Info().Msgf("Project %s is whitelisted", project.Namespace())
+			slog.Info("creating or updating projec", "namespace", project.Namespace())
 			generateProject(project)
 		}
+		time.Sleep(10 * time.Minute)
 	}
 }
 
@@ -69,6 +78,7 @@ func appendIfMissing(slice []string, i string) []string {
 
 // generate a project config or update it if exists
 func generateProject(projectInfos *types.Project) {
+	// todo: cleanup this funvtion for testability...
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
 
@@ -76,7 +86,7 @@ func generateProject(projectInfos *types.Project) {
 
 	splits := strings.Split(projectInfos.Namespace(), "-")
 	if len(splits) < 2 {
-		utils.Log.Warn().Msgf("Provisionner: The project %v could'nt be split in two part: <namespace>-<environment>.", projectInfos.Namespace())
+		slog.Info("Provisionner: The project is not splittable in two parts: <namespace>-<environment>.", "namespace", projectInfos.Namespace())
 	}
 
 	project := &cagipv1.Project{
@@ -111,7 +121,7 @@ func generateProject(projectInfos *types.Project) {
 	case projectpkg.KubiEnvironmentProduction:
 		project.Spec.Stages = []string{utils.KubiStageStable}
 	default:
-		utils.Log.Warn().Msgf("Provisionner: Can't map stage and environment for project %v.", projectInfos.Namespace())
+		slog.Info("Provisionner: Can't map stage and environment for project", "namespace", projectInfos.Namespace())
 	}
 
 	project.Spec.SourceEntity = projectInfos.Source
@@ -121,17 +131,16 @@ func generateProject(projectInfos *types.Project) {
 	}
 
 	if errProject != nil {
-		utils.Log.Info().Msgf("Project: %v doesn't exist, will be created", projectInfos.Namespace())
+		slog.Info("Project does not exist and will be created", "namespace", projectInfos.Namespace())
 		_, errorCreate := clientSet.CagipV1().Projects().Create(context.TODO(), project, metav1.CreateOptions{})
 		if errorCreate != nil {
-			utils.Log.Error().Msg(errorCreate.Error())
-			utils.ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
-		} else {
-			utils.ProjectCreation.WithLabelValues("created", projectInfos.Project).Inc()
+			slog.Error("failed to create project", "namespace", projectInfos.Namespace(), "error", errorCreate)
+			ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
 		}
+		ProjectCreation.WithLabelValues("created", projectInfos.Project).Inc()
 		return
 	} else {
-		utils.Log.Info().Msgf("Project: %v already exists, will be updated", projectInfos.Namespace())
+		slog.Info("Project already exists, will be updated", "namespace", projectInfos.Namespace())
 		existingProject.Spec.Project = project.Spec.Project
 		if len(project.Spec.Contact) > 0 {
 			existingProject.Spec.Contact = project.Spec.Contact
@@ -149,11 +158,12 @@ func generateProject(projectInfos *types.Project) {
 		existingProject.Spec.SourceDN = fmt.Sprintf("CN=%s,%s", projectInfos.Source, utils.Config.Ldap.GroupBase)
 		_, errUpdate := clientSet.CagipV1().Projects().Update(context.TODO(), existingProject, metav1.UpdateOptions{})
 		if errUpdate != nil {
-			utils.Log.Error().Msg(errUpdate.Error())
-			utils.ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
-		} else {
-			utils.ProjectCreation.WithLabelValues("updated", projectInfos.Project).Inc()
+			slog.Error("could not update project", "namespace", projectInfos.Namespace(), "error", errUpdate)
+			ProjectCreation.WithLabelValues("error", projectInfos.Project).Inc()
+			return
 		}
+		ProjectCreation.WithLabelValues("updated", projectInfos.Project).Inc()
+		return
 	}
 }
 
@@ -165,9 +175,9 @@ func deleteProject(projectInfos *types.Project) {
 	errDeletionProject := clientSet.CagipV1().Projects().Delete(context.TODO(), projectInfos.Namespace(), metav1.DeleteOptions{})
 
 	if errDeletionProject != nil {
-		utils.Log.Info().Msgf("Cannot delete project: %v", projectInfos.Namespace())
+		slog.Error("Cannot delete project", "namespace", projectInfos.Namespace())
 		return
 	}
 
-	utils.Log.Info().Msgf("Project: %v deleted", projectInfos.Namespace())
+	slog.Info("Project deleted", "namespace", projectInfos.Namespace())
 }

@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -22,13 +22,13 @@ import (
 func WatchNetPolConfig() cache.Store {
 	kconfig, err := rest.InClusterConfig()
 	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		slog.Error("failed to create in cluster config", "error", err)
 		return nil
 	}
 
 	v3, err := versioned.NewForConfig(kconfig)
 	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		slog.Error("failed to create kubernetes clientset", "error", err)
 		return nil
 	}
 
@@ -48,13 +48,13 @@ func WatchNetPolConfig() cache.Store {
 }
 func networkPolicyConfigCreated(obj interface{}) {
 	netpolconfig := obj.(*cagipv1.NetworkPolicyConfig)
-	utils.Log.Info().Msgf("Operator: the network config %v has been created, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
+	slog.Info("network config has been created, refreshing associated resources", "networkConfig", netpolconfig.Name)
 	createOrUpdateNetpols(netpolconfig)
 }
 
 func networkPolicyConfigUpdated(old interface{}, new interface{}) {
 	netpolconfig := new.(*cagipv1.NetworkPolicyConfig)
-	utils.Log.Info().Msgf("Operator: the network config %v has changed, refreshing associated resources: networkpolicies, for all kubi's namespaces.", netpolconfig.Name)
+	slog.Info("network config has been updated, refreshing associated resources", "networkConfig", netpolconfig.Name)
 	createOrUpdateNetpols(netpolconfig)
 }
 
@@ -62,31 +62,36 @@ func createOrUpdateNetpols(netpolconfig *cagipv1.NetworkPolicyConfig) {
 
 	kconfig, err := rest.InClusterConfig()
 	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating in cluster config %v", err.Error())) // TODO: Cleanup those calls to be less wrapped and simpler.
+		slog.Error("failed to create in cluster config", "error", err)
 		return
 	}
 
 	clientSet, err := versioned.NewForConfig(kconfig)
 	if err != nil {
-		utils.Log.Error().Msg(fmt.Sprintf("error creating kubernetes clientset, %v", err.Error()))
+		slog.Error("failed to create kubernetes clientset", "error", err)
 		return
 	}
 
 	projects, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
-		utils.Log.Error().Msg(err.Error())
+		slog.Error("failed to list projects", "error", err)
 		return
 	}
 
 	for _, project := range projects.Items {
-		utils.Log.Info().Msgf("Operator: refresh network policy for %v", project.Name)
-		generateNetworkPolicy(project.Name, netpolconfig)
+		slog.Info("refreshing network policy for project", "project", project.Name)
+		err := generateNetworkPolicy(project.Name, netpolconfig)
+		if err != nil {
+			slog.Error("cannot generate network policy", "namespace", project.Name, "error", err)
+			NetworkPolicyCreation.WithLabelValues("error", project.Name, utils.KubiDefaultNetworkPolicyName).Inc()
+		}
+		NetworkPolicyCreation.WithLabelValues("updated", project.Name, utils.KubiDefaultNetworkPolicyName).Inc()
 	}
 
 }
 
 func networkPolicyConfigDeleted(obj interface{}) {
 	netpolconfig := obj.(*cagipv1.NetworkPolicyConfig)
-	utils.Log.Info().Msgf("Operator: the network config %v has been deleted, please delete networkpolicies for all kubi's namespaces. Be careful !", netpolconfig.Name)
+	slog.Info("network config has been deleted, please delete network policies manually", "networkConfig", netpolconfig.Name)
 }
