@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -99,18 +100,18 @@ func (issuer *TokenIssuer) generateServiceJWTClaims(username string, email strin
 func (issuer *TokenIssuer) generateUserJWTClaims(auths []*types.Project, groups []string, username string, email string, hasAdminAccess bool, hasApplicationAccess bool, hasOpsAccess bool, hasViewerAccess bool, hasServiceAccess bool) (types.AuthJWTClaims, error) {
 
 	if hasAdminAccess || hasApplicationAccess || hasOpsAccess || hasServiceAccess {
-		utils.Log.Debug().Msgf("The user %s will have transversal access, removing all the projects (admin: %v, application: %v, ops: %v, service: %v)", username, hasAdminAccess, hasApplicationAccess, hasOpsAccess, hasServiceAccess)
+		slog.Debug("user will have transversal access, removing all the projects", "user", username, "admin", hasAdminAccess, "application", hasApplicationAccess, "ops", hasOpsAccess, "service", hasServiceAccess)
 		// To be removed when ppl will have the right to have both transversal and project access
 		// Currently removed because too many groups.
 		auths = []*types.Project{}
 	} else {
-		utils.Log.Debug().Msgf("The user %s will have access to the projects %v", username, auths)
+		slog.Debug("user will have access to the projects", "user", username, "projects", fmt.Sprint(auths))
 	}
 
 	var expirationTime time.Time
 
 	if hasServiceAccess {
-		utils.Log.Debug().Msgf("The user %s will have an extra token duration of %v", username, issuer.ExtraTokenDuration)
+		slog.Debug("The user will have an extra token duration", "user", username, "duration", issuer.ExtraTokenDuration)
 		expirationTime = time.Now().Add(issuer.ExtraTokenDuration)
 	} else {
 		expirationTime = time.Now().Add(issuer.TokenDuration)
@@ -194,7 +195,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
 	userContext := r.Context().Value(middlewares.UserContextKey)
 	if userContext == nil {
-		utils.Log.Error().Msgf("No user found in the context")
+		slog.Error("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -205,12 +206,12 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		TokenCounter.WithLabelValues("token_error").Inc()
-		utils.Log.Error().Msgf("Granting token fail for user %v, %v ", user.Username, err)
+		slog.Error("granting token fail for user", "user", user.Username, "error", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	utils.Log.Info().Msgf("Granting token for user %v with scopes %v", user.Username, scopes)
+	slog.Debug("token generated", "user", user.Username, "scopes", scopes)
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, *token)
 }
@@ -223,7 +224,7 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 
 	userContext := r.Context().Value(middlewares.UserContextKey)
 	if userContext == nil {
-		utils.Log.Error().Msgf("No user found in the context")
+		slog.Error("No user found in the context")
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -233,17 +234,17 @@ func (issuer *TokenIssuer) GenerateConfig(w http.ResponseWriter, r *http.Request
 	// no need to generate config if the user cannot access it.
 	if err != nil {
 		TokenCounter.WithLabelValues("token_error").Inc()
-		utils.Log.Error().Msgf("Granting token fail for user %v, %v", user.Username, err)
+		slog.Error("failed to grant token", "user", user.Username, "error", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	utils.Log.Info().Msgf("Granting token for user %v", user.Username)
+	slog.Debug("granting token for user", "user", user.Username)
 
 	// Create a DNS 1123 cluster name and user name
 	yml, err := generateKubeConfig(issuer.PublicApiServerURL.String(), utils.Config.KubeCa, user, token)
 	if err != nil {
-		utils.Log.Error().Err(err)
+		slog.Error("failed to generate config for user", "user", user.Username, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -299,14 +300,14 @@ func (issuer *TokenIssuer) VerifyToken(usertoken string) (*types.AuthJWTClaims, 
 		return issuer.EcdsaPublic, nil
 	})
 	if err != nil {
-		utils.Log.Info().Msgf("Bad token: %v", err.Error())
+		slog.Info("Bad token", "error", err.Error())
 		return nil, err
 	}
 
 	if claims, ok := token.Claims.(*types.AuthJWTClaims); ok && token.Valid {
 		return claims, nil
 	} else {
-		utils.Log.Info().Msgf("Auth token is invalid")
+		slog.Info("Auth token is invalid")
 		return nil, err
 	}
 }

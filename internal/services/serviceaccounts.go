@@ -2,21 +2,31 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// todo: remove the namespace name (high cardinality, no value)
+var ServiceAccountCreation = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "kubi_service_account_creation",
+	Help: "Number of service account created",
+}, []string{"status", "target_namespace", "name"})
+
 // Generate
-func GenerateAppServiceAccount(namespace string) {
+func GenerateAppServiceAccount(namespace string) error {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := kubernetes.NewForConfig(kconfig)
 	api := clientSet.CoreV1()
 
-	_, errRB := api.ServiceAccounts(namespace).Get(context.TODO(), utils.KubiServiceAccountAppName, metav1.GetOptions{})
+	_, err := api.ServiceAccounts(namespace).Get(context.TODO(), utils.KubiServiceAccountAppName, metav1.GetOptions{})
 
 	newServiceAccount := corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,16 +40,12 @@ func GenerateAppServiceAccount(namespace string) {
 		},
 	}
 
-	if errRB != nil {
+	if err != nil {
 		_, err := api.ServiceAccounts(namespace).Create(context.TODO(), &newServiceAccount, metav1.CreateOptions{})
 		if err != nil {
-			utils.Log.Error().Msg(err.Error())
-			utils.ServiceAccountCreation.WithLabelValues("error", namespace, utils.KubiServiceAccountAppName).Inc()
-			return
+			return fmt.Errorf("could not create service account %v, %v, %v", namespace, newServiceAccount.ObjectMeta.Name, err)
 		}
-		utils.Log.Info().Msgf("Service Account %v has been created for namespace %v", utils.KubiServiceAccountAppName, namespace)
-		utils.ServiceAccountCreation.WithLabelValues("created", namespace, utils.KubiServiceAccountAppName).Inc()
-		return
+		return nil
 	}
-	utils.ServiceAccountCreation.WithLabelValues("ok", namespace, utils.KubiServiceAccountAppName).Inc()
+	return nil
 }

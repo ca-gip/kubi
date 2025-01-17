@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -22,12 +23,12 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 
 		bodyString, err := io.ReadAll(r.Body)
 		if err != nil {
-			utils.Log.Error().Err(err)
+			slog.Info("error in request body", "error", err)
 		}
 		tokenReview := v1beta1.TokenReview{}
 		err = json.Unmarshal(bodyString, &tokenReview)
 		if err != nil {
-			utils.Log.Error().Msg(err.Error())
+			slog.Info("error unmarshalling token", "error", err)
 		}
 
 		token, err := issuer.VerifyToken(tokenReview.Spec.Token)
@@ -43,7 +44,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			json.NewEncoder(w).Encode(resp)
 		}
 
-		utils.Log.Info().Msgf("Challenging token for user %v", token.User)
+		slog.Debug("preparing access for user", "user", token.User)
 
 		var groups []string
 		groups = append(groups, utils.AuthenticatedGroup)
@@ -96,16 +97,13 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 
 		jwtTokenString, marshallError := json.Marshal(resp)
-		if marshallError == nil {
-			// todo, remove this logging
-			utils.Log.Debug().Msgf("%v", string(jwtTokenString))
-		} else {
-			utils.Log.Error().Msgf("Errot serializing json to token review: %s", marshallError.Error())
+		if marshallError != nil {
+			slog.Error("Error serializing json to token review", "error", marshallError.Error(), "token", jwtTokenString)
 		}
 
 		err = json.NewEncoder(w).Encode(resp)
 		if err != nil {
-			utils.Log.Error().Msg(err.Error())
+			slog.Error("cannot encode resp", "error", err)
 		}
 
 	}
