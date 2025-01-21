@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubi-deployment
+  namespace: kube-system
+  labels:
+    app: kubi
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kubi
+  template:
+    metadata:
+      labels:
+        app: kubi
+    spec:
+      serviceAccountName: kubi-user
+      containers:
+        - name: api
+          image: ghcr.io/ca-gip/kubi-api:b319644-amd64
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            httpGet:
+              path: /ca
+              port: 8000
+              scheme: HTTPS
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+        - name: webhook
+          image: ghcr.io/ca-gip/kubi-webhook:b319644-amd64
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+      volumes:
+        - name: kubi-tls
+          secret:
+            secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret
+

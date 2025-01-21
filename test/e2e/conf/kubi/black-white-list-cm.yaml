@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  blacklist: project-on-another-cluster-development,project-on-another-cluster-integration
+kind: ConfigMap
+metadata:
+  name: blackwhitelist
+  namespace: default

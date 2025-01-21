@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubi-api
+  namespace: kube-system
+  labels:
+    app: kubi
+spec:
+  type: NodePort
+  clusterIP: 10.96.0.3
+  ports:
+    - name: https
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+      nodePort: 30003
+  selector:
+    app: kubi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubi-webhook
+  namespace: kube-system
+  labels:
+    app: kubi
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.0.2
+  ports:
+    - name: https
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
+  selector:
+    app: kubi
+

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curl-pod
+  namespace: kube-system
+spec:
+  containers:
+  - name: curl-container
+    image: alpine/curl 
+    imagePullPolicy: IfNotPresent
+    args:
+    - sleep
+    - "1000000"
+  restartPolicy: Never

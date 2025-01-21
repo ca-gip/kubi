@@ -1,4 +1,4 @@
-.PHONY: clean test deps build bootstrap-tools image
+.PHONY: clean test test-e2e deps build bootstrap-tools image
 
 HACKDIR=./hack/bin
 GORELEASER_CMD=$(HACKDIR)/goreleaser
@@ -26,7 +26,11 @@ deps:
 	go mod tidy
 
 test: bootstrap-tools
-	go test ./...
+	go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 	staticcheck ./...
 
 image: build
+
+test-e2e: 
+	go test ./test/e2e/ -v -ginkgo.v
+
