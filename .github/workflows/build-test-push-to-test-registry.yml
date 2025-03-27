@@ -1,20 +1,18 @@
-name: pr
+name: build-test-push-to-test-registry
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  pr-tests:
-    name: Build and test images
+  build-test:
+    name: Build and test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        component: [webhook, api, operator]
-        arch: [amd64]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,9 +25,42 @@ jobs:
         with:
           go-version: '1.23'
 
-      - name: run tests
+      - uses: azure/setup-helm@v4.3.0
+        id: install
+
+      - name: Install helm plugin helm-images
+        run: helm plugin install https://github.com/nikhilsbhat/helm-images       
+
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
+
+      - name: install cfssl
+        run: go install github.com/cloudflare/cfssl/cmd/...@latest
+
+      - name: run non-E2E tests
         run: make test
 
+      - name: run E2E test
+        run: make test-e2e
+        
+  push-test-registry:
+    name: Push images on a test registry
+    runs-on: ubuntu-latest
+    needs: build-test
+    strategy:
+      matrix:
+        component: [webhook, api, operator]
+        arch: [amd64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find current tag version
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        id: tags
+        
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

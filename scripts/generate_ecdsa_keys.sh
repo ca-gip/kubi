@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Create a temporary directory using mktemp
-TEMP_DIR=$(mktemp -d)
+TEMP_DIR=/tmp/kubi/ecdsa
+mkdir -p $TEMP_DIR
 
 # Check if mktemp succeeded
 if [[ ! -d "$TEMP_DIR" ]]; then

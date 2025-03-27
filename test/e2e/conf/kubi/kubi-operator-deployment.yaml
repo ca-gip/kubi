@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubi-operator
+  namespace: kube-system
+  labels:
+    app: kubi-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubi-operator
+  template:
+    metadata:
+      labels:
+        app: kubi-operator
+    spec:
+      serviceAccountName: kubi-user
+      containers:
+        - name: kubi-operator
+          image: ghcr.io/ca-gip/kubi-operator:b319644-amd64
+          #image: docker-remote.registry.saas.cagip.group.gca/cagip/kubi-operator:v1.30.0-beta1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8002
+          volumeMounts:
+            - name: kubi-tls
+              mountPath: "/var/run/secrets/certs"
+              readOnly: true
+            - name: kubi-encryption
+              mountPath: "/var/run/secrets/ecdsa"
+              readOnly: true
+          envFrom:
+            - configMapRef:
+                name: kubi-config
+          env:
+            - name: LDAP_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: kubi-secret
+                  key: ldap_passwd
+      volumes:
+        - name: kubi-tls
+          secret:
+            secretName: kubi
+        - name: kubi-encryption
+          secret:
+            secretName: kubi-encryption-secret

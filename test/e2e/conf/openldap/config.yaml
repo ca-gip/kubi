@@ -1,0 +1,280 @@
+apiVersion: v1
+data:
+  00-root.ldif: |-
+    # Root creation
+    dn: dc=example,dc=org
+    objectclass: top
+    objectClass: dcObject
+    objectClass: organization
+    o: Example
+  01-default-group.ldif: |-
+    dn: cn=myGroup,dc=example,dc=org
+    cn: myGroup
+    gidnumber: 500
+    objectclass: posixGroup
+    objectclass: top
+  02-default-user.ldif: |-
+    dn: cn=Jean Dupond,dc=example,dc=org
+    cn: Jean Dupond
+    gidnumber: 500
+    givenname: Jean
+    homedirectory: /home/users/jdupond
+    objectclass: inetOrgPerson
+    objectclass: posixAccount
+    objectclass: top
+    sn: Dupond
+    uid: jdupond
+    uidnumber: 1000
+    userpassword: {MD5}KOULhzfBhPTq9k7a9XfCGw==
+  03-setup.ldif: |-
+    dn: ou=Users,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: Users
+
+    dn: cn=developer1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: developer1
+    uid: developer1
+    sn: One
+    givenName: Dev
+    userPassword: somepass
+
+    dn: cn=developer2,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: developer2
+    uid: developer2
+    givenName: Dev
+    sn: Two
+    userPassword: somepass
+
+    dn: cn=developer3,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: developer3
+    uid: developer3
+    givenName: Dev
+    sn: Three
+    userPassword: somepass
+
+    dn: cn=admin-kube1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: admin-kube1
+    uid: admin-kube1
+    sn: One
+    givenName: AdminKube
+    userPassword: somepass
+
+    dn: cn=admin-kube2,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: admin-kube2
+    uid: admin-kube2
+    givenName: AdminKube
+    sn: Two
+    userPassword: somepass
+
+    dn: cn=admin-kube3,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: admin-kube3
+    uid: admin-kube3
+    givenName: AdminKube
+    sn: Three
+    userPassword: somepass
+
+    dn: cn=cloudops-kube1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: cloudops-kube1
+    uid: cloudops-kube1
+    sn: One
+    givenName: CloudopsKube
+    userPassword: somepass
+
+    dn: cn=cloudops-kube2,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: cloudops-kube2
+    uid: cloudops-kube2
+    givenName: CloudopsKube
+    sn: Two
+    userPassword: somepass
+
+    dn: cn=cloudops-kube3,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: cloudops-kube3
+    uid: cloudops-kube3
+    givenName: CloudopsKube
+    sn: Three
+    userPassword: somepass
+
+    dn: cn=appops-kube1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: appops-kube1
+    uid: appops-kube1
+    sn: One
+    givenName: AppopsKube
+    userPassword: somepass
+
+    dn: cn=appops-kube2,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: appops-kube2
+    uid: appops-kube2
+    givenName: AppopsKube
+    sn: Two
+    userPassword: somepass
+
+    dn: cn=appops-kube3,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: appops-kube3
+    uid: appops-kube3
+    givenName: AppopsKube
+    sn: Three
+    userPassword: somepass
+
+    dn: cn=product-owner1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: product-owner1
+    uid: product-owner1
+    sn: One
+    givenName: ProductOwner
+    userPassword: somepass
+
+    dn: cn=product-owner2,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: product-owner2
+    uid: product-owner2
+    givenName: ProductOwner
+    sn: Two
+    userPassword: somepass
+
+    dn: cn=product-owner3,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: product-owner3
+    uid: product-owner3
+    givenName: ProductOwner
+    sn: Three
+    userPassword: somepass
+
+    dn: cn=service-account-kubernetes-team,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: service-account-kubernetes-team
+    uid: service-account-kubernetes-team
+    givenName: ServiceAccount
+    sn: KubernetesTeam
+    userPassword: somepass
+
+    dn: ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: groups
+
+    dn: ou=TEAMS,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: teams
+
+    dn: ou=CONTAINER,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: container
+
+    dn: ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: cagip
+
+    dn: ou=HORS-PROD,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: hors-prod
+
+    dn: cn=DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN,ou=HORS-PROD,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    cn: DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN
+    objectClass: groupOfNames
+    member: cn=developer1,ou=Users,dc=example,dc=org
+    member: cn=developer2,ou=Users,dc=example,dc=org
+    member: cn=developer3,ou=Users,dc=example,dc=org
+
+    dn: cn=DL_KUB_CAGIPHP_OPS,ou=HORS-PROD,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    cn: DL_KUB_CAGIPHP_OPS
+    objectClass: groupOfNames
+    member: cn=developer1,ou=Users,dc=example,dc=org
+    member: cn=developer2,ou=Users,dc=example,dc=org
+    member: cn=developer3,ou=Users,dc=example,dc=org
+
+    dn: cn=DL_KUB_CAGIPHP_VIEW,ou=HORS-PROD,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    cn: DL_KUB_CAGIPHP_VIEW
+    objectClass: groupOfNames
+    member: cn=product-owner1,ou=Users,dc=example,dc=org
+    member: cn=product-owner2,ou=Users,dc=example,dc=org
+    member: cn=product-owner3,ou=Users,dc=example,dc=org
+
+    dn: cn=DL_KUB_TRANSVERSAL_SERVICE,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    cn: DL_KUB_TRANSVERSAL_SERVICE
+    objectClass: groupOfNames
+    member: cn=service-account-kubernetes-team,ou=Users,dc=example,dc=org
+
+
+    dn: cn=ADMIN_KUBERNETES,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: ADMIN_KUBERNETES
+    objectClass: groupOfNames
+    member: cn=admin-kube1,ou=Users,dc=example,dc=org
+    member: cn=admin-kube2,ou=Users,dc=example,dc=org
+    member: cn=admin-kube3,ou=Users,dc=example,dc=org
+
+    dn: cn=CLOUDOPS_KUBERNETES,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: CLOUDOPS_KUBERNETES
+    objectClass: groupOfNames
+    member: cn=cloudops-kube1,ou=Users,dc=example,dc=org
+    member: cn=cloudops-kube2,ou=Users,dc=example,dc=org
+    member: cn=cloudops-kube3,ou=Users,dc=example,dc=org
+
+    dn: cn=CAGIP_MEMBERS,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: CAGIP_MEMBERS
+    objectClass: groupOfNames
+    member: cn=developer1,ou=Users,dc=example,dc=org
+    member: cn=developer2,ou=Users,dc=example,dc=org
+    member: cn=developer3,ou=Users,dc=example,dc=org
+kind: ConfigMap
+metadata:
+  name: ldapconf
+

@@ -1,7 +1,6 @@
 vendor
 .idea
 coverage.*
-kubi
 bin
 hack/bin
 dist/

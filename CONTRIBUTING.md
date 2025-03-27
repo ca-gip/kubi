@@ -138,6 +138,7 @@ chmod +x install_cfssl.sh
   - Create a secret for the deployment
   ``` 
   kubectl -n kube-system create secret tls kubi --key server-key.pem --cert server.crt
+  #problem here , does not take the temp dir from mktemp
   kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/ecdsa-key.pem --from-file=/tmp/ecdsa-public.pem
   kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='password'
   ```
@@ -172,7 +173,7 @@ chmod +x install_cfssl.sh
 You can execute the following commands to gather all the required secrets then decode and save them
 
   ```
-  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > / $TEMP_DIR/kubernetes.io/serviceaccount/ca.crt
+  kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['ca\.crt']}" | base64 -d > /$TEMP_DIR/kubernetes.io/serviceaccount/ca.crt
   kubectl -n kube-system get secrets $(kubectl -n kube-system get sa kubi-user -o "jsonpath={.secrets[0].name}") -o "jsonpath={.data['token']}" | base64 -d > /$TEMP_DIR/kubernetes.io  /serviceaccount/token
   kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.crt']}" | base64 -d > /$TEMP_DIR/certs/tls.crt
   kubectl -n kube-system get secrets kubi -o "jsonpath={.data['tls\.key']}" | base64 -d > /$TEMP_DIR/certs/tls.key
@@ -296,6 +297,29 @@ Here we use /etc/kubernetes/pki which is automatically mounted.
     go run ./cmd/api//main.go &
 ```
 
+
+## Test your code 
+The repository contains unit tests, lint tests and an E2E test, which can run in local and runs on each commit, on the CI. 
+```
+make test // executes the non-E2E tests (unit tests, linting, etc)
+make test-e2E // executes the E2E test. For it to run, some prerequisites are needed
+```
+
+Prerequisites for E2E test: 
+- in the CI, they are installed by some github actions, or by a run command. 
+- in local, dependencies today have to be managed manually. *TODO : could be nice to add them in a Makefile target*
+
+List of dependencies: 
+- kind: follow docs https://kind.sigs.k8s.io/docs/user/quick-start/
+- docker: follow docs https://docs.docker.com/engine/install/ubuntu/
+- kubectl: follow docs https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+- helm: `snap install helm`
+- helm plugin helm-images: `helm plugin install https://github.com/nikhilsbhat/helm-images`
+- sleep: present in Ubuntu
+- cfssl and cfssljson: `./scripts/install-cfssl.sh`
+- go: `sudo snap install go --classic`
+- goreleaser: `go install github.com/goreleaser/goreleaser/v2@latest`
+- openssl: `sudo apt install openssl`
 
 <!-- omit in toc -->
 # Contributing to kubi

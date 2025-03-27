@@ -1,0 +1,956 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: namespaced-admin
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods/attach
+  - pods/exec
+  - pods/portforward
+  - pods/proxy
+  - secrets
+  - services/proxy
+  - configmaps
+  - endpoints
+  - pods
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - services
+  - events
+  - limitranges
+  - namespaces/status
+  - pods/log
+  - pods/status
+  - replicationcontrollers/status
+  - resourcequotas
+  - resourcequotas/status
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - daemonsets
+  - deployments
+  - deployments/scale
+  - ingresses
+  - networkpolicies
+  - replicasets
+  - replicasets/scale
+  - replicationcontrollers/scale
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - controllerrevisions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/attach
+  - pods/exec
+  - pods/portforward
+  - pods/proxy
+  - configmaps
+  - endpoints
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - secrets
+  - services
+  - services/proxy
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/rollback
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  resources:
+  - deployments
+  - deployments/rollback
+  - deployments/scale
+  - ingresses
+  - networkpolicies
+  - replicasets
+  - replicasets/scale
+  - replicationcontrollers/scale
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - limitranges
+  verbs:
+  - create
+  - patch
+  - delete
+- apiGroups:
+  - cagip.github.com
+  resources:
+  - vaultsecrets
+  - s3buckets
+  - userbuckets
+  - resourcequotaclaims
+  verbs:
+  - get
+  - list
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - cagip.github.com
+  resources:
+  - vaultsecrets
+  - s3buckets
+  - userbuckets
+  - resourcequotaclaims
+  verbs:
+  - get
+  - list
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  - analysistemplates
+  - experiments
+  - rollouts
+  - rollouts/scale
+  - rollouts/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - external-secrets.io
+  resources:
+  - externalsecrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - external-secrets.io
+  resources:
+  - secretstores
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: namespaced-service
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - endpoints
+  - pods
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - services
+  - events
+  - endpoints
+  - namespaces/status
+  - pods/status
+  - pods/log
+  - replicationcontrollers/status
+  - resourcequotas
+  - resourcequotas/status
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - daemonsets
+  - deployments
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - replicationcontrollers/scale
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - controllerrevisions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - configmaps
+  - endpoints
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - services
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - get
+    - list
+    - watch
+    - create
+    - patch
+    - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/rollback
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  resources:
+  - deployments
+  - deployments/rollback
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - replicationcontrollers/scale
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pod-reader
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1  #dont know if useful
+kind: ClusterRole
+metadata:
+  name: ops-masters-extension
+rules:
+- apiGroups:
+    - metrics.k8s.io
+  resources:
+    - nodes
+  verbs:
+    - get
+    - watch
+    - list
+- apiGroups:
+    - ""
+  resources:
+    - nodes
+    - events
+  verbs:
+    - get
+    - watch
+    - list
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - delete
+- apiGroups:
+  - cagip.github.com
+  resources:
+  - projects
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - cagip.github.com
+  resources:
+  - projects
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1 #dont know if useful
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    name: ops-masters-extension
+  name: ops-masters-extension
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ops-masters-extension
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: ops:masters
+---
+apiVersion: rbac.authorization.k8s.io/v1 #dont know if useful
+kind: ClusterRole
+metadata:
+  name: impersonator
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - users
+    - groups
+    - serviceaccounts
+  verbs:
+    - impersonate
+- apiGroups:
+    - ""
+  resourceNames:
+    - impersonate
+  resources:
+    - users
+  verbs:
+    - impersonate
+- apiGroups:
+    - authorization.k8s.io
+  resources:
+    - selfsubjectaccessreviews
+    - selfsubjectrulesreviews
+  verbs:
+    - create
+---
+apiVersion: rbac.authorization.k8s.io/v1 #dont know if useful
+kind: ClusterRoleBinding
+metadata:
+  name: impersonator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: impersonator
+subjects:
+  - kind: User
+    name: impersonate
+    namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1 #dont know if useful
+kind: ClusterRole
+metadata:
+  name: cluster-developper
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods/attach
+  - pods/exec
+  - pods/portforward
+  - pods/proxy
+  - secrets
+  - services/proxy
+  - configmaps
+  - endpoints
+  - pods
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - services
+  - events
+  - limitranges
+  - namespaces/status
+  - pods/log
+  - pods/status
+  - replicationcontrollers/status
+  - resourcequotas
+  - resourcequotas/status
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions
+  resources:
+  - daemonsets
+  - deployments
+  - deployments/scale
+  - ingresses
+  - networkpolicies
+  - replicasets
+  - replicasets/scale
+  - replicationcontrollers/scale
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - controllerrevisions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/attach
+  - pods/exec
+  - pods/portforward
+  - pods/proxy
+  - configmaps
+  - endpoints
+  - replicationcontrollers
+  - replicationcontrollers/scale
+  - secrets
+  - services
+  - services/proxy
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/rollback
+  - deployments/scale
+  - replicasets
+  - replicasets/scale
+  - statefulsets
+  - statefulsets/scale
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  resources:
+  - deployments
+  - deployments/rollback
+  - deployments/scale
+  - ingresses
+  - networkpolicies
+  - replicasets
+  - replicasets/scale
+  - replicationcontrollers/scale
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - limitranges
+  verbs:
+  - create
+  - patch
+  - delete
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  - analysistemplates
+  - experiments
+  - rollouts
+  - rollouts/scale
+  - rollouts/status
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1 # dont know if useful
+kind: ClusterRole
+metadata:
+  name: cluster-viewer
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+    - endpoints
+    - persistentvolumeclaims
+    - pods
+    - replicationcontrollers
+    - replicationcontrollers/scale
+    - serviceaccounts
+    - services
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - bindings
+    - events
+    - limitranges
+    - namespaces/status
+    - pods/log
+    - pods/status
+    - replicationcontrollers/status
+    - resourcequotas
+    - resourcequotas/status
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - namespaces
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - apps
+  resources:
+    - controllerrevisions
+    - daemonsets
+    - deployments
+    - deployments/scale
+    - replicasets
+    - replicasets/scale
+    - statefulsets
+    - statefulsets/scale
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - autoscaling
+  resources:
+    - horizontalpodautoscalers
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - batch
+  resources:
+    - cronjobs
+    - jobs
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - extensions
+  resources:
+    - daemonsets
+    - deployments
+    - deployments/scale
+    - ingresses
+    - networkpolicies
+    - replicasets
+    - replicasets/scale
+    - replicationcontrollers/scale
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - policy
+  resources:
+    - poddisruptionbudgets
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - networking.k8s.io
+  resources:
+    - networkpolicies
+    - ingresses
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  - analysistemplates
+  - experiments
+  - rollouts
+  - rollouts/scale
+  - rollouts/status
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1 #dont know if useful
+kind: ClusterRole
+metadata:
+  name: application-masters-extension
+rules:
+- apiGroups:
+  - metrics.k8s.io
+  resources:
+  - nodes
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - events
+  verbs:
+  - list
+  - get
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1 #dont know if useful
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    name: application-masters-extension
+  name: application-masters-extension
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: application-masters-extension
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: application:masters

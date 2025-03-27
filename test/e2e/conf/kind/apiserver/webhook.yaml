@@ -1,0 +1,21 @@
+# Kubernetes API version
+apiVersion: v1
+# kind of the API object
+kind: Config
+# clusters refers to the remote service.
+clusters:
+  - name: kubi
+    cluster:
+      certificate-authority: /etc/kubernetes/pki/ca.crt
+      server: https://10.96.0.2:8001/authenticate
+users:
+  - name: apiserver
+    user:
+      client-certificate: /etc/kubernetes/pki/apiserver.crt
+      client-key: /etc/kubernetes/pki/apiserver.key
+current-context: webhook
+contexts:
+  - context:
+      cluster:  kubi
+      user: apiserver
+    name: webhook

@@ -1,0 +1,33 @@
+apiVersion: v1
+data:
+  CUSTOM_LABELS: quota=managed
+  DEFAULT_PERMISSION: pod-reader
+  LDAP_ADMIN_GROUPBASE: CN=ADMIN_KUBERNETES,OU=TEAMS,OU=Groups,DC=example,DC=org
+  LDAP_ADMIN_USERBASE: OU=Users,DC=example,DC=org
+  LDAP_APP_GROUPBASE: CN=CAGIP_MEMBERS,OU=TEAMS,OU=Groups,DC=example,DC=org
+  LDAP_BINDDN: CN=admin,DC=example,DC=org # Not like that , should container O=Example but does not work for some reason 
+  LDAP_CUSTOMER_OPS_GROUPBASE: CN=DL_KUB_CAGIPHP_OPS,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=Groups,DC=example,DC=org
+  LDAP_GROUPBASE: OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=Groups,DC=example,DC=org
+  LDAP_OPS_GROUPBASE: CN=CLOUDOPS_KUBERNETES,OU=TEAMS,OU=Groups,DC=example,DC=org
+  LDAP_PORT: "389"
+  LDAP_SERVER: openldap.kube-system.svc.cluster.local
+  LDAP_SERVICE_GROUPBASE: CN=DL_KUB_TRANSVERSAL_SERVICE,OU=CONTAINER,OU=Groups,DC=example,DC=org
+  LDAP_USE_SSL: "false"
+  LDAP_USERBASE: OU=Users
+  LDAP_USERFILTER: (uid=%s) # in microsoft AD, would be userPrincipalName
+  LDAP_VIEWER_GROUPBASE: CN=DL_KUB_CAGIPHP_VIEW,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=Groups,DC=example,DC=org
+  LOCATOR: intranet
+  PODSECURITYADMISSION_AUDIT: restricted
+  PODSECURITYADMISSION_ENFORCEMENT: baseline
+  PODSECURITYADMISSION_WARNING: restricted
+  PUBLIC_APISERVER_URL: https://kubernetes.default.svc.cluster.local
+  TENANT: cagip
+  TOKEN_LIFETIME: 4h
+kind: ConfigMap
+metadata:
+  labels:
+    app: kubi
+    version: v1.28.0
+  name: kubi-config
+  namespace: kube-system
+  
