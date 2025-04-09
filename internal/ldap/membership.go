@@ -26,33 +26,30 @@ type LDAPMemberships struct {
 func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 	m := &LDAPMemberships{}
 
-	var err error
-
 	// TODO Evaluate whether we could use the memberOf of userDN instead.
 	entries, err := c.getGroupsContainingUser(c.AllGroupsBase, userDN)
 	if err != nil {
-		return nil, fmt.Errorf("could not get groups %v", err)
+		return nil, fmt.Errorf("could not get groups: %w", err)
 	}
+
 	// special groups, to be removed when we're ready to do so.
+	groupMapping := map[string]*[]*ldap.Entry{
+		strings.ToUpper(c.AdminGroupBase):       &m.AdminAccess,
+		strings.ToUpper(c.AppMasterGroupBase):   &m.AppOpsAccess,
+		strings.ToUpper(c.CustomerOpsGroupBase): &m.CustomerOpsAccess,
+		strings.ToUpper(c.ViewerGroupBase):      &m.ViewerAccess,
+		strings.ToUpper(c.ServiceGroupBase):     &m.ServiceAccess,
+		strings.ToUpper(c.OpsMasterGroupBase):   &m.CloudOpsAccess,
+		strings.ToUpper(c.GroupBase):            &m.ClusterGroupsAccess,
+	}
+
+	// We expect each ldap group to match one of the categories in which case
+	// we add the group to the corresponding slice, otherwise we add it the non specific.
 	for _, entry := range entries {
-		switch strings.ToUpper(entry.DN) {
-		// The following will be able to get removed when we will
-		// have removed the specific accesses.
-		case strings.ToUpper(c.AdminGroupBase):
-			m.AdminAccess = append(m.AdminAccess, entry)
-		case strings.ToUpper(c.AppMasterGroupBase):
-			m.AppOpsAccess = append(m.AppOpsAccess, entry)
-		case strings.ToUpper(c.CustomerOpsGroupBase):
-			m.CustomerOpsAccess = append(m.CustomerOpsAccess, entry)
-		case strings.ToUpper(c.ViewerGroupBase):
-			m.ViewerAccess = append(m.ViewerAccess, entry)
-		case strings.ToUpper(c.ServiceGroupBase):
-			m.ServiceAccess = append(m.ServiceAccess, entry)
-		case strings.ToUpper(c.OpsMasterGroupBase):
-			m.CloudOpsAccess = append(m.CloudOpsAccess, entry)
-		case strings.ToUpper(c.GroupBase):
-			m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
-		default:
+		upperDN := strings.ToUpper(entry.DN)
+		if group, exists := groupMapping[upperDN]; exists {
+			*group = append(*group, entry)
+		} else {
 			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 		}
 	}
