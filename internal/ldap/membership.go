@@ -65,37 +65,30 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 // This is necessary, because we know the groups in specific access (like adminAccess)
 // are also present in the big blob of groups (="NonSpecificGroups")
 func (m *LDAPMemberships) toGroupNames() []string {
-	groupMap := make(map[string]struct{})
-	for _, entry := range m.AdminAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.AppOpsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.CustomerOpsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.ViewerAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.ServiceAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.CloudOpsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.ClusterGroupsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.NonSpecificGroups {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
+    groupMap := make(map[string]struct{})
 
-	var groups []string
-	for group := range groupMap {
-		groups = append(groups, group)
-	}
-	return groups
+    accessCategories := [][]*ldap.Entry{
+        m.AdminAccess,
+        m.AppOpsAccess,
+        m.CustomerOpsAccess,
+        m.ViewerAccess,
+        m.ServiceAccess,
+        m.CloudOpsAccess,
+        m.ClusterGroupsAccess,
+        m.NonSpecificGroups,
+    }
+
+    for _, category := range accessCategories {
+        for _, entry := range category {
+            groupMap[entry.GetAttributeValue("cn")] = struct{}{}
+        }
+    }
+    groups := make([]string, 0, len(groupMap))
+    for group := range groupMap {
+        groups = append(groups, group)
+    }
+
+    return groups
 }
 
 // toProjectNames retuns a slice for all the project names the user is member of,
