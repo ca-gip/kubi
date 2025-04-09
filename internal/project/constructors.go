@@ -28,32 +28,19 @@ var DnsParser = regexp.MustCompile("(?:.+_+)*(?P<namespace>.+)_(?P<role>.+)$")
 // If environment not found, return the namespace as is
 // This is a convenience function for test purposes
 func parseNamespace(namespaceInput string) (projectName string, environment string) {
+	// We leverage the fact that the last '-' character separates
+	// the projectName from the environment
+	parts := regexp.MustCompile("(?P<project>.+)-(?P<env>.+)$").FindStringSubmatch(namespaceInput)
 
-	var namespaceHasSuffix bool
-
-	// check whether any of our environments names (short and longs)
-	// are part of the namespace given in input
-	for _, environmentSuffix := range AllEnvironments {
-		if strings.HasSuffix(namespaceInput, "-"+environmentSuffix) {
-			namespaceHasSuffix = true
-			break
+	projectName = namespaceInput
+	environment = ""
+	if len(parts) > 2 && slices.Contains(AllEnvironments, parts[2]) {
+		environment = parts[2]
+		if val, ok := EnvironmentNamesMapping[environment]; ok {
+			environment = val
 		}
+		projectName = parts[1]
 	}
-
-	if !namespaceHasSuffix {
-		projectName = namespaceInput
-		environment = ""
-		return
-	}
-
-	splits := strings.Split(namespaceInput, "-")
-
-	environment = splits[len(splits)-1]
-	if val, ok := EnvironmentNamesMapping[environment]; ok {
-		environment = val
-	}
-
-	projectName = strings.Join(splits[:len(splits)-1], "-")
 	return
 }
 
@@ -66,13 +53,13 @@ func NewProject(group string) (*types.Project, error) {
 		return nil, fmt.Errorf("the group parser does not have the two required keys (namespace and role) as it only contains %v", keys)
 	}
 
-	countSplits := len(DnsParser.FindStringSubmatch(lowerGroup))
+	parts := DnsParser.FindStringSubmatch(lowerGroup)
 
-	if countSplits != 3 {
+	if len(parts) != 3 {
 		return nil, fmt.Errorf("cannot find a namespace and a role - the group '%v' cannot be parsed", group)
 	}
 
-	rawNamespace, role := DnsParser.ReplaceAllString(lowerGroup, "${namespace}"), DnsParser.ReplaceAllString(lowerGroup, "${role}")
+	rawNamespace, role := parts[1], parts[2]
 	fmt.Println("namespace:", rawNamespace, "role:", role)
 	projectName, environment := parseNamespace(rawNamespace)
 	project := &types.Project{
@@ -81,23 +68,23 @@ func NewProject(group string) (*types.Project, error) {
 		Source:      group,
 		Environment: environment,
 	}
-
-	isNamespaceValid, err := regexp.MatchString(Dns1123LabelFmt, project.Namespace())
+	projectNs := project.Namespace()
+	isNamespaceValid, err := regexp.MatchString(Dns1123LabelFmt, projectNs)
 	if err != nil {
 		return nil, err
 	}
-	isInBlacklistedNamespace := slices.Contains(BlacklistedNamespaces, project.Namespace())
+	isInBlacklistedNamespace := slices.Contains(BlacklistedNamespaces, projectNs)
 	isRoleValid := slices.Contains(WhitelistedRoles, project.Role)
 
 	switch {
-	case len(project.Namespace()) > DNS1123LabelMaxLength:
+	case len(projectNs) > DNS1123LabelMaxLength:
 		return nil, fmt.Errorf("the name for namespace cannot exceeded %v characters", DNS1123LabelMaxLength)
 	case len(role) > DNS1123LabelMaxLength:
 		return nil, fmt.Errorf("the name for role cannot exceeded %v characters", DNS1123LabelMaxLength)
 	case isInBlacklistedNamespace:
-		return nil, fmt.Errorf("the project from group %v cannot be created, its namespace %v is protected through blacklist", group, project.Namespace())
+		return nil, fmt.Errorf("the project from group %v cannot be created, its namespace %v is protected through blacklist", group, projectNs)
 	case !isNamespaceValid:
-		return nil, fmt.Errorf("the project from group %v cannot be created, its namespace %v is not dns1123 compliant", group, project.Namespace())
+		return nil, fmt.Errorf("the project from group %v cannot be created, its namespace %v is not dns1123 compliant", group, projectNs)
 	case !isRoleValid:
 		return nil, fmt.Errorf("the project from group %v cannot be created, its role %v is not valid", group, role)
 	default:
@@ -106,7 +93,7 @@ func NewProject(group string) (*types.Project, error) {
 }
 
 func GetProjectsFromGrouplist(groups []string) []*types.Project {
-	projects := make([]*types.Project, 0)
+	projects := []*types.Project{}
 	for _, projectGroup := range groups {
 		project, err := NewProject(projectGroup)
 		if err != nil {

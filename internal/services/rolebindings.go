@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -190,11 +191,9 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 // 1. it's not valid to not have a name
 // 2. We check whether we have a name in the generation of the rolebinding object.
 func toSubject(DN string) string {
-	parts := strings.Split(DN, ",")
-	for _, part := range parts {
-		if strings.HasPrefix(part, "CN=") {
-			return strings.TrimPrefix(part, "CN=")
-		}
+	p := regexp.MustCompile(("CN=([^,]+)")).FindStringSubmatch(DN)
+	if len(p) > 1 {
+		return strings.TrimSpace(p[1])
 	}
 	return ""
 }

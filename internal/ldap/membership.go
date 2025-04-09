@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 	"strings"
 
 	"gopkg.in/ldap.v2"
@@ -26,36 +27,32 @@ type LDAPMemberships struct {
 func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 	m := &LDAPMemberships{}
 
-	var err error
-
-	// TODO Evaluate whether we could use the memberOf of userDN instead.
+	// Fetch all groups containing the user
 	entries, err := c.getGroupsContainingUser(c.AllGroupsBase, userDN)
 	if err != nil {
-		return nil, fmt.Errorf("could not get groups %v", err)
+		return nil, fmt.Errorf("could not get groups: %w", err)
 	}
-	// special groups, to be removed when we're ready to do so.
+
+	// Categorize groups based on their DN
+	groupMapping := map[string]*[]*ldap.Entry{
+		strings.ToUpper(c.AdminGroupBase):       &m.AdminAccess,
+		strings.ToUpper(c.AppMasterGroupBase):   &m.AppOpsAccess,
+		strings.ToUpper(c.CustomerOpsGroupBase): &m.CustomerOpsAccess,
+		strings.ToUpper(c.ViewerGroupBase):      &m.ViewerAccess,
+		strings.ToUpper(c.ServiceGroupBase):     &m.ServiceAccess,
+		strings.ToUpper(c.OpsMasterGroupBase):   &m.CloudOpsAccess,
+		strings.ToUpper(c.GroupBase):            &m.ClusterGroupsAccess,
+	}
+
 	for _, entry := range entries {
-		switch strings.ToUpper(entry.DN) {
-		// The following will be able to get removed when we will
-		// have removed the specific accesses.
-		case strings.ToUpper(c.AdminGroupBase):
-			m.AdminAccess = append(m.AdminAccess, entry)
-		case strings.ToUpper(c.AppMasterGroupBase):
-			m.AppOpsAccess = append(m.AppOpsAccess, entry)
-		case strings.ToUpper(c.CustomerOpsGroupBase):
-			m.CustomerOpsAccess = append(m.CustomerOpsAccess, entry)
-		case strings.ToUpper(c.ViewerGroupBase):
-			m.ViewerAccess = append(m.ViewerAccess, entry)
-		case strings.ToUpper(c.ServiceGroupBase):
-			m.ServiceAccess = append(m.ServiceAccess, entry)
-		case strings.ToUpper(c.OpsMasterGroupBase):
-			m.CloudOpsAccess = append(m.CloudOpsAccess, entry)
-		case strings.ToUpper(c.GroupBase):
-			m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
-		default:
+		upperDN := strings.ToUpper(entry.DN)
+		if group, exists := groupMapping[upperDN]; exists {
+			*group = append(*group, entry)
+		} else {
 			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 		}
 	}
+
 	return m, nil
 }
 
@@ -109,31 +106,30 @@ func (m *LDAPMemberships) toProjectNames() []string {
 }
 
 func (m *LDAPMemberships) isUserAllowedOnCluster(regexpPatterns []string) (bool, error) {
-	var allowedInCluster bool
 	// To get access, the user needs at least one of the following:
-	// - Be granted access to at least one project
-	// - Have special rights
-	// - Have their group listed in an extra group allowlist
-	if len(m.AdminAccess) > 0 || len(m.AppOpsAccess) > 0 || len(m.CustomerOpsAccess) > 0 || len(m.ViewerAccess) > 0 || len(m.ServiceAccess) > 0 || len(m.CloudOpsAccess) > 0 || len(m.ClusterGroupsAccess) > 0 {
-		allowedInCluster = true
-	} else { // else is not mandatory it's just an optimisation: don't browse all groups if we already know the user has the rights to the cluster
-		for _, groupName := range m.NonSpecificGroups {
-			for _, pattern := range regexpPatterns {
+	allowedInCluster := (len(m.AdminAccess) > 0 || // - Have special rights
+		len(m.AppOpsAccess) > 0 || // - Have special rights
+		len(m.CustomerOpsAccess) > 0 || // - Have special rights
+		len(m.ViewerAccess) > 0 || // - Have special rights
+		len(m.ServiceAccess) > 0 || // - Have special rights
+		len(m.CloudOpsAccess) > 0 || // - Have special rights
+		len(m.ClusterGroupsAccess) > 0) // - Be granted access to at least one project
+	var finalErr error
+	if !allowedInCluster { // Not mandatory it's just an optimisation: don't browse all groups if we already know the user has the rights to the cluster
+		for _, groupName := range m.NonSpecificGroups { // - Have their group listed in an extra group allowlist
+			if allowedInCluster = slices.ContainsFunc(regexpPatterns, func(pattern string) bool {
 				matched, err := regexp.MatchString(strings.ToUpper(pattern), strings.ToUpper(groupName.DN)) // we match on full DN rather than CN because nobody prevents the ppl in the different entities to create a CN identical as the one used for adminGroup. This is purely out of precaution. In the future, we might want to change the regexp to match only the cn of the groups if we have the guarantee the users will not create groups that are duplicate.
 				if err != nil {
-					return false, fmt.Errorf("error matching pattern %v: %v", pattern, err)
+					finalErr = fmt.Errorf("error matching pattern %v: %v", pattern, err)
+					return false
 				}
 				slog.Info("Result of regexp match between config pattern and the following user's group", "match", matched, "pattern", pattern, "groupDN", groupName.DN)
-				if matched {
-					allowedInCluster = true
-					break
-				}
-			}
-			if allowedInCluster {
+				return matched
+			}); allowedInCluster {
 				slog.Info("not evaluating further group patterns, the user has access to the cluster")
 				break
 			}
 		}
 	}
-	return allowedInCluster, nil
+	return allowedInCluster, finalErr
 }
