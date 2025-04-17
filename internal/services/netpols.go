@@ -146,7 +146,7 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *cagipv1.Networ
 		}
 	case errNetpol != nil:
 		return fmt.Errorf("failed to create network policy in ns %v: %v", namespace, errNetpol)
-	case errNetpol == nil:
+	default:
 		slog.Debug("updating netpol", "namespace", namespace)
 		_, err := api.NetworkPolicies(namespace).Update(context.TODO(), networkpolicy, metav1.UpdateOptions{})
 		if err != nil {

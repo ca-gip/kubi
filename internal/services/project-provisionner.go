@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -65,15 +66,6 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 		}
 		time.Sleep(10 * time.Minute)
 	}
-}
-
-func appendIfMissing(slice []string, i string) []string {
-	for _, ele := range slice {
-		if ele == i {
-			return slice
-		}
-	}
-	return append(slice, i)
 }
 
 // generate a project config or update it if exists
@@ -152,7 +144,9 @@ func generateProject(projectInfos *types.Project) {
 			existingProject.Spec.Tenant = project.Spec.Tenant
 		}
 		for _, stage := range project.Spec.Stages {
-			existingProject.Spec.Stages = appendIfMissing(existingProject.Spec.Stages, stage)
+			if !slices.Contains(existingProject.Spec.Stages, stage) {
+				existingProject.Spec.Stages = append(existingProject.Spec.Stages, stage)
+			}
 		}
 		existingProject.Spec.SourceEntity = projectInfos.Source
 		existingProject.Spec.SourceDN = fmt.Sprintf("CN=%s,%s", projectInfos.Source, utils.Config.Ldap.GroupBase)

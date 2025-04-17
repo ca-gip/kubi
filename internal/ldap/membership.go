@@ -2,9 +2,6 @@ package ldap
 
 import (
 	"fmt"
-	"log/slog"
-	"regexp"
-	"slices"
 	"strings"
 
 	"gopkg.in/ldap.v2"
@@ -28,7 +25,7 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 	m := &LDAPMemberships{}
 
 	// Fetch all groups containing the user
-	entries, err := c.getGroupsContainingUser(c.AllGroupsBase, userDN)
+	entries, err := c.getGroupsContainingUser(userDN)
 	if err != nil {
 		return nil, fmt.Errorf("could not get groups: %w", err)
 	}
@@ -105,31 +102,14 @@ func (m *LDAPMemberships) toProjectNames() []string {
 	return groups
 }
 
-func (m *LDAPMemberships) isUserAllowedOnCluster(regexpPatterns []string) (bool, error) {
+func (m *LDAPMemberships) isUserAllowedOnCluster() bool {
 	// To get access, the user needs at least one of the following:
-	allowedInCluster := (len(m.AdminAccess) > 0 || // - Have special rights
+	return (len(m.AdminAccess) > 0 || // - Have special rights
 		len(m.AppOpsAccess) > 0 || // - Have special rights
 		len(m.CustomerOpsAccess) > 0 || // - Have special rights
 		len(m.ViewerAccess) > 0 || // - Have special rights
 		len(m.ServiceAccess) > 0 || // - Have special rights
 		len(m.CloudOpsAccess) > 0 || // - Have special rights
-		len(m.ClusterGroupsAccess) > 0) // - Be granted access to at least one project
-	var finalErr error
-	if !allowedInCluster { // Not mandatory it's just an optimisation: don't browse all groups if we already know the user has the rights to the cluster
-		for _, groupName := range m.NonSpecificGroups { // - Have their group listed in an extra group allowlist
-			if allowedInCluster = slices.ContainsFunc(regexpPatterns, func(pattern string) bool {
-				matched, err := regexp.MatchString(strings.ToUpper(pattern), strings.ToUpper(groupName.DN)) // we match on full DN rather than CN because nobody prevents the ppl in the different entities to create a CN identical as the one used for adminGroup. This is purely out of precaution. In the future, we might want to change the regexp to match only the cn of the groups if we have the guarantee the users will not create groups that are duplicate.
-				if err != nil {
-					finalErr = fmt.Errorf("error matching pattern %v: %v", pattern, err)
-					return false
-				}
-				slog.Info("Result of regexp match between config pattern and the following user's group", "match", matched, "pattern", pattern, "groupDN", groupName.DN)
-				return matched
-			}); allowedInCluster {
-				slog.Info("not evaluating further group patterns, the user has access to the cluster")
-				break
-			}
-		}
-	}
-	return allowedInCluster, finalErr
+		len(m.ClusterGroupsAccess) > 0 || //- Be granted access to at least one project
+		len(m.NonSpecificGroups) > 0) // Be member of a group eligible to rolebindings
 }

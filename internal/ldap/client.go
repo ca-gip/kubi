@@ -73,10 +73,8 @@ func (c *LDAPClient) AuthZ(user *types.User) (*types.User, error) {
 	// If they do, it means we trust the user, and we'll rely on the authorization db of each asset
 	// (dex+kubi plugin+argocm for argcd, kubernetes+kubiwebhook+rolebindings for kube api, promote...)
 
-	allowedInCluster, err := ldapMemberships.isUserAllowedOnCluster(c.AllowedGroupRegexps)
-	if err != nil {
-		return nil, fmt.Errorf("user is not autorised in this cluster due to an regex error %v, %v", user.UserDN, err)
-	}
+	allowedInCluster := ldapMemberships.isUserAllowedOnCluster()
+
 	if !allowedInCluster {
 		return nil, fmt.Errorf("user is not allowed in this cluster %v", user.UserDN)
 	}

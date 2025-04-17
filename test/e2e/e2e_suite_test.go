@@ -62,7 +62,7 @@ var _ = BeforeSuite(func() {
 	//TO comment when you are developping the E2E test to avoid redoing the fixtures which lasts 1m30s
 	cmd := exec.Command("./test/e2e/bootstrap-fixtures-test-e2e.sh")
 	// To change to 'output, err := utils.Run(cmd)' if you want to debug the fixtures and uncomment the 'fmt.Print(output)' line.
-	_, err := utils.Run(cmd)
+	_, err := utils.Run(cmd, nil)
 	//fmt.Print(output) // and rename _ to output
 
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to setting up the E2E test environment and fixtures")

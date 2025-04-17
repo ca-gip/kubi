@@ -48,7 +48,7 @@ func generateNamespace(project *cagipv1.Project) (err error) {
 		return createNamespace(project, api)
 	case errNs != nil:
 		return errNs
-	case errNs == nil && !isNsUptodate:
+	case !isNsUptodate:
 		slog.Info("updating namespace", "namespace", project.Name)
 		return updateExistingNamespace(project, api)
 	default:

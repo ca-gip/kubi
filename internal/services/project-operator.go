@@ -34,10 +34,15 @@ func WatchProjects() cache.Store {
 	watchlist := cache.NewFilteredListWatchFromClient(v3.CagipV1().RESTClient(), "projects", metav1.NamespaceAll, utils.DefaultWatchOptionModifier)
 	resyncPeriod := 30 * time.Minute
 
-	store, controller := cache.NewInformer(watchlist, &cagipv1.Project{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
-		AddFunc:    projectCreated,
-		DeleteFunc: projectDeleted,
-		UpdateFunc: projectUpdated,
+	store, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: watchlist,
+		ResyncPeriod:  resyncPeriod,
+		ObjectType:    &cagipv1.Project{},
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    projectCreated,
+			DeleteFunc: projectDeleted,
+			UpdateFunc: projectUpdated,
+		},
 	})
 
 	go controller.Run(wait.NeverStop)
@@ -84,18 +89,18 @@ func createOrUpdateProjectResources(project *cagipv1.Project) {
 
 	if err := GenerateAppServiceAccount(project.Name); err != nil {
 		slog.Error("generate service account error", "error", err)
-		ServiceAccountCreation.WithLabelValues("error", project.Name).Inc()
+		ServiceAccountCreation.WithLabelValues("error", project.Name, utils.KubiServiceAccountAppName).Inc()
 		return
 	}
 	slog.Debug("service Account created", "object", utils.KubiServiceAccountAppName, "namespace", project.Name)
-	ServiceAccountCreation.WithLabelValues("ok", project.Name).Inc()
+	ServiceAccountCreation.WithLabelValues("ok", project.Name, utils.KubiServiceAccountAppName).Inc()
 
 	if err := generateRoleBindings(project, utils.Config.DefaultPermission); err != nil {
 		slog.Error("generate role binding error", "error", err)
-		RoleBindingsCreation.WithLabelValues("error", project.Name).Inc()
+		RoleBindingsCreation.WithLabelValues("error", project.Name, "rolebindings").Inc()
 		return
 	}
 	slog.Debug("role bindings created", "namespace", project.Name)
-	RoleBindingsCreation.WithLabelValues("ok", project.Name).Inc()
+	RoleBindingsCreation.WithLabelValues("ok", project.Name, "rolebindings").Inc()
 
 }

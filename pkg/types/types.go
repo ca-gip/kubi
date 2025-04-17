@@ -10,28 +10,28 @@ import (
 )
 
 type LdapConfig struct {
-	UserBase             string
-	AllGroupsBase        string   // base path for all the groups in the org, superset of GroupBase
-	AllowedGroupRegexps  []string // list of DNs that will be allowed to pass through auth.
-	GroupBase            string   // base path for all the cluster's project groups
-	AppMasterGroupBase   string
-	CustomerOpsGroupBase string
-	ServiceGroupBase     string
-	OpsMasterGroupBase   string
-	ViewerGroupBase      string
-	AdminUserBase        string
-	AdminGroupBase       string
-	Host                 string
-	Port                 int
-	PageSize             uint32
-	UseSSL               bool
-	StartTLS             bool
-	SkipTLSVerification  bool
-	BindDN               string
-	BindPassword         string
-	UserFilter           string
-	GroupFilter          string
-	Attributes           []string
+	UserBase              string
+	EligibleGroupsParents []string
+	AllGroupsBase         string // base path for all the groups in the org, superset of GroupBase
+	GroupBase             string // base path for all the cluster's project groups
+	AppMasterGroupBase    string
+	CustomerOpsGroupBase  string
+	ServiceGroupBase      string
+	OpsMasterGroupBase    string
+	ViewerGroupBase       string
+	AdminUserBase         string
+	AdminGroupBase        string
+	Host                  string
+	Port                  int
+	PageSize              uint32
+	UseSSL                bool
+	StartTLS              bool
+	SkipTLSVerification   bool
+	BindDN                string
+	BindPassword          string
+	UserFilter            string
+	GroupFilter           string
+	Attributes            []string
 }
 
 type Config struct {

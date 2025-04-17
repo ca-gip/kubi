@@ -18,8 +18,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: kubi-operator
-          image: ghcr.io/ca-gip/kubi-operator:b319644-amd64
-          #image: docker-remote.registry.saas.cagip.group.gca/cagip/kubi-operator:v1.30.0-beta1
+          image: <kubi-operator-image>
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8002

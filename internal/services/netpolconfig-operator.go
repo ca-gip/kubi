@@ -36,10 +36,15 @@ func WatchNetPolConfig() cache.Store {
 
 	resyncPeriod := 30 * time.Minute
 
-	store, controller := cache.NewInformer(watchlist, &cagipv1.NetworkPolicyConfig{}, resyncPeriod, cache.ResourceEventHandlerFuncs{
-		AddFunc:    networkPolicyConfigCreated,
-		DeleteFunc: networkPolicyConfigDeleted,
-		UpdateFunc: networkPolicyConfigUpdated,
+	store, controller := cache.NewInformerWithOptions(cache.InformerOptions{
+		ListerWatcher: watchlist,
+		ObjectType:    &cagipv1.NetworkPolicyConfig{},
+		ResyncPeriod:  resyncPeriod,
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    networkPolicyConfigCreated,
+			DeleteFunc: networkPolicyConfigDeleted,
+			UpdateFunc: networkPolicyConfigUpdated,
+		},
 	})
 
 	go controller.Run(wait.NeverStop)

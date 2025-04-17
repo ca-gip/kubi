@@ -93,11 +93,10 @@ func TestToGroupNames(t *testing.T) {
 }
 func TestIsUserAllowedOnCluster(t *testing.T) {
 	tests := []struct {
-		name           string
-		members        LDAPMemberships
-		regexpPatterns []string
-		expected       bool
-		expectError    bool
+		name        string
+		members     LDAPMemberships
+		expected    bool
+		expectError bool
 	}{
 		{
 			name: "User with admin access",
@@ -106,53 +105,24 @@ func TestIsUserAllowedOnCluster(t *testing.T) {
 					{DN: "cn=admin1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"admin1"}}}},
 				},
 			},
-			regexpPatterns: []string{},
-			expected:       true,
-			expectError:    false,
+			expected:    true,
+			expectError: false,
 		},
 		{
-			name: "User with no special access but matching group pattern",
+			name: "User with no special access but with eligible group",
 			members: LDAPMemberships{
 				NonSpecificGroups: []*ldap.Entry{
 					{DN: "cn=group1,OU=CAGIP,O=CA", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"group1"}}}},
 				},
 			},
-			regexpPatterns: []string{"CN=GROUP1,OU=CAGIP,O=CA"},
-			expected:       true,
-			expectError:    false,
+			expected:    true,
+			expectError: false,
 		},
 		{
-			name: "User with no special access but matching generic group pattern",
-			members: LDAPMemberships{
-				NonSpecificGroups: []*ldap.Entry{
-					{DN: "cn=group1,OU=CAGIP,O=CA", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"group1"}}}},
-				},
-			},
-			regexpPatterns: []string{"CN=.*,OU=CAGIP,O=CA"},
-			expected:       true,
-			expectError:    false,
-		},
-		{
-			name: "User with no access and no matching group pattern",
-			members: LDAPMemberships{
-				NonSpecificGroups: []*ldap.Entry{
-					{DN: "cn=group1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"group1"}}}},
-				},
-			},
-			regexpPatterns: []string{"CN=group2"},
-			expected:       false,
-			expectError:    false,
-		},
-		{
-			name: "User with no access and invalid regex pattern",
-			members: LDAPMemberships{
-				NonSpecificGroups: []*ldap.Entry{
-					{DN: "cn=group1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"group1"}}}},
-				},
-			},
-			regexpPatterns: []string{"["},
-			expected:       false,
-			expectError:    true,
+			name:        "User with no access and no eligible group",
+			members:     LDAPMemberships{},
+			expected:    false,
+			expectError: false,
 		},
 		{
 			name: "User with multiple access types",
@@ -164,19 +134,14 @@ func TestIsUserAllowedOnCluster(t *testing.T) {
 					{DN: "cn=appops1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"appops1"}}}},
 				},
 			},
-			regexpPatterns: []string{},
-			expected:       true,
-			expectError:    false,
+			expected:    true,
+			expectError: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.members.isUserAllowedOnCluster(tt.regexpPatterns)
-			if (err != nil) != tt.expectError {
-				t.Errorf("isUserAllowedOnCluster() error = %v, expectError %v", err, tt.expectError)
-				return
-			}
+			got := tt.members.isUserAllowedOnCluster()
 			if got != tt.expected {
 				t.Errorf("isUserAllowedOnCluster() = %v, want %v", got, tt.expected)
 			}

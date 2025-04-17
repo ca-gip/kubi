@@ -3,6 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 
 	"github.com/pkg/errors"
 	"gopkg.in/ldap.v2"
@@ -73,15 +74,24 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 	return allResults, nil
 }
 
-func (c *LDAPClient) getGroupsContainingUser(groupBaseDN string, userDN string) ([]*ldap.Entry, error) {
-	if len(groupBaseDN) == 0 {
+func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, error) {
+	if len(c.GroupBase) == 0 {
 		return []*ldap.Entry{}, nil
 	}
+
+	groupsFilter := "|"
+	for _, group := range c.EligibleGroupsParents {
+		groupsFilter += fmt.Sprintf("(ou:dn:=%s)", group)
+	}
+
+	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(%s)(member=%s))", groupsFilter, userDN)
+	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
 	req := ldap.NewSearchRequest(
-		groupBaseDN,
+		c.GroupBase, // Change to the main master group OU=Applications,OU=Groupes,O=CA
 		ldap.ScopeWholeSubtree,
 		ldap.NeverDerefAliases, 0, 30, false,
-		fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN),
+		// We add group filters to extra only the needed subgroups
+		filter,
 		[]string{"cn"},
 		nil,
 	)

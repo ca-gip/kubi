@@ -89,7 +89,7 @@ func TestToSubject(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.DN, func(t *testing.T) {
-			result := toSubject(tt.DN)
+			result := ToSubject(tt.DN)
 			if result != tt.expected {
 				t.Errorf("toSubject(%v) = %v, expected %v", tt.DN, result, tt.expected)
 			}

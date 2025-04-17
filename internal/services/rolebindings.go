@@ -116,17 +116,17 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     toSubject(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
+					Name:     ToSubject(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     toSubject(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
+					Name:     ToSubject(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     toSubject(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
+					Name:     ToSubject(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
 				},
 			},
 		},
@@ -142,7 +142,7 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     toSubject(utils.Config.Ldap.ViewerGroupBase),
+					Name:     ToSubject(utils.Config.Ldap.ViewerGroupBase),
 				},
 			},
 		},
@@ -190,7 +190,7 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 // if not valid, return an empty string, which does not get applied in the list of subjects, as:
 // 1. it's not valid to not have a name
 // 2. We check whether we have a name in the generation of the rolebinding object.
-func toSubject(DN string) string {
+func ToSubject(DN string) string {
 	p := regexp.MustCompile(("CN=([^,]+)")).FindStringSubmatch(DN)
 	if len(p) > 1 {
 		return strings.TrimSpace(p[1])

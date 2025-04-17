@@ -4,3 +4,8 @@ coverage.*
 bin
 hack/bin
 dist/
+generated-kubeconfig
+server-key.pem
+server.crt
+server.csr
+cover.out

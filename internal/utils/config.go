@@ -69,16 +69,16 @@ func MakeConfig() (*types.Config, error) {
 	ldapAllGroupsBase := os.Getenv("LDAP_ALLGROUPSBASE")
 	switch {
 	case ldapAllGroupsBase == "":
-		return nil, errors.New("groupBase is required")
+		return nil, errors.New("allGroupBase is required")
 	case len(ldapAllGroupsBase) < 2 || len(ldapAllGroupsBase) > 200:
 		return nil, fmt.Errorf("length for LDAP_ALLGROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapAllGroupsBase, len(ldapAllGroupsBase))
 	}
 
-	concatenatedAllowList := os.Getenv("LDAP_ALLOWED_GROUPS_REGEXPS")
-	if concatenatedAllowList == "" {
-		return nil, errors.New("LDAP_ALLOWED_GROUPS_REGEXPS env var is mandatory")
+	concatenatedEligibleList := os.Getenv("LDAP_ELIGIBLE_GROUPS_PARENTS")
+	if concatenatedEligibleList == "" {
+		return nil, errors.New("LDAP_ELIGIBLE_GROUPS_PARENTS env var is mandatory")
 	}
-	ldapAllowedGroupRegexps := strings.Split(concatenatedAllowList, "~")
+	ldapEligibleGroupsParents := strings.Split(concatenatedEligibleList, "|")
 
 	ldapServer := os.Getenv("LDAP_SERVER")
 	if ldapServer == "" {
@@ -202,28 +202,29 @@ func MakeConfig() (*types.Config, error) {
 		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
 		Ldap: types.LdapConfig{
-			UserBase:             ldapUserBase,
+			UserBase: ldapUserBase,
 			AllGroupsBase:        ldapAllGroupsBase,
-			AllowedGroupRegexps:  ldapAllowedGroupRegexps,
-			GroupBase:            ldapGroupBase,
-			AppMasterGroupBase:   getEnv("LDAP_APP_GROUPBASE", ""),
-			CustomerOpsGroupBase: getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
-			ServiceGroupBase:     getEnv("LDAP_SERVICE_GROUPBASE", ""),
-			OpsMasterGroupBase:   getEnv("LDAP_OPS_GROUPBASE", ""),
-			AdminUserBase:        getEnv("LDAP_ADMIN_USERBASE", ""),
-			AdminGroupBase:       getEnv("LDAP_ADMIN_GROUPBASE", ""),
-			ViewerGroupBase:      getEnv("LDAP_VIEWER_GROUPBASE", ""),
-			PageSize:             uint32(ldapPageSize),
-			Host:                 ldapServer,
-			Port:                 ldapPort,
-			UseSSL:               useSSL,
-			StartTLS:             startTLS,
-			SkipTLSVerification:  skipTLSVerification,
-			BindDN:               ldapBindDN,
-			BindPassword:         ldapBindPassword,
-			UserFilter:           ldapUserFilter,
-			GroupFilter:          "(member=%s)",
-			Attributes:           []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
+			//AllowedGroupRegexps:  ldapAllowedGroupRegexps,
+			EligibleGroupsParents: ldapEligibleGroupsParents,
+			GroupBase:             ldapGroupBase,
+			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),
+			CustomerOpsGroupBase:  getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
+			ServiceGroupBase:      getEnv("LDAP_SERVICE_GROUPBASE", ""),
+			OpsMasterGroupBase:    getEnv("LDAP_OPS_GROUPBASE", ""),
+			AdminUserBase:         getEnv("LDAP_ADMIN_USERBASE", ""),
+			AdminGroupBase:        getEnv("LDAP_ADMIN_GROUPBASE", ""),
+			ViewerGroupBase:       getEnv("LDAP_VIEWER_GROUPBASE", ""),
+			PageSize:              uint32(ldapPageSize),
+			Host:                  ldapServer,
+			Port:                  ldapPort,
+			UseSSL:                useSSL,
+			StartTLS:              startTLS,
+			SkipTLSVerification:   skipTLSVerification,
+			BindDN:                ldapBindDN,
+			BindPassword:          ldapBindPassword,
+			UserFilter:            ldapUserFilter,
+			GroupFilter:           "(member=%s)",
+			Attributes:            []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
 		},
 		KubeCa:             caEncoded,
 		KubeCaText:         string(kubeCA),
