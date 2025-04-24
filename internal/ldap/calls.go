@@ -75,7 +75,7 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 }
 
 func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, error) {
-	if len(c.GroupBase) == 0 {
+	if len(c.AllGroupsBase) == 0 {
 		return []*ldap.Entry{}, nil
 	}
 
@@ -87,7 +87,7 @@ func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, erro
 	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(%s)(member=%s))", groupsFilter, userDN)
 	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
 	req := ldap.NewSearchRequest(
-		c.GroupBase, // Change to the main master group OU=Applications,OU=Groupes,O=CA
+		c.AllGroupsBase,
 		ldap.ScopeWholeSubtree,
 		ldap.NeverDerefAliases, 0, 30, false,
 		// We add group filters to extra only the needed subgroups

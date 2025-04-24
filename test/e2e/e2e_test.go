@@ -31,6 +31,7 @@ import (
 	"github.com/ca-gip/kubi/internal/services"
 	kubiv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	kubiclientset "github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
+	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/ca-gip/kubi/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,6 +65,7 @@ var kubiConfig *corev1Types.ConfigMap
 var testProject kubiv1.Project
 var testKubeConfigPath string
 var clusterConfig *rest.Config
+var tokenIssuer *services.TokenIssuer
 var _ = Describe("Manager", Ordered, func() {
 	//var controllerPodName string
 
@@ -97,6 +99,23 @@ var _ = Describe("Manager", Ordered, func() {
 		}
 		currDir, _ := os.Getwd()
 		testKubeConfigPath = filepath.Join(currDir, "generated-kubeconfig")
+
+		ecdsaPem, err := os.ReadFile("/tmp/kubi/ecdsa/ecdsa-key.pem")
+		fmt.Printf("ecdsaPemErr: %s\n", err)
+		ecdsaPubPem, _ := os.ReadFile("/tmp/kubi/ecdsa/ecdsa-public.pem")
+		fmt.Printf("ecdsaPubErr: %s\n", err)
+		tokenIssuer, err = services.NewTokenIssuer(
+			ecdsaPem,
+			ecdsaPubPem,
+			"4h",
+			"720h", // This had to be included in refactor. TODO: Check side effects
+			"intranet",
+			"https://kubernetes.default.svc.cluster.local",
+			"cagip",
+		)
+		if err != nil {
+			panic(err.Error())
+		}
 		// By("creating manager namespace")
 		// cmd := exec.Command("kubectl", "create", "ns", namespace)
 		// _, err := utils.Run(cmd)
@@ -468,6 +487,176 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyKubeconfigFileHasBeenGenerated).Should(Succeed())
 			Eventually(verifyKubeconfigFileAllowsAuthentication).Should(Succeed())
 		})
+		It("should generate tokens with appropriate contents (auths, and groups)", func() {
+			By("generating an appropriate token for admin user")
+			verifyAdminUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "admin-kube1:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeTrue())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("ADMIN_KUBERNETES"))
+			}
+			By("generating an appropriate token for ops user")
+			verifyOpsUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "cloudops-kube2:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeTrue())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CLOUDOPS_KUBERNETES"))
+			}
+			By("generating an appropriate token for service account user")
+			verifyServiceAccountsHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "service-account-kubernetes-team:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeTrue())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_TRANSVERSAL_SERVICE"))
+			}
+			By("generating an appropriate token for cluster viewer user")
+			verifyViewerUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "product-owner2:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeTrue())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_CAGIPHP_VIEW"))
+				fmt.Printf("Decoded token: %+v\n", *decoded)
+			}
+			By("generating an appropriate token for appops user")
+			verifyClusterAppopsHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "developer1:somepass", "-k", "-s", "https://localhost:30003/token")
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeTrue())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_CAGIPHP_OPS", "DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN", "CAGIP_MEMBERS"))
+			}
+			By("generating an appropriate token for project admin user")
+			verifyProjectUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "developer4:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(HaveExactElements(&types.Project{
+					Project:     "projet-toto",
+					Role:        "admin",
+					Source:      "",
+					Environment: "development",
+					Contact:     "",
+				}))
+				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN"))
+				fmt.Printf("Decoded token: %+v\n", *decoded)
+			}
+			By("generating an appropriate token for user from eligible group 1")
+			verifyRandomEligibleUser1HaveAppropriateRights := func(g Gomega) {
+				// network-dev1 is only a member of a group with
+				// eligible parents("TEAMS" in this case) specified in config
+				cmd := exec.Command("curl", "-u", "network-dev1:somepass", "-k", "-s", "https://localhost:30003/token")
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("NETWORK"))
+			}
+			By("generating an appropriate token for user from eligible group 2")
+			verifyRandomEligibleUser2HaveAppropriateRights := func(g Gomega) {
+				// platform-dev1 is only a member of a group with
+				// eligible parents("CONTAINER" in this case) specified in config
+				cmd := exec.Command("curl", "-u", "platform-dev1:somepass", "-k", "-s", "https://localhost:30003/token")
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("PLATFORM"))
+			}
+			By("generating an appropriate token for user with no access")
+			verifyRandomUsersHaveAppropriateRights := func(g Gomega) {
+				// random-user is not a member of any interesting groups:
+				// cluster-wide (admin, viewer, appops, cloudops..),
+				// project groups (DL_KUB...) or groups with eligible parents specified in config
+				cmd := exec.Command("curl", "-u", "random-user:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				_, err = tokenIssuer.VerifyToken(token)
+				g.Expect(err).To(HaveOccurred(), "The token to verify should be invalid")
+				g.Expect(token).To(Equal("Unauthorized\n"))
+			}
+
+			Eventually(verifyAdminUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyOpsUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyServiceAccountsHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyViewerUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyClusterAppopsHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyProjectUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomEligibleUser1HaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomEligibleUser2HaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomUsersHaveAppropriateRights).Should(Succeed())
+		})
 	})
 
 	Context("kubi authentication webhook and K8S+Kubi RBAC", func() {
@@ -524,7 +713,6 @@ var _ = Describe("Manager", Ordered, func() {
 				// Unable to connect to the server: tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error" while trying to verify candidate authority certificate "kubernetes")
 				g.Expect(cmdOutput).To(ContainSubstring("error: You must be logged in to the server (Unauthorized)"), "Failed to deny access to non-legit user/token")
 				g.Expect(cmdOutput).To(ContainSubstring("Unauthorized"), "Failed to deny access to non-legit user/token")
-
 			}
 
 			Eventually(verifyLegitUserGetsAuthenticatedAndIsAuthorizedWhenLegitAction).Should(Succeed())

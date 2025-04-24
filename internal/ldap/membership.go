@@ -2,6 +2,7 @@ package ldap
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"gopkg.in/ldap.v2"
@@ -43,9 +44,16 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 
 	for _, entry := range entries {
 		upperDN := strings.ToUpper(entry.DN)
-		if group, exists := groupMapping[upperDN]; exists {
-			*group = append(*group, entry)
-		} else {
+		collected := false
+		for groupBase, groups := range groupMapping {
+			if strings.HasSuffix(upperDN, groupBase) {
+				*groups = append(*groups, entry)
+				collected = true
+				break
+			}
+		}
+		if !collected {
+			slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
 			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 		}
 	}

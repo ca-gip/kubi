@@ -67,6 +67,19 @@ data:
     userPassword: somepass
     mail: developer3@example.org
 
+
+    dn: cn=developer4,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: developer4
+    uid: developer4
+    givenName: Dev
+    sn: Three
+    userPassword: somepass
+    mail: developer4@example.org
+
     dn: cn=admin-kube1,ou=Users,dc=example,dc=org
     objectClass: top
     objectClass: person
@@ -211,6 +224,32 @@ data:
     userPassword: somepass
     mail: productowner3@example.org
 
+    dn: cn=network-dev1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: network-dev1
+    uid: network-dev1
+    givenName: NetworkDev
+    sn: One
+    userPassword: somepass
+    mail: network-dev1@example.org
+
+
+    dn: cn=platform-dev1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: platform-dev1
+    uid: platform-dev1
+    givenName: PlatformDev
+    sn: One
+    userPassword: somepass
+    mail: platform-dev1@example.org
+
+
     dn: cn=service-account-kubernetes-team,ou=Users,dc=example,dc=org
     objectClass: top
     objectClass: person
@@ -223,6 +262,18 @@ data:
     userPassword: somepass
     mail: serviceaccountk8steams@example.org
 
+    dn: cn=random-user,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: random-user
+    uid: random-user
+    givenName: RandomUser
+    sn: Three
+    userPassword: somepass
+    mail: random-user3@example.org
+
     dn: ou=Groups,dc=example,dc=org
     objectClass: organizationalUnit
     ou: groups
@@ -231,6 +282,11 @@ data:
     objectClass: organizationalUnit
     ou: teams
 
+
+    dn: ou=DIVISION,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: division
+    
     dn: ou=CONTAINER,ou=Groups,dc=example,dc=org
     objectClass: organizationalUnit
     ou: container
@@ -249,6 +305,7 @@ data:
     member: cn=developer1,ou=Users,dc=example,dc=org
     member: cn=developer2,ou=Users,dc=example,dc=org
     member: cn=developer3,ou=Users,dc=example,dc=org
+    member: cn=developer4,ou=Users,dc=example,dc=org
 
     dn: cn=DL_KUB_CAGIPHP_OPS,ou=HORS-PROD,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
     cn: DL_KUB_CAGIPHP_OPS
@@ -268,7 +325,6 @@ data:
     cn: DL_KUB_TRANSVERSAL_SERVICE
     objectClass: groupOfNames
     member: cn=service-account-kubernetes-team,ou=Users,dc=example,dc=org
-
 
     dn: cn=ADMIN_KUBERNETES,ou=TEAMS,ou=Groups,dc=example,dc=org
     cn: ADMIN_KUBERNETES
@@ -290,6 +346,21 @@ data:
     member: cn=developer1,ou=Users,dc=example,dc=org
     member: cn=developer2,ou=Users,dc=example,dc=org
     member: cn=developer3,ou=Users,dc=example,dc=org
+
+    dn: cn=NETWORK,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: NETWORK
+    objectClass: groupOfNames
+    member: cn=network-dev1,ou=Users,dc=example,dc=org
+
+    dn: cn=PLATFORM,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    cn: PLATFORM
+    objectClass: groupOfNames
+    member: cn=platform-dev1,ou=Users,dc=example,dc=org
+
+    dn: cn=RANDOM_GROUP,ou=DIVISION,ou=Groups,dc=example,dc=org
+    cn: RANDOM_GROUP
+    objectClass: groupOfNames
+    member: cn=random-user,ou=Users,dc=example,dc=org
 kind: ConfigMap
 metadata:
   name: ldapconf
