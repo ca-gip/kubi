@@ -3,9 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 
+	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/utils"
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -116,17 +115,17 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ToSubject(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
+					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ToSubject(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
+					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ToSubject(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
+					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
 				},
 			},
 		},
@@ -142,7 +141,7 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ToSubject(utils.Config.Ldap.ViewerGroupBase),
+					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.ViewerGroupBase),
 				},
 			},
 		},
@@ -184,16 +183,4 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 		return fmt.Errorf("encountered the following errors in rolebindings create or update: %v", errors)
 	}
 	return nil
-}
-
-// Quick and hacky way to parse DN from config, without having to load an ldap parser or doing any query
-// if not valid, return an empty string, which does not get applied in the list of subjects, as:
-// 1. it's not valid to not have a name
-// 2. We check whether we have a name in the generation of the rolebinding object.
-func ToSubject(DN string) string {
-	p := regexp.MustCompile(("CN=([^,]+)")).FindStringSubmatch(DN)
-	if len(p) > 1 {
-		return strings.TrimSpace(p[1])
-	}
-	return ""
 }

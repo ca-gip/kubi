@@ -39,7 +39,7 @@ func TestToGroupNames(t *testing.T) {
 					{DN: "cn=cluster1", Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"cluster1"}}}},
 				},
 			},
-			expected: []string{"admin1", "admin2", "appops1", "customerops1", "viewer1", "service1", "cloudops1", "cluster1"},
+			expected: []string{"CN=ADMIN1", "CN=ADMIN2", "CN=APPOPS1", "CN=CLOUDOPS1", "CN=CLUSTER1", "CN=CUSTOMEROPS1", "CN=SERVICE1", "CN=VIEWER1"},
 		},
 		{
 			name: "No groups",
@@ -71,7 +71,7 @@ func TestToGroupNames(t *testing.T) {
 				CloudOpsAccess:      []*ldap.Entry{},
 				ClusterGroupsAccess: []*ldap.Entry{},
 			},
-			expected: []string{"admin1", "appops1", "viewer1"},
+			expected: []string{"CN=ADMIN1", "CN=APPOPS1", "CN=VIEWER1"},
 		},
 	}
 

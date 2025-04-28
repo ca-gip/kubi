@@ -274,6 +274,18 @@ data:
     userPassword: somepass
     mail: random-user3@example.org
 
+    dn: cn=division4-user1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: division4-user1
+    uid: division4-user1
+    givenName: division4User1
+    sn: Three
+    userPassword: somepass
+    mail: division4-user1@example.org
+
     dn: ou=Groups,dc=example,dc=org
     objectClass: organizationalUnit
     ou: groups
@@ -282,6 +294,9 @@ data:
     objectClass: organizationalUnit
     ou: teams
 
+    dn: ou=DIVISION4,ou=TEAMS,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: DIVISION4
 
     dn: ou=DIVISION,ou=Groups,dc=example,dc=org
     objectClass: organizationalUnit
@@ -339,6 +354,11 @@ data:
     member: cn=cloudops-kube1,ou=Users,dc=example,dc=org
     member: cn=cloudops-kube2,ou=Users,dc=example,dc=org
     member: cn=cloudops-kube3,ou=Users,dc=example,dc=org
+
+    dn: cn=CLOUDOPS_KUBERNETES,ou=DIVISION4,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: CLOUDOPS_KUBERNETES
+    objectClass: groupOfNames
+    member: cn=division4-user1,ou=Users,dc=example,dc=org
 
     dn: cn=CAGIP_MEMBERS,ou=TEAMS,ou=Groups,dc=example,dc=org
     cn: CAGIP_MEMBERS

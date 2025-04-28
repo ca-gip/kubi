@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/services"
 	kubiv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	kubiclientset "github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
@@ -297,9 +298,9 @@ var _ = Describe("Manager", Ordered, func() {
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "ops:masters"},
 
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: testProject.Spec.SourceEntity},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: services.ToSubject(kubiConfig.Data["LDAP_APP_GROUPBASE"])},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: services.ToSubject(kubiConfig.Data["LDAP_CUSTOMER_OPS_GROUPBASE"])},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: services.ToSubject(kubiConfig.Data["LDAP_OPS_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_APP_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_CUSTOMER_OPS_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_OPS_GROUPBASE"])},
 				}
 				g.Expect(nsAdminSa.Subjects).To(Equal(nsAdminSaSubjects), "for rb namespaced-admin, expected binding to groups projet-toto-development:admin application:master and ops:masters  - TODO")
 
@@ -314,7 +315,7 @@ var _ = Describe("Manager", Ordered, func() {
 
 				viewSaSubjects := []rbacv1.Subject{
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "application:view"},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: services.ToSubject(kubiConfig.Data["LDAP_VIEWER_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_VIEWER_GROUPBASE"])},
 				}
 				g.Expect(viewSa.Subjects).To(Equal(viewSaSubjects), "for rb view, expected binding to the group application:view - TODO")
 			}
@@ -502,7 +503,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeFalse())
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("ADMIN_KUBERNETES"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=ADMIN_KUBERNETES,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 			}
 			By("generating an appropriate token for ops user")
 			verifyOpsUsersHaveAppropriateRights := func(g Gomega) {
@@ -519,7 +520,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeFalse())
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("CLOUDOPS_KUBERNETES"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=CLOUDOPS_KUBERNETES,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 			}
 			By("generating an appropriate token for service account user")
 			verifyServiceAccountsHaveAppropriateRights := func(g Gomega) {
@@ -536,7 +537,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeTrue())
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_TRANSVERSAL_SERVICE"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=DL_KUB_TRANSVERSAL_SERVICE,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 			}
 			By("generating an appropriate token for cluster viewer user")
 			verifyViewerUsersHaveAppropriateRights := func(g Gomega) {
@@ -553,7 +554,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeFalse())
 				g.Expect(decoded.ViewerAccess).To(BeTrue())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_CAGIPHP_VIEW"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=DL_KUB_CAGIPHP_VIEW,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 				fmt.Printf("Decoded token: %+v\n", *decoded)
 			}
 			By("generating an appropriate token for appops user")
@@ -570,7 +571,11 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeFalse())
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_CAGIPHP_OPS", "DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN", "CAGIP_MEMBERS"))
+				g.Expect(decoded.Groups).To(ConsistOf(
+					"CN=CAGIP_MEMBERS,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG",
+					"CN=DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG",
+					"CN=DL_KUB_CAGIPHP_OPS,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG",
+				))
 			}
 			By("generating an appropriate token for project admin user")
 			verifyProjectUsersHaveAppropriateRights := func(g Gomega) {
@@ -593,7 +598,7 @@ var _ = Describe("Manager", Ordered, func() {
 					Environment: "development",
 					Contact:     "",
 				}))
-				g.Expect(decoded.Groups).To(ConsistOf("DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 				fmt.Printf("Decoded token: %+v\n", *decoded)
 			}
 			By("generating an appropriate token for user from eligible group 1")
@@ -612,7 +617,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeFalse())
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("NETWORK"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=NETWORK,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 			}
 			By("generating an appropriate token for user from eligible group 2")
 			verifyRandomEligibleUser2HaveAppropriateRights := func(g Gomega) {
@@ -630,7 +635,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ServiceAccess).To(BeFalse())
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
-				g.Expect(decoded.Groups).To(ConsistOf("PLATFORM"))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=PLATFORM,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
 			}
 			By("generating an appropriate token for user with no access")
 			verifyRandomUsersHaveAppropriateRights := func(g Gomega) {
@@ -646,6 +651,30 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(err).To(HaveOccurred(), "The token to verify should be invalid")
 				g.Expect(token).To(Equal("Unauthorized\n"))
 			}
+			By("generating an appropriate token for user with no access")
+			verifyRandomAlmostEligibleUsersHaveAppropriateRights := func(g Gomega) {
+				// division4-user1 is a member of a group that shares the same CN (CLOUDOPS_KUBERNETES)
+				// with an eligible group: He should not have ops-access (or any other special access) 
+				// to the cluster but since its group belong to an eligible parent (OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG)
+				// he receives a token
+
+				cmd := exec.Command("curl", "-u", "division4-user1:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=CLOUDOPS_KUBERNETES,OU=DIVISION4,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+			
+			}
 
 			Eventually(verifyAdminUsersHaveAppropriateRights).Should(Succeed())
 			Eventually(verifyOpsUsersHaveAppropriateRights).Should(Succeed())
@@ -656,6 +685,7 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyRandomEligibleUser1HaveAppropriateRights).Should(Succeed())
 			Eventually(verifyRandomEligibleUser2HaveAppropriateRights).Should(Succeed())
 			Eventually(verifyRandomUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomAlmostEligibleUsersHaveAppropriateRights).Should(Succeed())
 		})
 	})
 

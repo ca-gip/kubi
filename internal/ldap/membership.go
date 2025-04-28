@@ -46,7 +46,8 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 		upperDN := strings.ToUpper(entry.DN)
 		collected := false
 		for groupBase, groups := range groupMapping {
-			if strings.HasSuffix(upperDN, groupBase) {
+			hasSuffix := strings.HasSuffix(upperDN, groupBase)
+			if hasSuffix {
 				*groups = append(*groups, entry)
 				collected = true
 				break
@@ -61,43 +62,46 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 	return m, nil
 }
 
-// toGroupNames returns a slice for all the group names the user is member of,
+// toGroupNames returns a slice for all the group names (DN) the user is member of,
 // rather than their full LDAP entries.
 // Ensuring uniqueness through map of 0 bytes structs as sets do not exist in go std lib
 // This is necessary, because we know the groups in specific access (like adminAccess)
 // are also present in the big blob of groups (="NonSpecificGroups")
 func (m *LDAPMemberships) toGroupNames() []string {
 	groupMap := make(map[string]struct{})
-	for _, entry := range m.AdminAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.AppOpsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.CustomerOpsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.ViewerAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.ServiceAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.CloudOpsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.ClusterGroupsAccess {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
-	}
-	for _, entry := range m.NonSpecificGroups {
-		groupMap[entry.GetAttributeValue("cn")] = struct{}{}
+
+	accessCategories := [][]*ldap.Entry{
+		m.AdminAccess,
+		m.AppOpsAccess,
+		m.CustomerOpsAccess,
+		m.ViewerAccess,
+		m.ServiceAccess,
+		m.CloudOpsAccess,
+		m.ClusterGroupsAccess,
+		m.NonSpecificGroups,
 	}
 
-	var groups []string
+	for _, category := range accessCategories {
+		for _, entry := range category {
+			normalizedGroup := NormalizeGroupName(entry.DN)
+			groupMap[normalizedGroup] = struct{}{}
+		}
+	}
+
+	groups := make([]string, 0, len(groupMap))
 	for group := range groupMap {
 		groups = append(groups, group)
 	}
+
 	return groups
+}
+
+// Normalized group names will be used as subjects of k8s rolebindings
+// While ldap entry are not case-sensitive, k8s subjects are, so we
+// need to normalize the ldap entry so as to be robust to case or whitespace
+func NormalizeGroupName(groupName string) string {
+	withoutWhitespace := strings.ReplaceAll(groupName, " ", "")
+	return strings.ToUpper(withoutWhitespace)
 }
 
 // toProjectNames retuns a slice for all the project names the user is member of,
