@@ -66,14 +66,6 @@ func MakeConfig() (*types.Config, error) {
 		return nil, fmt.Errorf("length for LDAP_GROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapGroupBase, len(ldapGroupBase))
 	}
 
-	ldapAllGroupsBase := os.Getenv("LDAP_ALLGROUPSBASE")
-	switch {
-	case ldapAllGroupsBase == "":
-		return nil, errors.New("allGroupBase is required")
-	case len(ldapAllGroupsBase) < 2 || len(ldapAllGroupsBase) > 200:
-		return nil, fmt.Errorf("length for LDAP_ALLGROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapAllGroupsBase, len(ldapAllGroupsBase))
-	}
-
 	concatenatedEligibleList := os.Getenv("LDAP_ELIGIBLE_GROUPS_PARENTS")
 	if concatenatedEligibleList == "" {
 		return nil, errors.New("LDAP_ELIGIBLE_GROUPS_PARENTS env var is mandatory")
@@ -203,8 +195,6 @@ func MakeConfig() (*types.Config, error) {
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
 		Ldap: types.LdapConfig{
 			UserBase: ldapUserBase,
-			AllGroupsBase:        ldapAllGroupsBase,
-			//AllowedGroupRegexps:  ldapAllowedGroupRegexps,
 			EligibleGroupsParents: ldapEligibleGroupsParents,
 			GroupBase:             ldapGroupBase,
 			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),

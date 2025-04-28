@@ -12,7 +12,6 @@ import (
 type LdapConfig struct {
 	UserBase              string
 	EligibleGroupsParents []string
-	AllGroupsBase         string // base path for all the groups in the org, superset of GroupBase
 	GroupBase             string // base path for all the cluster's project groups
 	AppMasterGroupBase    string
 	CustomerOpsGroupBase  string

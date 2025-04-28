@@ -75,31 +75,26 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 }
 
 func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, error) {
-	if len(c.AllGroupsBase) == 0 {
-		return []*ldap.Entry{}, nil
-	}
 
-	groupsFilter := "|"
-	for _, group := range c.EligibleGroupsParents {
-		groupsFilter += fmt.Sprintf("(ou:dn:=%s)", group)
-	}
-
-	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(%s)(member=%s))", groupsFilter, userDN)
+	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
 	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
-	req := ldap.NewSearchRequest(
-		c.AllGroupsBase,
-		ldap.ScopeWholeSubtree,
-		ldap.NeverDerefAliases, 0, 30, false,
-		// We add group filters to extra only the needed subgroups
-		filter,
-		[]string{"cn"},
-		nil,
-	)
+	var res []*ldap.Entry
+	for _, groupbase := range c.EligibleGroupsParents {
+		req := ldap.NewSearchRequest(
+			groupbase,
+			ldap.ScopeWholeSubtree,
+			ldap.NeverDerefAliases, 0, 30, false,
+			// We add group filters to extra only the needed subgroups
+			filter,
+			[]string{"cn"},
+			nil,
+		)
 
-	res, err := c.Query(*req)
-	if err != nil {
-		return nil, errors.Wrap(err, "error querying for group memberships")
+		queryRes, err := c.Query(*req)
+		if err != nil {
+			return nil, errors.Wrap(err, "error querying for group memberships")
+		}
+		res = append(res, queryRes...)
 	}
-
 	return res, nil
 }
