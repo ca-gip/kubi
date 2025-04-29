@@ -75,6 +75,13 @@ var _ = Describe("Manager", Ordered, func() {
 	BeforeAll(func() {
 
 		kubeconfig := os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				panic(err.Error())
+			}
+			kubeconfig = filepath.Join(homeDir, ".kube", "config")
+		}
 		//fmt.Printf("KUBECONFIG PATH: %s\n", kubeconfig)
 		// use the current context in kubeconfig
 		var err error
@@ -654,7 +661,7 @@ var _ = Describe("Manager", Ordered, func() {
 			By("generating an appropriate token for user with no access")
 			verifyRandomAlmostEligibleUsersHaveAppropriateRights := func(g Gomega) {
 				// division4-user1 is a member of a group that shares the same CN (CLOUDOPS_KUBERNETES)
-				// with an eligible group: He should not have ops-access (or any other special access) 
+				// with an eligible group: He should not have ops-access (or any other special access)
 				// to the cluster but since its group belong to an eligible parent (OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG)
 				// he receives a token
 
@@ -673,7 +680,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(decoded.ViewerAccess).To(BeFalse())
 				g.Expect(decoded.Auths).To(BeEmpty())
 				g.Expect(decoded.Groups).To(ConsistOf("CN=CLOUDOPS_KUBERNETES,OU=DIVISION4,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
-			
+
 			}
 
 			Eventually(verifyAdminUsersHaveAppropriateRights).Should(Succeed())
