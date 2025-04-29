@@ -30,10 +30,18 @@ type TokenIssuer struct {
 	Tenant             string
 }
 
-var TokenCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "kubi_valid_token_total",
-	Help: "Total number of tokens issued",
-}, []string{"status"})
+var (
+	TokenCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "kubi_valid_token_total",
+		Help: "Total number of tokens issued",
+	}, []string{"status"})
+
+	KubiTokenSizeHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "kubi_token_size",
+		Help:    "size of a kubi ldap token in bytes",
+		Buckets: []float64{512, 1024, 4096, 16384, 65536},
+	})
+)
 
 func NewTokenIssuer(privateKey []byte, publicKey []byte, tokenDuration string, extraTokenDuration string, locator string, publicApiServerURL string, tenant string) (*TokenIssuer, error) {
 	duration, err := time.ParseDuration(tokenDuration)
@@ -212,6 +220,7 @@ func (issuer *TokenIssuer) GenerateJWT(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Debug("token generated", "user", user.Username, "scopes", scopes)
+	KubiTokenSizeHistogram.Observe(float64(len(*token)))
 	w.WriteHeader(http.StatusCreated)
 	io.WriteString(w, *token)
 }

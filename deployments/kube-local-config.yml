@@ -4,6 +4,7 @@ data:
   LDAP_ADMIN_USERBASE: dc=kubi,dc=cagip,dc=github,dc=com
   LDAP_BINDDN: cn=admin,dc=kubi,dc=cagip,dc=github,dc=com
   LDAP_GROUPBASE: ou=LOCAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
+  LDAP_ELIGIBLE_GROUPS_PARENTS: OU=GLOBAL,ou=Groups,dc=kubi,dc=cagip,dc=github,dc=com
   LDAP_PORT: "389"
   LDAP_SERVER: kube-ldap.kube-system.svc.cluster.local
   LDAP_USE_SSL: "false"

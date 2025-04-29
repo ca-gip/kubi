@@ -139,6 +139,7 @@ For specific exceptions, add another network policy.
 |  **LDAP_ADMIN_GROUPBASE**          |  *BaseDn for admin group base search*| `ou=AdminGroup,dc=example,dc=org`| `yes  `     | -           |
 |  **LDAP_VIEWER_GROUPBASE**         |  *BaseDn for viewer group base search*| `ou=ViewerGroup,dc=example,dc=org`| `no  `     | -           |
 |  **LDAP_SERVICE_GROUPBASE**        |  *BaseDn for service group base search*| `ou=ServiceGroup,dc=example,dc=org`| `no  `     | -           |
+|  **LDAP_ELIGIBLE_GROUPS_PARENTS**        |  *List of "\|" separated BaseDn for user groups memberships search*| `ou=container,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com\|ou=teams,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com`| `yes  `     | -           |
 |  **LDAP_SERVER**                   |  *LDAP server ip address*            | `"192.168.2.1"                 ` | `yes  `     | -           |
 |  **LDAP_PORT**                     |  *LDAP server port 389, 636...*      | `389                           ` | `no   `     | `389  `     |
 |  **LDAP_PAGE_SIZE**                |  *LDAP page size, 1000...*           | `1000                           `| `no   `     | `1000  `    |

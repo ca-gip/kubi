@@ -6,7 +6,23 @@ import (
 	"log/slog"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gopkg.in/ldap.v2"
+)
+
+var (
+	LdapGroupsHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "kubi_ldap_groups_number",
+		Help:    "Number of ldap groups of a user",
+		Buckets: []float64{10, 60, 100, 200, 500},
+	})
+
+	LdapGroupsRequestDurationHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "kubi_ldap_groups_request_duration",
+		Help:    "Duration of ldap user's groups requests",
+		Buckets: []float64{1, 2, 5, 6, 10},
+	})
 )
 
 // Connect to LDAP and bind with given credentials
@@ -79,6 +95,8 @@ func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, erro
 	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
 	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
 	var res []*ldap.Entry
+
+	timer := prometheus.NewTimer(LdapGroupsRequestDurationHistogram)
 	for _, groupbase := range c.EligibleGroupsParents {
 		req := ldap.NewSearchRequest(
 			groupbase,
@@ -96,5 +114,7 @@ func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, erro
 		}
 		res = append(res, queryRes...)
 	}
+	timer.ObserveDuration()
+	LdapGroupsHistogram.Observe(float64(len(res)))
 	return res, nil
 }
