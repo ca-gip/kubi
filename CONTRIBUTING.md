@@ -283,6 +283,7 @@ Here we use /etc/kubernetes/pki which is automatically mounted.
     LDAP_ADMIN_USERBASE="dc=kubi,dc=ca-gip,dc=github,dc=com"  \
     LDAP_BINDDN="cn=admin,dc=kubi,dc=ca-gip,dc=github,dc=com"   \
     LDAP_GROUPBASE="ou=LOCAL,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com"  \
+    LDAP_ELIGIBLE_GROUPS_PARENTS: ou=container,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com|ou=teams,ou=Groups,dc=kubi,dc=ca-gip,dc=github,dc=com \
     LDAP_PORT="389"   \
     LDAP_SERVER="kube-ldap.kube-system.svc.cluster.local"  \
     LDAP_USE_SSL="false"   \

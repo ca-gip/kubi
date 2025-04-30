@@ -33,4 +33,3 @@ image: build
 
 test-e2e: 
 	go test ./test/e2e/ -v -ginkgo.v
-

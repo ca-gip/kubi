@@ -18,7 +18,7 @@ spec:
       serviceAccountName: kubi-user
       containers:
         - name: api
-          image: ghcr.io/ca-gip/kubi-api:b319644-amd64
+          image: <kubi-api-image>
           imagePullPolicy: IfNotPresent
           livenessProbe:
             initialDelaySeconds: 2
@@ -46,7 +46,7 @@ spec:
                   name: kubi-secret
                   key: ldap_passwd
         - name: webhook
-          image: ghcr.io/ca-gip/kubi-webhook:b319644-amd64
+          image: <kubi-webhook-image>
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8001

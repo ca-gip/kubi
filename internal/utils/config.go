@@ -4,15 +4,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"log"
+	"errors"
+	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/ca-gip/kubi/pkg/types"
-	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/go-ozzo/ozzo-validation/is"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/rest"
@@ -21,179 +21,220 @@ import (
 
 var Config *types.Config
 
-// Build the configuration from environment variable
-// and validate that is consistent. If false, the program exit
-// with validation message. The validation is not error safe but
-// it limit misconfiguration ( lack of parameter ).
+// Convenience function to default to a fallback string if the env var is not set
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
+// Build and validates the configuration from the environment variables
+// Todo: Split the makeconfig in two: One for the api+webhook, one for the operator.
 func MakeConfig() (*types.Config, error) {
 
 	// Check cluster deployment
 	host, port := os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
 	if len(host) == 0 || len(port) == 0 {
-		log.Fatalf("Cannot retrieve environment variable for Kubernetes service")
 		return nil, rest.ErrNotInCluster
 	}
 
 	kubeToken, errToken := os.ReadFile(TokenFile)
-	Check(errToken)
+	if errToken != nil {
+		return nil, fmt.Errorf("cannot read token file %s", TokenFile)
+	}
 
 	kubeCA, errCA := os.ReadFile(TlsCaFile)
-	Check(errCA)
-
-	caEncoded := base64.StdEncoding.EncodeToString(kubeCA)
-
-	// Get the SystemCertPool, continue with an empty pool on error
-	rootCAs, err := x509.SystemCertPool()
-	if err != nil {
-		log.Fatalf("Cannot retrieve system cert pool, exiting for security reason")
-	}
-	if rootCAs == nil {
-		rootCAs = x509.NewCertPool()
-	}
-
-	if ok := rootCAs.AppendCertsFromPEM(kubeCA); !ok {
-		log.Fatalf("Cannot add Kubernetes CA, exiting for security reason")
-	}
-
-	// Trust the augmented cert pool in our client
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
-		RootCAs:            rootCAs,
+	if errCA != nil {
+		return nil, fmt.Errorf("cannot read CA file %s", TlsCaFile)
 	}
 
 	// LDAP validation
+	ldapUserBase := os.Getenv("LDAP_USERBASE")
+	switch {
+	case ldapUserBase == "":
+		return nil, errors.New("userBase is required")
+	case len(ldapUserBase) < 2 || len(ldapUserBase) > 200:
+		return nil, fmt.Errorf("length for LDAP_USERBASE must be between 2 and 200 characters, got %v of len %v", ldapUserBase, len(ldapUserBase))
+	}
 
-	ldapPageSize, errLdapPageSize := strconv.Atoi(getEnv("LDAP_PAGE_SIZE", "1000"))
-	Checkf(errLdapPageSize, "Invalid LDAP_PAGE_SIZE, must be an integer")
+	ldapGroupBase := os.Getenv("LDAP_GROUPBASE")
+	switch {
+	case ldapGroupBase == "":
+		return nil, errors.New("groupBase is required")
+	case len(ldapGroupBase) < 2 || len(ldapGroupBase) > 200:
+		return nil, fmt.Errorf("length for LDAP_GROUPBASE must be between 2 and 200 characters, got %v of len %v", ldapGroupBase, len(ldapGroupBase))
+	}
 
-	ldapPort, errLdapPort := strconv.Atoi(getEnv("LDAP_PORT", "389"))
-	Checkf(errLdapPort, "Invalid LDAP_PORT, must be an integer")
+	concatenatedEligibleList := os.Getenv("LDAP_ELIGIBLE_GROUPS_PARENTS")
+	if concatenatedEligibleList == "" {
+		return nil, errors.New("LDAP_ELIGIBLE_GROUPS_PARENTS env var is mandatory")
+	}
+	ldapEligibleGroupsParents := strings.Split(concatenatedEligibleList, "|")
+
+	ldapServer := os.Getenv("LDAP_SERVER")
+	if ldapServer == "" {
+		return nil, errors.New("host is required")
+	}
+
+	ldapBindDN := os.Getenv("LDAP_BINDDN")
+	if ldapBindDN == "" {
+		return nil, errors.New("BindDN is required")
+	}
+	if len(ldapBindDN) < 2 || len(ldapBindDN) > 200 {
+		return nil, fmt.Errorf("length for LDAP_BINDDN must be between 2 and 200 characters, got %v of len %v", ldapBindDN, len(ldapBindDN))
+	}
+
+	ldapBindPassword := os.Getenv("LDAP_PASSWD")
+	if ldapBindPassword == "" {
+		return nil, errors.New("BindPassword is required")
+	}
+	if len(ldapBindPassword) < 2 || len(ldapBindPassword) > 200 {
+		return nil, fmt.Errorf("length for LDAP_PASSWD must be between 2 and 200 characters, got len %v", len(ldapBindPassword))
+	}
+
+	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
+
+	ldapPageSizeEnv := getEnv("LDAP_PAGE_SIZE", "1000")
+	ldapPageSize, errLdapPageSize := strconv.Atoi(ldapPageSizeEnv)
+	if errLdapPageSize != nil {
+		return nil, fmt.Errorf("invalid LDAP_PAGE_SIZE %s, must be an integer", errLdapPageSize)
+	}
 
 	useSSL, errLdapSSL := strconv.ParseBool(getEnv("LDAP_USE_SSL", "false"))
-	Checkf(errLdapSSL, "Invalid LDAP_USE_SSL, must be a boolean")
+	if errLdapSSL != nil {
+		return nil, fmt.Errorf("invalid LDAP_USE_SSL %s, must be a boolean", errLdapSSL)
+	}
 
 	skipTLSVerification, errSkipTLS := strconv.ParseBool(getEnv("LDAP_SKIP_TLS_VERIFICATION", "true"))
-	Checkf(errSkipTLS, "Invalid LDAP_SKIP_TLS_VERIFICATION, must be a boolean")
+	if errSkipTLS != nil {
+		return nil, fmt.Errorf("invalid LDAP_SKIP_TLS_VERIFICATION %s, must be a boolean", errSkipTLS)
+	}
 
 	startTLS, errStartTLS := strconv.ParseBool(getEnv("LDAP_START_TLS", "false"))
-	Checkf(errStartTLS, "Invalid LDAP_START_TLS, must be a boolean")
+	if errStartTLS != nil {
+		return nil, fmt.Errorf("invalid LDAP_START_TLS %s, must be a boolean", errStartTLS)
+	}
 
+	ldapPortEnv := getEnv("LDAP_PORT", "389")
+	ldapPort, err := strconv.Atoi(ldapPortEnv)
+	if err != nil {
+		return nil, fmt.Errorf("invalid LDAP_PORT %s, must be an integer", err)
+	}
+	if ldapPort == 389 && os.Getenv("LDAP_SKIP_TLS") == "false" {
+		skipTLSVerification = false
+	}
+	if ldapPort == 636 && os.Getenv("LDAP_SKIP_TLS") == "false" {
+		skipTLSVerification = false
+		useSSL = true
+	}
+
+	// feature validation and parsing
 	whitelist, errWhitelist := strconv.ParseBool(getEnv("WHITELIST", "false"))
-	Checkf(errWhitelist, "Invalid WHITELIST, must be a boolean")
-
-	if len(os.Getenv("LDAP_PORT")) > 0 {
-		envLdapPort, err := strconv.Atoi(os.Getenv("LDAP_PORT"))
-		Check(err)
-		ldapPort = envLdapPort
-		if ldapPort == 389 && os.Getenv("LDAP_SKIP_TLS") == "false" {
-			skipTLSVerification = false
-		}
-		if ldapPort == 636 && os.Getenv("LDAP_SKIP_TLS") == "false" {
-			skipTLSVerification = false
-			useSSL = true
-		}
+	if errWhitelist != nil {
+		return nil, fmt.Errorf("invalid WHITELIST %s, must be a boolean", errWhitelist)
 	}
 
 	networkpolicyEnabled, errNetpol := strconv.ParseBool(getEnv("PROVISIONING_NETWORK_POLICIES", "true"))
-	Checkf(errNetpol, "Invalid LDAP_START_TLS, must be a boolean")
+	if errNetpol != nil {
+		return nil, fmt.Errorf("invalid PROVISIONING_NETWORK_POLICIES %s, must be a boolean", errNetpol)
+	}
 
 	customLabels := parseCustomLabels(getEnv("CUSTOM_LABELS", ""))
 
-	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
 	tenant := strings.ToLower(getEnv("TENANT", KubiTenantUndeterminable))
 
 	// No need to state a default or crash, because kubernetes defaults to restricted.
 	podSecurityAdmissionEnforcement, errPodSecurityAdmissionEnforcement := podSecurity.ParseLevel(strings.ToLower(getEnv("PODSECURITYADMISSION_ENFORCEMENT", string(podSecurity.LevelRestricted))))
 
 	if errPodSecurityAdmissionEnforcement != nil {
-		Log.Error().Msgf("PODSECURITYADMISSION_ENFORCEMENT is incorrect. %s ", errPodSecurityAdmissionEnforcement.Error())
+		return nil, fmt.Errorf("level for PODSECURITYADMISSION_ENFORCEMENT is incorrect. %v", errPodSecurityAdmissionEnforcement)
 	}
 
 	// No need to state a default or crash, because kubernetes defaults to restricted.
 	podSecurityAdmissionWarning, errPodSecurityAdmissionWarning := podSecurity.ParseLevel(strings.ToLower(getEnv("PODSECURITYADMISSION_WARNING", string(podSecurity.LevelRestricted))))
 
 	if errPodSecurityAdmissionWarning != nil {
-		Log.Error().Msgf("PODSECURITYADMISSION_WARNING is incorrect. %s ", errPodSecurityAdmissionWarning.Error())
+		return nil, fmt.Errorf("level for PODSECURITYADMISSION_WARNING is incorrect. %v", errPodSecurityAdmissionWarning)
 	}
 
 	// No need to state a default or crash, because kubernetes defaults to restricted.
 	podSecurityAdmissionAudit, errPodSecurityAdmissionAudit := podSecurity.ParseLevel(strings.ToLower(getEnv("PODSECURITYADMISSION_AUDIT", string(podSecurity.LevelRestricted))))
 
 	if errPodSecurityAdmissionAudit != nil {
-		Log.Error().Msgf("PODSECURITYADMISSION_AUDIT is incorrect. %s ", errPodSecurityAdmissionAudit.Error())
+		return nil, fmt.Errorf("level for PODSECURITYADMISSION_AUDIT is incorrect. %v", errPodSecurityAdmissionAudit)
 	}
 
-	ldapConfig := types.LdapConfig{
-		UserBase:             os.Getenv("LDAP_USERBASE"),
-		GroupBase:            os.Getenv("LDAP_GROUPBASE"),
-		AppMasterGroupBase:   getEnv("LDAP_APP_GROUPBASE", ""),
-		CustomerOpsGroupBase: getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
-		ServiceGroupBase:     getEnv("LDAP_SERVICE_GROUPBASE", ""),
-		OpsMasterGroupBase:   getEnv("LDAP_OPS_GROUPBASE", ""),
-		AdminUserBase:        getEnv("LDAP_ADMIN_USERBASE", ""),
-		AdminGroupBase:       getEnv("LDAP_ADMIN_GROUPBASE", ""),
-		ViewerGroupBase:      getEnv("LDAP_VIEWER_GROUPBASE", ""),
-		PageSize:             uint32(ldapPageSize),
-		Host:                 os.Getenv("LDAP_SERVER"),
-		Port:                 ldapPort,
-		UseSSL:               useSSL,
-		StartTLS:             startTLS,
-		SkipTLSVerification:  skipTLSVerification,
-		BindDN:               os.Getenv("LDAP_BINDDN"),
-		BindPassword:         os.Getenv("LDAP_PASSWD"),
-		UserFilter:           ldapUserFilter,
-		GroupFilter:          "(member=%s)",
-		Attributes:           []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
+	publicApiServerURL := os.Getenv("PUBLIC_APISERVER_URL")
+	if publicApiServerURL == "" {
+		return nil, errors.New("publicApiServerURL is required")
 	}
-	config := &types.Config{
+	if _, err := url.ParseRequestURI(publicApiServerURL); err != nil {
+		return nil, fmt.Errorf("publicApiServerURL must be a valid URL, got %v", err)
+	}
+
+	caEncoded := base64.StdEncoding.EncodeToString(kubeCA)
+
+	// Get the SystemCertPool, continue with an empty pool on error
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("cannot retrieve system cert pool, exiting for security reason")
+	}
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	if ok := rootCAs.AppendCertsFromPEM(kubeCA); !ok {
+		return nil, fmt.Errorf("cannot add Kubernetes CA, exiting for security reason")
+	}
+
+	return &types.Config{
 		Tenant:                          tenant,
 		PodSecurityAdmissionEnforcement: podSecurityAdmissionEnforcement,
 		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
-		Ldap:                            ldapConfig,
-		KubeCa:                          caEncoded,
-		KubeCaText:                      string(kubeCA),
-		KubeToken:                       string(kubeToken),
-		PublicApiServerURL:              getEnv("PUBLIC_APISERVER_URL", ""),
-		ApiServerTLSConfig:              *tlsConfig,
-		TokenLifeTime:                   getEnv("TOKEN_LIFETIME", "4h"),
-		ExtraTokenLifeTime:              getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
-		Locator:                         getEnv("LOCATOR", KubiLocatorIntranet),
-		NetworkPolicy:                   networkpolicyEnabled,
-		CustomLabels:                    customLabels,
-		DefaultPermission:               getEnv("DEFAULT_PERMISSION", ""),
-		PrivilegedNamespaces:            strings.Split(getEnv("PRIVILEGED_NAMESPACES", ""), ","),
-		Blacklist:                       strings.Split(getEnv("BLACKLIST", ""), ","),
-		Whitelist:                       whitelist,
-		BlackWhitelistNamespace:         getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
-	}
-
-	// TODO: Remove validation through ozzo-validation
-	err = validation.ValidateStruct(config,
-		validation.Field(&config.KubeToken, validation.Required),
-		validation.Field(&config.KubeCa, validation.Required, is.Base64),
-		validation.Field(&config.PublicApiServerURL, validation.Required, is.URL),
-	)
-	// TODO: Get rid of Check method
-	Check(err)
-
-	errLdap := validation.ValidateStruct(&ldapConfig,
-		validation.Field(&ldapConfig.UserBase, validation.Required, validation.Length(2, 200)),
-		validation.Field(&ldapConfig.GroupBase, validation.Required, validation.Length(2, 200)),
-		validation.Field(&ldapConfig.Host, validation.Required, is.URL),
-		validation.Field(&ldapConfig.BindDN, validation.Required, validation.Length(2, 200)),
-		validation.Field(&ldapConfig.BindPassword, validation.Required, validation.Length(2, 200)),
-	)
-
-	if err != nil {
-		Log.Error().Msgf(strings.Replace(err.Error(), "; ", "\n", -1))
-		return nil, err
-	}
-	if errLdap != nil {
-		Log.Error().Msgf(strings.Replace(errLdap.Error(), "; ", "\n", -1))
-		return nil, err
-	}
-	return config, nil
+		Ldap: types.LdapConfig{
+			UserBase: ldapUserBase,
+			EligibleGroupsParents: ldapEligibleGroupsParents,
+			GroupBase:             ldapGroupBase,
+			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),
+			CustomerOpsGroupBase:  getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
+			ServiceGroupBase:      getEnv("LDAP_SERVICE_GROUPBASE", ""),
+			OpsMasterGroupBase:    getEnv("LDAP_OPS_GROUPBASE", ""),
+			AdminUserBase:         getEnv("LDAP_ADMIN_USERBASE", ""),
+			AdminGroupBase:        getEnv("LDAP_ADMIN_GROUPBASE", ""),
+			ViewerGroupBase:       getEnv("LDAP_VIEWER_GROUPBASE", ""),
+			PageSize:              uint32(ldapPageSize),
+			Host:                  ldapServer,
+			Port:                  ldapPort,
+			UseSSL:                useSSL,
+			StartTLS:              startTLS,
+			SkipTLSVerification:   skipTLSVerification,
+			BindDN:                ldapBindDN,
+			BindPassword:          ldapBindPassword,
+			UserFilter:            ldapUserFilter,
+			GroupFilter:           "(member=%s)",
+			Attributes:            []string{"givenName", "sn", "mail", "uid", "cn", "userPrincipalName"},
+		},
+		KubeCa:             caEncoded,
+		KubeCaText:         string(kubeCA),
+		KubeToken:          string(kubeToken),
+		PublicApiServerURL: publicApiServerURL,
+		ApiServerTLSConfig: tls.Config{
+			InsecureSkipVerify: false,
+			RootCAs:            rootCAs,
+		},
+		TokenLifeTime:           getEnv("TOKEN_LIFETIME", "4h"),
+		ExtraTokenLifeTime:      getEnv("EXTRA_TOKEN_LIFETIME", "720h"),
+		Locator:                 getEnv("LOCATOR", KubiLocatorIntranet),
+		NetworkPolicy:           networkpolicyEnabled,
+		CustomLabels:            customLabels,
+		DefaultPermission:       getEnv("DEFAULT_PERMISSION", ""),
+		PrivilegedNamespaces:    strings.Split(getEnv("PRIVILEGED_NAMESPACES", ""), ","),
+		Blacklist:               strings.Split(getEnv("BLACKLIST", ""), ","),
+		Whitelist:               whitelist,
+		BlackWhitelistNamespace: getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
+	}, nil
 }
 
 // Parse CustomLabels from a string to a map holding the key value

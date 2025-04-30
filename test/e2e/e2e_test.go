@@ -19,20 +19,37 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"time"
 
+	"github.com/ca-gip/kubi/internal/ldap"
+	"github.com/ca-gip/kubi/internal/services"
+	kubiv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	kubiclientset "github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
+	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/ca-gip/kubi/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1Types "k8s.io/api/core/v1"
+
+	netv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // namespace where the project is deployed in
 const namespace = "kube-system"
+const testProjectName = "projet-toto-development"
 
 // serviceAccountName created for the project
 const serviceAccountName = "test-kubebuilder-controller-manager"
@@ -43,12 +60,70 @@ const metricsServiceName = "test-kubebuilder-controller-manager-metrics-service"
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
 const metricsRoleBindingName = "test-kubebuilder-metrics-binding"
 
+var clientset *kubernetes.Clientset
+var kubiclient *kubiclientset.Clientset
+var kubiConfig *corev1Types.ConfigMap
+var testProject kubiv1.Project
+var testKubeConfigPath string
+var clusterConfig *rest.Config
+var tokenIssuer *services.TokenIssuer
 var _ = Describe("Manager", Ordered, func() {
-	var controllerPodName string
+	//var controllerPodName string
 
 	// Before running the tests, set up the environment by creating the namespace,
 	// installing CRDs, and deploying the controller.
 	BeforeAll(func() {
+
+		kubeconfig := os.Getenv("KUBECONFIG")
+		if kubeconfig == "" {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				panic(err.Error())
+			}
+			kubeconfig = filepath.Join(homeDir, ".kube", "config")
+		}
+		//fmt.Printf("KUBECONFIG PATH: %s\n", kubeconfig)
+		// use the current context in kubeconfig
+		var err error
+		clusterConfig, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		// create the clientset
+		clientset, err = kubernetes.NewForConfig(clusterConfig)
+		if err != nil {
+			panic(err.Error())
+		}
+		kubiConfig, err = clientset.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "kubi-config", v1.GetOptions{})
+
+		if err != nil {
+			panic(err.Error())
+		}
+
+		kubiclient, err = kubiclientset.NewForConfig(clusterConfig)
+		if err != nil {
+			panic(err.Error())
+		}
+		currDir, _ := os.Getwd()
+		testKubeConfigPath = filepath.Join(currDir, "generated-kubeconfig")
+
+		ecdsaPem, err := os.ReadFile("/tmp/kubi/ecdsa/ecdsa-key.pem")
+		fmt.Printf("ecdsaPemErr: %s\n", err)
+		ecdsaPubPem, _ := os.ReadFile("/tmp/kubi/ecdsa/ecdsa-public.pem")
+		fmt.Printf("ecdsaPubErr: %s\n", err)
+		tokenIssuer, err = services.NewTokenIssuer(
+			ecdsaPem,
+			ecdsaPubPem,
+			"4h",
+			"720h", // This had to be included in refactor. TODO: Check side effects
+			"intranet",
+			"https://kubernetes.default.svc.cluster.local",
+			"cagip",
+		)
+		if err != nil {
+			panic(err.Error())
+		}
 		// By("creating manager namespace")
 		// cmd := exec.Command("kubectl", "create", "ns", namespace)
 		// _, err := utils.Run(cmd)
@@ -135,37 +210,14 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should run successfully", func() {
 			By("validating that the kubi operator pod is running as expected")
 			verifyKubiOperatorUp := func(g Gomega) {
-				// Get the name of the kubi pod
-				cmd := exec.Command("kubectl", "get",
-					"pods", "-n", "kube-system")
-				outputDebug, err := utils.Run(cmd)
-				fmt.Print(outputDebug)
+				operatorPods, err := clientset.CoreV1().Pods("kube-system").List(context.TODO(),
+					v1.ListOptions{
+						LabelSelector: "app=kubi-operator",
+					})
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve Kubi operator pod information")
-
-				cmd = exec.Command("kubectl", "get",
-					"pods", "-l", "app=kubi-operator",
-					"-o", "go-template={{ range .items }}"+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}{{ end }}",
-					"-n", namespace,
-				)
-
-				podOutput, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve Kubi operator pod information")
-				podNames := utils.GetNonEmptyLines(podOutput)
-				g.Expect(podNames).To(HaveLen(1), "expected 1 Kubi operator pod running")
-				controllerPodName = podNames[0]
-				g.Expect(controllerPodName).To(ContainSubstring("kubi-operator"))
-
-				// Validate the pod's status
-				cmd = exec.Command("kubectl", "get",
-					"pods", controllerPodName, "-o", "jsonpath={.status.phase}",
-					"-n", namespace,
-				)
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(Equal("Running"), "Incorrect Kubi operator pod status")
+				g.Expect(operatorPods.Items).To(HaveLen(1), "There should only be one pod in the kubi operator deployment")
+				pod := operatorPods.Items[0]
+				g.Expect(pod.Status.Phase).To(Equal(corev1Types.PodRunning), "The kubi-operator pod should be in Running state")
 			}
 			Eventually(verifyKubiOperatorUp).Should(Succeed())
 		})
@@ -173,288 +225,202 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should have created all appropriate objects (project, namespace, service account, rolebinding, network policies)", func() {
 			By("validating that the kubi project has been created by kubi-operator")
 			verifyTestKubiProjectHasBeenCreated := func(g Gomega) {
-				cmd := exec.Command("kubectl", "get",
-					"projects.cagip.github.com", "-l", "creator=kubi", "-o", "go-template={{ range .items }}"+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}{{ end }}",
-				)
+				projects, err := kubiclient.CagipV1().Projects().List(context.TODO(), v1.ListOptions{
+					LabelSelector: "creator=kubi",
+				})
 
-				projectsOutput, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve projects")
-				projectNames := utils.GetNonEmptyLines(projectsOutput)
-				g.Expect(projectNames).To(HaveLen(1), "expected 1 Kubi project")
-				controllerPodName = projectNames[0]
-				g.Expect(controllerPodName).To(Equal("projet-toto-development"))
-
-				cmd = exec.Command("kubectl", "get", "projects.cagip.github.com", "projet-toto-development", "-o", "jsonpath={.metadata.labels.creator}")
-				projectOutput, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get project label creator")
-				g.Expect(projectOutput).To(Equal("kubi"), "the label creator is not equal to kubi")
-
-				cmd = exec.Command("kubectl", "get", "projects.cagip.github.com", "projet-toto-development", "-o", "jsonpath={.spec.environment}")
-				projectOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get project spec environment")
-				g.Expect(projectOutput).To(Equal("development"), "the spec environment is not equal to development")
-
-				cmd = exec.Command("kubectl", "get", "projects.cagip.github.com", "projet-toto-development", "-o", "jsonpath={.spec.project}")
-				projectOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get project spec project")
-				g.Expect(projectOutput).To(Equal("projet-toto"), "the spec project is not equal to projet-toto")
-
-				cmd = exec.Command("kubectl", "get", "projects.cagip.github.com", "projet-toto-development", "-o", "jsonpath={.spec.sourceEntity}")
-				projectOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get project spec sourceEntity")
-				g.Expect(projectOutput).To(Equal("DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN"), "the spec sourceEntity is not equal to DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN")
-
-				cmd = exec.Command("kubectl", "get", "projects.cagip.github.com", "projet-toto-development", "-o", "jsonpath={.spec.stages}")
-				projectOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get project spec stages")
-				g.Expect(projectOutput).To(Equal("[\"scratch\",\"staging\",\"stable\"]"), "the spec stages is not equal to [\"scratch\",\"staging\",\"stable\"] ")
-
-				cmd = exec.Command("kubectl", "get", "projects.cagip.github.com", "projet-toto-development", "-o", "jsonpath={.spec.tenant}")
-				projectOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get project spec sourceEntity")
-				g.Expect(projectOutput).To(Equal("cagip"), "the spec sourceEntity is not equal to cagip")
-
+				g.Expect(projects.Items).To(HaveLen(1), "expected 1 Kubi project")
+				testProject = projects.Items[0]
+				g.Expect(testProject.Name).To(Equal(testProjectName))
+				g.Expect(testProject.Spec.Environment).To(Equal("development"), "the spec environment is not equal to development")
+				g.Expect(testProject.Spec.Project).To(Equal("projet-toto"), "the spec project is not equal to projet-toto")
+				g.Expect(testProject.Spec.SourceEntity).To(Equal("DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN"), "the spec sourceEntity is not equal to DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN")
+				g.Expect(testProject.Spec.Stages).To(Equal([]string{"scratch", "staging", "stable"}), "the spec stages is not equal to [\"scratch\",\"staging\",\"stable\"]")
+				g.Expect(testProject.Spec.Tenant).To(Equal("cagip"), "the spec tenant is not equal to cagip")
 			}
 
 			By("validating that the test namespace has been created by kubi-operator")
 			verifyTestNamespaceHasBeenCreated := func(g Gomega) {
 				// Get the name of the kubi pod
-				cmd := exec.Command("kubectl", "get",
-					"ns", "-l", "creator=kubi", "-o", "go-template={{ range .items }}"+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}{{ end }}",
-				)
+				namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), v1.ListOptions{
+					LabelSelector: "creator=kubi",
+				})
 
-				namespaceOutput, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve namespaces")
-				namespaceNames := utils.GetNonEmptyLines(namespaceOutput)
-				g.Expect(namespaceNames).To(HaveLen(1), "expected 1 Kubi namespace")
-				controllerPodName = namespaceNames[0]
-				g.Expect(controllerPodName).To(Equal("projet-toto-development"))
-
-				cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.creator}")
-				namespaceOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label creator")
-				g.Expect(namespaceOutput).To(Equal("kubi"), "the label creator is not equal to kubi")
-
-				cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.environment}")
-				namespaceOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label environment")
-				g.Expect(namespaceOutput).To(Equal("development"), "the label creator is not equal to development")
-
-				// Could be useful
-				// https://gist.github.com/PrasadG193/589975a55ed992a7b138a53c3d0d1836
-
-				// Cannot parse because there are dots in the label
-				// cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.pod-security.kubernetes.io/audit}")
-				// namespaceOutput, err = utils.Run(cmd)
-				// g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label pod-security.kubernetes.io/audit")
-				// g.Expect(namespaceOutput).To(Equal("restricted"), "the label pod-security.kubernetes.io/audit is not equal to restricted")
-
-				// cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.pod-security.kubernetes.io/enforce}")
-				// namespaceOutput, err = utils.Run(cmd)
-				// g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label pod-security.kubernetes.io/enforce")
-				// g.Expect(namespaceOutput).To(Equal("baseline"), "the label pod-security.kubernetes.io/enforce is not equal to baseline")
-
-				// cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.pod-security.kubernetes.io/warn}")
-				// namespaceOutput, err = utils.Run(cmd)
-				// g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label pod-security.kubernetes.io/warn")
-				// g.Expect(namespaceOutput).To(Equal("restricted"), "the label pod-security.kubernetes.io/warn is not equal to restricted")
-
-				cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.quota}")
-				namespaceOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label quota")
-				g.Expect(namespaceOutput).To(Equal("managed"), "the label quota is not equal to managed")
-
-				cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.type}")
-				namespaceOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label type")
-				g.Expect(namespaceOutput).To(Equal("customer"), "the label type is not equal to customer")
-
+				g.Expect(namespaces.Items).To(HaveLen(1), "expected 1 Kubi namespace")
+				ns := namespaces.Items[0]
+				g.Expect(ns.Name).To(Equal(testProjectName))
+				g.Expect(ns.Labels["environment"]).To(Equal("development"), "the label environment is not equal to development")
+				g.Expect(ns.Labels["pod-security.kubernetes.io/audit"]).To(Equal("restricted"), "the label pod-security.kubernetes.io/audit is not equal to restricted")
+				g.Expect(ns.Labels["pod-security.kubernetes.io/enforce"]).To(Equal("baseline"), "the label pod-security.kubernetes.io/enforce is not equal to baseline")
+				g.Expect(ns.Labels["pod-security.kubernetes.io/warn"]).To(Equal("restricted"), "the label pod-security.kubernetes.io/warn is not equal to restricted")
+				g.Expect(ns.Labels["quota"]).To(Equal("managed"), "the label quota is not equal to managed")
+				g.Expect(ns.Labels["type"]).To(Equal("customer"), "the label type is not equal to customer")
 			}
 
 			By("validating that the service account has been created by kubi-operator")
 			verifyTestServiceAccountHasBeenCreated := func(g Gomega) {
-				// Get the name of the kubi pod
-				cmd := exec.Command("kubectl", "get", "sa", "-n", "projet-toto-development", "-l", "creator=kubi",
-					"-o", "go-template={{ range .items }}"+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}{{ end }}",
-				)
-
-				saOutput, err := utils.Run(cmd)
+				sas, err := clientset.CoreV1().ServiceAccounts(testProjectName).List(context.TODO(), v1.ListOptions{
+					LabelSelector: "creator=kubi",
+				})
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve service accounts")
-				saNames := utils.GetNonEmptyLines(saOutput)
-				g.Expect(saNames).To(HaveLen(1), "expected 1 sa created by kubi operator")
-				controllerPodName = saNames[0]
-				g.Expect(controllerPodName).To(Equal("service"))
-
-				// cmd = exec.Command("kubectl", "get", "namespace", "projet-toto-development", "-o", "jsonpath={.metadata.labels.creator}")
-				// saOutput, err = utils.Run(cmd)
-				// g.Expect(err).NotTo(HaveOccurred(), "Failed to get namespace label creator")
-				// g.Expect(saOutput).To(Equal("kubi"), "the label creator is not equal to kubi")
-
+				g.Expect(sas.Items).To(HaveLen(1), "expected 1 sa created by kubi operator")
+				sa := sas.Items[0]
+				g.Expect(sa.Name).To(Equal("service"))
 			}
 
 			By("validating that the rolebindings have been created by kubi-operator")
 			verifyTestRolebindingsHaveBeenCreated := func(g Gomega) {
-				// Get the name of the kubi pod
-				cmd := exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development", "-l", "creator=kubi",
-					"-o", "go-template={{ range .items }}"+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}{{ end }}",
-				)
-				rbOutput, err := utils.Run(cmd)
+				rbs, err := clientset.RbacV1().RoleBindings(testProjectName).List(context.TODO(), v1.ListOptions{
+					LabelSelector: "creator=kubi",
+				})
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve role bindings")
-				rbNames := utils.GetNonEmptyLines(rbOutput)
-				g.Expect(rbNames).To(HaveLen(4), "expected 4 rolebindings created by kubi operator")
-				g.Expect(rbNames).To(ContainElements("default-sa", "namespaced-admin", "namespaced-service-binding", "view"), "expected rolebindings default-sa, namespaced-admin, namespaced-service-binding and view")
+				g.Expect(rbs.Items).To(HaveLen(4), "expected 4 rolebindings created by kubi operator")
+				var defaultSa, nsAdminSa, nsServiceBindingSa, viewSa *rbacv1.RoleBinding
+				for _, s := range rbs.Items {
+					switch s.Name {
+					case "default-sa":
+						defaultSa = &s
+					case "namespaced-admin":
+						nsAdminSa = &s
+					case "namespaced-service-binding":
+						nsServiceBindingSa = &s
+					case "view":
+						viewSa = &s
+					}
+				}
+				g.Expect(nsAdminSa).NotTo(Equal(nil))
+				g.Expect(nsServiceBindingSa).NotTo(Equal(nil))
+				g.Expect(viewSa).NotTo(Equal(nil))
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"default-sa", "-o", "jsonpath={.roleRef}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding default-sa roleRef")
-				g.Expect(rbOutput).To(Equal("{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"ClusterRole\",\"name\":\"pod-reader\"}"), "for rb default-sa, expected binding the clusterRole pod-reader")
+				g.Expect(defaultSa.RoleRef).To(Equal(rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "pod-reader"}), "for rb default-sa, expected binding the clusterRole pod-reader")
+				g.Expect(defaultSa.Subjects).To(Equal([]rbacv1.Subject{{Kind: "ServiceAccount", Name: "default", Namespace: testProjectName}}))
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"default-sa", "-o", "jsonpath={.subjects}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding default-sa subjects")
-				g.Expect(rbOutput).To(Equal("[{\"kind\":\"ServiceAccount\",\"name\":\"default\",\"namespace\":\"projet-toto-development\"}]"), "for rb default-sa, expected binding to service account default")
+				g.Expect(nsAdminSa.RoleRef).To(Equal(rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "namespaced-admin"}), "for rb namespaced-admin, expected binding the clusterRole namespaced-admin")
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"namespaced-admin", "-o", "jsonpath={.roleRef}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding namespaced-admin roleRef")
-				g.Expect(rbOutput).To(Equal("{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"ClusterRole\",\"name\":\"namespaced-admin\"}"), "for rb namespaced-admin, expected binding the clusterRole namespaced-admin")
+				nsAdminSaSubjects := []rbacv1.Subject{
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "projet-toto-development-admin"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "application:masters"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "ops:masters"},
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"namespaced-admin", "-o", "jsonpath={.subjects}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding namespaced-admin subjects")
-				g.Expect(rbOutput).To(Equal("[{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"Group\",\"name\":\"projet-toto-development-admin\"},{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"Group\",\"name\":\"application:masters\"},{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"Group\",\"name\":\"ops:masters\"}]"), "for rb namespaced-admin, expected binding to groups projet-toto-development:admin application:master and ops:masters")
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: testProject.Spec.SourceEntity},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_APP_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_CUSTOMER_OPS_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_OPS_GROUPBASE"])},
+				}
+				g.Expect(nsAdminSa.Subjects).To(Equal(nsAdminSaSubjects), "for rb namespaced-admin, expected binding to groups projet-toto-development:admin application:master and ops:masters  - TODO")
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"namespaced-service-binding", "-o", "jsonpath={.roleRef}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding namespaced-service-binding roleRef")
-				g.Expect(rbOutput).To(Equal("{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"ClusterRole\",\"name\":\"namespaced-service\"}"), "for rb namespaced-service, expected binding the clusterRole namespaced-service")
+				g.Expect(nsServiceBindingSa.RoleRef).To(Equal(rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "namespaced-service"}), "for rb namespaced-service, expected binding the clusterRole namespaced-service")
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"namespaced-service-binding", "-o", "jsonpath={.subjects}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding namespaced-service-binding subjects")
-				g.Expect(rbOutput).To(Equal("[{\"kind\":\"ServiceAccount\",\"name\":\"service\",\"namespace\":\"projet-toto-development\"}]"), "for rb namespaced-service, expected binding to the service account service")
+				nsServiceBindingSaSubjects := []rbacv1.Subject{
+					{Kind: "ServiceAccount", Name: "service", Namespace: testProjectName},
+				}
+				g.Expect(nsServiceBindingSa.Subjects).To(Equal(nsServiceBindingSaSubjects), "for rb namespaced-service, expected binding to the service account service")
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"view", "-o", "jsonpath={.roleRef}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding view roleRef")
-				g.Expect(rbOutput).To(Equal("{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"ClusterRole\",\"name\":\"view\"}"), "for rb view, expected binding the clusterRole view")
+				g.Expect(viewSa.RoleRef).To(Equal(rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "view"}), "for rb view, expected binding the clusterRole view")
 
-				cmd = exec.Command("kubectl", "get", "rolebinding", "-n", "projet-toto-development",
-					"view", "-o", "jsonpath={.subjects}",
-				)
-				rbOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get role binding view subjects")
-				g.Expect(rbOutput).To(Equal("[{\"apiGroup\":\"rbac.authorization.k8s.io\",\"kind\":\"Group\",\"name\":\"application:view\"}]"), "for rb view, expected binding to the group application:view")
-
+				viewSaSubjects := []rbacv1.Subject{
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "application:view"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: ldap.NormalizeGroupName(kubiConfig.Data["LDAP_VIEWER_GROUPBASE"])},
+				}
+				g.Expect(viewSa.Subjects).To(Equal(viewSaSubjects), "for rb view, expected binding to the group application:view - TODO")
 			}
-
 			Eventually(verifyTestKubiProjectHasBeenCreated).Should(Succeed())
 			Eventually(verifyTestNamespaceHasBeenCreated).Should(Succeed())
 			Eventually(verifyTestServiceAccountHasBeenCreated).Should(Succeed())
 			Eventually(verifyTestRolebindingsHaveBeenCreated).Should(Succeed())
-
 		})
 
 		It("should watch the network policy config objects and create the network policies", func() {
 			By("validating that kubi operator has created the default network policy in the test namespace")
 			verifyNetworkPoliciesHaveBeenCreated := func(g Gomega) {
-				// Get the name of the kubi pod
-
-				// "kubectl", "get",
-				// 	"pods", "-l", "app=kubi-operator",
-				// 	"-o", "go-template={{ range .items }}"+
-				// 		"{{ if not .metadata.deletionTimestamp }}"+
-				// 		"{{ .metadata.name }}"+
-				// 		"{{ \"\\n\" }}{{ end }}{{ end }}",
-				// 	"-n", namespace,
-
-				cmd := exec.Command("kubectl", "get",
-					"networkpolicy", "kubi-default",
-					"-n", "projet-toto-development", "-o", "go-template="+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}",
-				)
-
-				netpolOutput, err := utils.Run(cmd)
+				netpol, err := clientset.NetworkingV1().NetworkPolicies(testProjectName).Get(context.TODO(), "kubi-default", v1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve network policy kubi-default")
-				netpolNames := utils.GetNonEmptyLines(netpolOutput)
-				g.Expect(netpolNames).To(HaveLen(1), "expected 1 network policy") // pretty useless today as we 'kubectl get' one netpol in  particular, kubi-default. Could be useful, if later, we 'kubectl get' using a label selector, typically if more than one netpolconf is created.
-				netpolName := netpolNames[0]
-				g.Expect(netpolName).To(Equal("kubi-default"))
 
-				// Parse the json and validate the rules inside the netpol
-				cmd = exec.Command("kubectl", "get", "networkpolicy", "kubi-default", "-n",
-					"projet-toto-development", "-o", "jsonpath={.spec.egress}",
-				)
-				netpolOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get netpol spec egress")
-				//	expectedJsonBlock := '[{"ports":[{"port":636,"protocol":"UDP"},{"port":636,"protocol":"TCP"},{"port":389,"protocol":"UDP"},{"port":389,"protocol":"TCP"},{"port":123,"protocol":"UDP"},{"port":123,"protocol":"TCP"},{"port":53,"protocol":"UDP"},{"port":53,"protocol":"TCP"},{"port":53,"protocol":"UDP"}]},{"to":[{"podSelector":{}},{"namespaceSelector":{"matchLabels":{"name":"kube-system"}},"podSelector":{"matchLabels":{"component":"kube-apiserver","tier":"control-plane"}}},{"ipBlock":{"cidr":"172.20.0.0/16"}}]}]'
-				g.Expect(netpolOutput).To(Equal("[{\"ports\":[{\"port\":636,\"protocol\":\"UDP\"},{\"port\":636,\"protocol\":\"TCP\"},{\"port\":389,\"protocol\":\"UDP\"},{\"port\":389,\"protocol\":\"TCP\"},{\"port\":123,\"protocol\":\"UDP\"},{\"port\":123,\"protocol\":\"TCP\"},{\"port\":53,\"protocol\":\"UDP\"},{\"port\":53,\"protocol\":\"TCP\"},{\"port\":53,\"protocol\":\"UDP\"}]},{\"to\":[{\"podSelector\":{}},{\"namespaceSelector\":{\"matchLabels\":{\"name\":\"kube-system\"}},\"podSelector\":{\"matchLabels\":{\"component\":\"kube-apiserver\",\"tier\":\"control-plane\"}}},{\"ipBlock\":{\"cidr\":\"172.20.0.0/16\"}}]}]"), "the spec egress of the network policy is not equal to what was requested in NetworkPolicyConfig object")
+				udpProtocol := corev1Types.ProtocolUDP
+				tcpProtocol := corev1Types.ProtocolTCP
+				port636 := intstr.FromInt(636)
+				port389 := intstr.FromInt(389)
+				port123 := intstr.FromInt(123)
+				port53 := intstr.FromInt(53)
+				egressRules := []netv1.NetworkPolicyEgressRule{
+					{
+						Ports: []netv1.NetworkPolicyPort{
+							{Protocol: &udpProtocol, Port: &port636},
+							{Protocol: &tcpProtocol, Port: &port636},
+							{Protocol: &udpProtocol, Port: &port389},
+							{Protocol: &tcpProtocol, Port: &port389},
+							{Protocol: &udpProtocol, Port: &port123},
+							{Protocol: &tcpProtocol, Port: &port123},
+							{Protocol: &udpProtocol, Port: &port53},
+							{Protocol: &tcpProtocol, Port: &port53},
+							{Protocol: &udpProtocol, Port: &port53},
+						},
+					},
+					{
+						To: []netv1.NetworkPolicyPeer{
+							{
+								PodSelector: &v1.LabelSelector{},
+							},
+							{
+								NamespaceSelector: &v1.LabelSelector{
+									MatchLabels: map[string]string{
+										"name": "kube-system",
+									},
+								},
+								PodSelector: &v1.LabelSelector{
+									MatchLabels: map[string]string{
+										"component": "kube-apiserver",
+										"tier":      "control-plane",
+									},
+								},
+							},
+							{
+								IPBlock: &netv1.IPBlock{
+									CIDR: "172.20.0.0/16",
+								},
+							},
+						},
+					},
+				}
+				g.Expect(netpol.Spec.Egress).To(Equal(egressRules))
 
-				// Parse the json and validate the rules inside the netpol
-				cmd = exec.Command("kubectl", "get", "networkpolicy", "kubi-default", "-n",
-					"projet-toto-development", "-o", "jsonpath={.spec.ingress}",
-				)
-				netpolOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get netpol spec ingress")
-				g.Expect(netpolOutput).To(Equal("[{\"from\":[{\"podSelector\":{}},{\"namespaceSelector\":{\"matchLabels\":{\"name\":\"ingress-nginx\"}},\"podSelector\":{}},{\"namespaceSelector\":{\"matchLabels\":{\"name\":\"monitoring\"}},\"podSelector\":{}}]}]"), "the netpol spec ingress is not equal to what was configured in the networkPolicyConfig object")
-
-				// Parse the json and validate the rules inside the netpol
-				cmd = exec.Command("kubectl", "get", "networkpolicy", "kubi-default", "-n",
-					"projet-toto-development", "-o", "jsonpath={.spec.podSelector}",
-				)
-				netpolOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get netpol spec podSelector")
-				g.Expect(netpolOutput).To(Equal("{}"), "the netpol spec podSelector is not equal to what was configured in the networkPolicyConfig object")
-
-				// Parse the json and validate the rules inside the netpol
-				cmd = exec.Command("kubectl", "get", "networkpolicy", "kubi-default", "-n",
-					"projet-toto-development", "-o", "jsonpath={.spec.policyTypes}",
-				)
-				netpolOutput, err = utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to get netpol spec policyTypes")
-				g.Expect(netpolOutput).To(Equal("[\"Ingress\",\"Egress\"]"), "the netpol spec policyTypes is not equal to what was configured in the networkPolicyConfig object")
+				ingressRules := []netv1.NetworkPolicyIngressRule{
+					{
+						From: []netv1.NetworkPolicyPeer{
+							{
+								PodSelector: &v1.LabelSelector{},
+							},
+							{
+								NamespaceSelector: &v1.LabelSelector{
+									MatchLabels: map[string]string{
+										"name": "ingress-nginx",
+									},
+								},
+								PodSelector: &v1.LabelSelector{},
+							},
+							{
+								NamespaceSelector: &v1.LabelSelector{
+									MatchLabels: map[string]string{
+										"name": "monitoring",
+									},
+								},
+								PodSelector: &v1.LabelSelector{},
+							},
+						},
+					},
+				}
+				g.Expect(netpol.Spec.Ingress).To(Equal(ingressRules))
+				g.Expect(netpol.Spec.PodSelector).To(Equal(v1.LabelSelector{}))
+				g.Expect(netpol.Spec.PolicyTypes).To(Equal([]netv1.PolicyType{
+					"Ingress", "Egress",
+				}))
 			}
 			Eventually(verifyNetworkPoliciesHaveBeenCreated).Should(Succeed())
 		})
 
 		// +kubebuilder:scaffold:e2e-webhooks-checks
-
-		// TODO: Customize the e2e test suite with scenarios specific to your project.
-		// Consider applying sample/CR(s) and check their status and/or verifying
-		// the reconciliation by using the metrics, i.e.:
-		// metricsOutput := getMetricsOutput()
-		// Expect(metricsOutput).To(ContainSubstring(
-		//    fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-		//    strings.ToLower(<Kind>),
-		// ))
 	})
 
 	Context("kubi api", func() {
@@ -462,36 +428,16 @@ var _ = Describe("Manager", Ordered, func() {
 			By("validating that the kubi API + Authn webhook pod is running as expected")
 			verifyKubiAPIAndAuthnWebhookUp := func(g Gomega) {
 				// Get the name of the kubi pod
-				cmd := exec.Command("kubectl", "get",
-					"pods", "-n", "kube-system")
-				outputDebug, err := utils.Run(cmd)
-				fmt.Print(outputDebug)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve Kubi API + Authn Webhook pod information")
-
-				cmd = exec.Command("kubectl", "get",
-					"pods", "-l", "app=kubi",
-					"-o", "go-template={{ range .items }}"+
-						"{{ if not .metadata.deletionTimestamp }}"+
-						"{{ .metadata.name }}"+
-						"{{ \"\\n\" }}{{ end }}{{ end }}",
-					"-n", namespace,
-				)
-
-				podOutput, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve Kubi API + Authn Webhook pod information")
-				podNames := utils.GetNonEmptyLines(podOutput)
-				g.Expect(podNames).To(HaveLen(2), "expected 2 Kubi API + Authn Webhook pods running")
-				controllerPodName = podNames[0]
-				g.Expect(controllerPodName).To(ContainSubstring("kubi-deployment"))
-
-				// Validate the pod's status
-				cmd = exec.Command("kubectl", "get",
-					"pods", controllerPodName, "-o", "jsonpath={.status.phase}",
-					"-n", namespace,
-				)
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(Equal("Running"), "Incorrect Kubi API + Authn Webhook pod status")
+				apiWebhookPods, err := clientset.CoreV1().Pods("kube-system").List(context.TODO(),
+					v1.ListOptions{
+						LabelSelector: "app=kubi",
+					})
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve Kubi operator pod information")
+				g.Expect(apiWebhookPods.Items).To(HaveLen(2), "expected 2 Kubi API + Authn Webhook pods running")
+				pod1 := apiWebhookPods.Items[0]
+				pod2 := apiWebhookPods.Items[1]
+				g.Expect(pod1.Status.Phase).To(Equal(corev1Types.PodRunning), "Incorrect Kubi API + Authn Webhook pod status")
+				g.Expect(pod2.Status.Phase).To(Equal(corev1Types.PodRunning), "Incorrect Kubi API + Authn Webhook pod status")
 			}
 			Eventually(verifyKubiAPIAndAuthnWebhookUp).Should(Succeed())
 		})
@@ -500,34 +446,34 @@ var _ = Describe("Manager", Ordered, func() {
 			By("validating that kubi api has generated a kubeconfig")
 			verifyKubeconfigFileHasBeenGenerated := func(g Gomega) {
 				// Get the name of the kubi pod
-				cmd := exec.Command("kubectl", "-n", "kube-system", "exec", "curl-pod", "--",
+				/*cmd := exec.Command("kubectl", "-n", "kube-system", "exec", "curl-pod", "--",
 					"curl", "-u", "developer1:somepass", "-X", "GET", "https://kubi-api.kube-system.svc.cluster.local:8000/config", "-k", "-s",
-				)
+				)*/
+				cmd := exec.Command("curl", "-u", "developer1:somepass", "-k", "-s", "https://localhost:30003/config")
 
-				kubeconfig, err := utils.Run(cmd)
+				//currentDir, _ := os.Getwd()
+				//fmt.Printf("CURRENT_DIR:%s\n", currentDir)
+				kubeconfig, err := utils.Run(cmd, nil)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to generate kubeconfig")
 
-				filePath := "generated-kubeconfig"
-				err = os.WriteFile(filePath, []byte(kubeconfig), 0644)
+				//testKubeConfigPath := "generated-kubeconfig"
+				// We need to patch the server url
+				//patched := regexp.MustCompile(`^(\s*server:\s*)(.*)$`).ReplaceAllString(kubeconfig, `$1 serverUrl`)
+				//patched := regexp.MustCompile(`server: (.*)`).ReplaceAllString(kubeconfig, `serverUrl`)
+				patched := regexp.MustCompile(`(\s*server:\s*)(.*)`).ReplaceAllString(kubeconfig, fmt.Sprintf(`${1}%s`, clusterConfig.Host))
+				//os.WriteFile("toto.txt", []byte(patched), 0644)
+				err = os.WriteFile(testKubeConfigPath, []byte(patched), 0644)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to save the generated kubeconfig file in local")
-
+				fmt.Printf("Generated kubeconfig file in %s", testKubeConfigPath)
+				time.Sleep(2 * time.Second) // Wait a bit for the change to take effect
 			}
 
 			By("validating that the generated kubeconfig allows authentication of the user")
 			verifyKubeconfigFileAllowsAuthentication := func(g Gomega) {
-				// Fixture (put the kubeconfig file in the kubectl pod)
-				cmd := exec.Command("kubectl", "-n", "kube-system", "cp",
-					"generated-kubeconfig", "kubectl:/.kube/config",
-				)
+				cmd := exec.Command("kubectl", "get", "po", "-n", "projet-toto-development")
+				env := []string{fmt.Sprintf("KUBECONFIG=%s", testKubeConfigPath)}
 
-				_, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to copy the generated kubeconfig file to the kubectl pod")
-
-				cmd = exec.Command("kubectl", "-n", "kube-system", "exec", "kubectl", "--",
-					"kubectl", "get", "po", "-n", "projet-toto-development",
-				)
-
-				cmdOutput, err := utils.Run(cmd)
+				cmdOutput, err := utils.Run(cmd, env)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to execute command inside kubectl test pod")
 				// Typical messages when you present a bad token or the API server cannot authenticate you. We verify that it does not contain such stuff.
 				// kubectl auth can-i get pod -n projet-toto-development
@@ -549,6 +495,205 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyKubeconfigFileHasBeenGenerated).Should(Succeed())
 			Eventually(verifyKubeconfigFileAllowsAuthentication).Should(Succeed())
 		})
+		It("should generate tokens with appropriate contents (auths, and groups)", func() {
+			By("generating an appropriate token for admin user")
+			verifyAdminUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "admin-kube1:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeTrue())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=ADMIN_KUBERNETES,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+			}
+			By("generating an appropriate token for ops user")
+			verifyOpsUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "cloudops-kube2:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeTrue())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=CLOUDOPS_KUBERNETES,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+			}
+			By("generating an appropriate token for service account user")
+			verifyServiceAccountsHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "service-account-kubernetes-team:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeTrue())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=DL_KUB_TRANSVERSAL_SERVICE,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+			}
+			By("generating an appropriate token for cluster viewer user")
+			verifyViewerUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "product-owner2:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeTrue())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=DL_KUB_CAGIPHP_VIEW,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+				fmt.Printf("Decoded token: %+v\n", *decoded)
+			}
+			By("generating an appropriate token for appops user")
+			verifyClusterAppopsHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "developer1:somepass", "-k", "-s", "https://localhost:30003/token")
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeTrue())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf(
+					"CN=CAGIP_MEMBERS,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG",
+					"CN=DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG",
+					"CN=DL_KUB_CAGIPHP_OPS,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG",
+				))
+			}
+			By("generating an appropriate token for project admin user")
+			verifyProjectUsersHaveAppropriateRights := func(g Gomega) {
+				cmd := exec.Command("curl", "-u", "developer4:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(HaveExactElements(&types.Project{
+					Project:     "projet-toto",
+					Role:        "admin",
+					Source:      "",
+					Environment: "development",
+					Contact:     "",
+				}))
+				g.Expect(decoded.Groups).To(ConsistOf("CN=DL_KUB_CAGIPHP_PROJET-TOTO-DEV_ADMIN,OU=HORS-PROD,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+				fmt.Printf("Decoded token: %+v\n", *decoded)
+			}
+			By("generating an appropriate token for user from eligible group 1")
+			verifyRandomEligibleUser1HaveAppropriateRights := func(g Gomega) {
+				// network-dev1 is only a member of a group with
+				// eligible parents("TEAMS" in this case) specified in config
+				cmd := exec.Command("curl", "-u", "network-dev1:somepass", "-k", "-s", "https://localhost:30003/token")
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=NETWORK,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+			}
+			By("generating an appropriate token for user from eligible group 2")
+			verifyRandomEligibleUser2HaveAppropriateRights := func(g Gomega) {
+				// platform-dev1 is only a member of a group with
+				// eligible parents("CONTAINER" in this case) specified in config
+				cmd := exec.Command("curl", "-u", "platform-dev1:somepass", "-k", "-s", "https://localhost:30003/token")
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=PLATFORM,OU=CAGIP,OU=CONTAINER,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+			}
+			By("generating an appropriate token for user with no access")
+			verifyRandomUsersHaveAppropriateRights := func(g Gomega) {
+				// random-user is not a member of any interesting groups:
+				// cluster-wide (admin, viewer, appops, cloudops..),
+				// project groups (DL_KUB...) or groups with eligible parents specified in config
+				cmd := exec.Command("curl", "-u", "random-user:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				_, err = tokenIssuer.VerifyToken(token)
+				g.Expect(err).To(HaveOccurred(), "The token to verify should be invalid")
+				g.Expect(token).To(Equal("Unauthorized\n"))
+			}
+			By("generating an appropriate token for user with no access")
+			verifyRandomAlmostEligibleUsersHaveAppropriateRights := func(g Gomega) {
+				// division4-user1 is a member of a group that shares the same CN (CLOUDOPS_KUBERNETES)
+				// with an eligible group: He should not have ops-access (or any other special access)
+				// to the cluster but since its group belong to an eligible parent (OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG)
+				// he receives a token
+
+				cmd := exec.Command("curl", "-u", "division4-user1:somepass", "-k", "-s", "https://localhost:30003/token")
+
+				token, err := utils.Run(cmd, nil)
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get token")
+
+				decoded, err := tokenIssuer.VerifyToken(token)
+
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to verify the token")
+				g.Expect(decoded.AdminAccess).To(BeFalse())
+				g.Expect(decoded.ApplicationAccess).To(BeFalse())
+				g.Expect(decoded.OpsAccess).To(BeFalse())
+				g.Expect(decoded.ServiceAccess).To(BeFalse())
+				g.Expect(decoded.ViewerAccess).To(BeFalse())
+				g.Expect(decoded.Auths).To(BeEmpty())
+				g.Expect(decoded.Groups).To(ConsistOf("CN=CLOUDOPS_KUBERNETES,OU=DIVISION4,OU=TEAMS,OU=GROUPS,DC=EXAMPLE,DC=ORG"))
+
+			}
+
+			Eventually(verifyAdminUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyOpsUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyServiceAccountsHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyViewerUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyClusterAppopsHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyProjectUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomEligibleUser1HaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomEligibleUser2HaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomUsersHaveAppropriateRights).Should(Succeed())
+			Eventually(verifyRandomAlmostEligibleUsersHaveAppropriateRights).Should(Succeed())
+		})
 	})
 
 	Context("kubi authentication webhook and K8S+Kubi RBAC", func() {
@@ -561,11 +706,11 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should authenticate/authorize or not depending if the user is legit and if RBAC permits it", func() {
 			By("validating that legit user gets authenticated and is authorized to perform legit action")
 			verifyLegitUserGetsAuthenticatedAndIsAuthorizedWhenLegitAction := func(g Gomega) {
-				cmd := exec.Command("kubectl", "-n", "kube-system", "exec", "kubectl", "--",
-					"kubectl", "auth", "can-i", "get", "pod", "-n", "projet-toto-development",
-				)
+				cmd := exec.Command("kubectl", "auth", "can-i", "get", "pod", "-n", "projet-toto-development")
 
-				cmdOutput, err := utils.Run(cmd)
+				env := []string{fmt.Sprintf("KUBECONFIG=%s", testKubeConfigPath)}
+
+				cmdOutput, err := utils.Run(cmd, env)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to execute 'kubectl auth can-i' command to determine if action possible")
 				g.Expect(cmdOutput).To(Equal("yes\n"), "Failed to validate that legit user is authorized to perform legit action")
 
@@ -573,32 +718,29 @@ var _ = Describe("Manager", Ordered, func() {
 
 			By("validating that legit user gets authenticated and is not authorized to perform non-legit action")
 			verifyLegitUserGetsAuthenticatedAndIsNotAuthorizedWhenNonLegitAction := func(g Gomega) {
-				cmd := exec.Command("kubectl", "-n", "kube-system", "exec", "kubectl", "--",
-					"kubectl", "auth", "can-i", "get", "pod", "-n", "projet-titi-development",
-				)
 
-				cmdOutput, err := utils.Run(cmd)
-				g.Expect(err).To(HaveOccurred(), "The command 'kubectl auth can-i' to determine if action possible should have failed")
-				g.Expect(cmdOutput).To(Equal("no\ncommand terminated with exit code 1\n"), "Failed to validate that legit user is not authorized to perform non-legit action")
+				env := []string{fmt.Sprintf("KUBECONFIG=%s", testKubeConfigPath)}
+				cmd := exec.Command("kubectl", "auth", "can-i", "get", "pod", "-n", "projet-titi-development")
 
+				cmdOutput, _ := utils.Run(cmd, env)
+				g.Expect(cmdOutput).To(Equal("no\n"), "Failed to validate that legit user is not authorized to perform non-legit action")
 			}
 
 			By("validating that legit user gets authenticated and is not authorized to perform non-legit action")
 			verifyNonLegitUserDoesNotGetAuthenticated := func(g Gomega) {
 				// Fixtures : we change the kubeconfig file to use a non-legit token
-				cmd := exec.Command("kubectl", "-n", "kube-system", "exec", "kubectl", "--",
-					"kubectl", "config", "set", "users.developer1_https://kubernetes.default.svc.cluster.local.token",
+				cmd := exec.Command("kubectl", "config", "set", "users.developer1_https://kubernetes.default.svc.cluster.local.token",
 					"eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdXRocyI6W10sInVzZXIiOiJkZXZlbG9wZXIxIiwiZW1haWwiOiIiLCJhZG1pbkFjY2VzcyI6ZmFsc2UsImFwcEFjY2VzcyI6dHJ1ZSwib3BzQWNjZXNzIjpmYWxzZSwidmlld2VyQWNjZXNzIjpmYWxzZSwic2VydmljZUFjY2VzcyI6ZmFsc2UsImxvY2F0b3IiOiJpbnRyYW5ldCIsImVuZFBvaW50Ijoia3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwidGVuYW50IjoiY2FnaXAiLCJzY29wZXMiOiIiLCJleHAiOjE3NDE4MDE5NzMsImlzcyI6Ikt1YmkgU2VydmVyIn0.ATHtSzFUsiF0k2OACGefUCvJ57t9uKKk_u7CsXbF3sCYC7h4tr6di63aiXKWi6ssp_tX4amp96a6JvKG6AwAd1f8AVsyip9WcPVjjABM6hdhT5KiLM2n9qtVHZ97IImYeZq86LDUjioOAoNO1jYHP0eRxOmV2YM84FmRRYbVwwUf12ul",
 				)
 
-				_, err := utils.Run(cmd)
+				env := []string{fmt.Sprintf("KUBECONFIG=%s", testKubeConfigPath)}
+				out, err := utils.Run(cmd, env)
+				fmt.Printf("Config_Update: %s\n", out)
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to change the kubeconfig to use a non-legit token")
 
-				cmd = exec.Command("kubectl", "-n", "kube-system", "exec", "kubectl", "--",
-					"kubectl", "auth", "can-i", "get", "pod", "-n", "projet-toto-development",
-				)
+				cmd = exec.Command("kubectl", "auth", "can-i", "get", "pod", "-n", "projet-toto-development")
 
-				cmdOutput, err := utils.Run(cmd)
+				cmdOutput, err := utils.Run(cmd, env)
 				g.Expect(err).To(HaveOccurred(), "The command 'kubectl auth can-i' to determine if action possible should have failed")
 				// Typical messages when you present a bad token or the API server cannot authenticate you. We verify that it does not contain such stuff.
 				// kubectl auth can-i get pod -n projet-toto-development
@@ -608,7 +750,6 @@ var _ = Describe("Manager", Ordered, func() {
 				// Unable to connect to the server: tls: failed to verify certificate: x509: certificate signed by unknown authority (possibly because of "crypto/rsa: verification error" while trying to verify candidate authority certificate "kubernetes")
 				g.Expect(cmdOutput).To(ContainSubstring("error: You must be logged in to the server (Unauthorized)"), "Failed to deny access to non-legit user/token")
 				g.Expect(cmdOutput).To(ContainSubstring("Unauthorized"), "Failed to deny access to non-legit user/token")
-
 			}
 
 			Eventually(verifyLegitUserGetsAuthenticatedAndIsAuthorizedWhenLegitAction).Should(Succeed())
@@ -666,7 +807,7 @@ func serviceAccountToken() (string, error) {
 func getMetricsOutput() string {
 	By("getting the curl-metrics logs")
 	cmd := exec.Command("kubectl", "logs", "curl-metrics", "-n", namespace)
-	metricsOutput, err := utils.Run(cmd)
+	metricsOutput, err := utils.Run(cmd, nil)
 	Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
 	Expect(metricsOutput).To(ContainSubstring("< HTTP/1.1 200 OK"))
 	return metricsOutput

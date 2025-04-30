@@ -10,26 +10,27 @@ import (
 )
 
 type LdapConfig struct {
-	UserBase             string
-	GroupBase            string
-	AppMasterGroupBase   string
-	CustomerOpsGroupBase string
-	ServiceGroupBase     string
-	OpsMasterGroupBase   string
-	ViewerGroupBase      string
-	AdminUserBase        string
-	AdminGroupBase       string
-	Host                 string
-	Port                 int
-	PageSize             uint32
-	UseSSL               bool
-	StartTLS             bool
-	SkipTLSVerification  bool
-	BindDN               string
-	BindPassword         string
-	UserFilter           string
-	GroupFilter          string
-	Attributes           []string
+	UserBase              string
+	EligibleGroupsParents []string
+	GroupBase             string // base path for all the cluster's project groups
+	AppMasterGroupBase    string
+	CustomerOpsGroupBase  string
+	ServiceGroupBase      string
+	OpsMasterGroupBase    string
+	ViewerGroupBase       string
+	AdminUserBase         string
+	AdminGroupBase        string
+	Host                  string
+	Port                  int
+	PageSize              uint32
+	UseSSL                bool
+	StartTLS              bool
+	SkipTLSVerification   bool
+	BindDN                string
+	BindPassword          string
+	UserFilter            string
+	GroupFilter           string
+	Attributes            []string
 }
 
 type Config struct {
@@ -98,6 +99,7 @@ type KubeConfigUserToken struct {
 type AuthJWTClaims struct {
 	Auths             []*Project `json:"auths"`
 	User              string     `json:"user"`
+	Groups            []string   `json:"groups"`
 	Contact           string     `json:"email"`
 	AdminAccess       bool       `json:"adminAccess"`
 	ApplicationAccess bool       `json:"appAccess"`
@@ -141,4 +143,17 @@ type Auth struct {
 type BlackWhitelist struct {
 	Blacklist []string `json:"blacklist"`
 	Whitelist []string `json:"whitelist"`
+}
+
+type User struct {
+	Username        string
+	UserDN          string
+	Email           string
+	Groups          []string // Store alls the user groups (search is based on implementation!), including the ProjectAccess groups
+	IsAdmin         bool
+	IsAppOps        bool
+	IsCloudOps      bool
+	IsViewer        bool
+	IsService       bool
+	ProjectAccesses []string // Contains the groups matching the cluster's project naming convention. Purposedly a string instead of a []*Project: This will allow the testing based on the project names instead of projects, but also makes it a very clean separation between the ldap package, and its implementation. This will allow further cleanup should another method be used later.
 }

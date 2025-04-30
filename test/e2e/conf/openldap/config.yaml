@@ -41,6 +41,7 @@ data:
     sn: One
     givenName: Dev
     userPassword: somepass
+    mail: developer1@example.org
 
     dn: cn=developer2,ou=Users,dc=example,dc=org
     objectClass: top
@@ -52,6 +53,7 @@ data:
     givenName: Dev
     sn: Two
     userPassword: somepass
+    mail: developer2@example.org
 
     dn: cn=developer3,ou=Users,dc=example,dc=org
     objectClass: top
@@ -63,6 +65,20 @@ data:
     givenName: Dev
     sn: Three
     userPassword: somepass
+    mail: developer3@example.org
+
+
+    dn: cn=developer4,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: developer4
+    uid: developer4
+    givenName: Dev
+    sn: Three
+    userPassword: somepass
+    mail: developer4@example.org
 
     dn: cn=admin-kube1,ou=Users,dc=example,dc=org
     objectClass: top
@@ -74,6 +90,7 @@ data:
     sn: One
     givenName: AdminKube
     userPassword: somepass
+    mail: adminkube1@example.org
 
     dn: cn=admin-kube2,ou=Users,dc=example,dc=org
     objectClass: top
@@ -85,6 +102,7 @@ data:
     givenName: AdminKube
     sn: Two
     userPassword: somepass
+    mail: adminkube2@example.org
 
     dn: cn=admin-kube3,ou=Users,dc=example,dc=org
     objectClass: top
@@ -96,6 +114,7 @@ data:
     givenName: AdminKube
     sn: Three
     userPassword: somepass
+    mail: adminkube3@example.org
 
     dn: cn=cloudops-kube1,ou=Users,dc=example,dc=org
     objectClass: top
@@ -107,6 +126,7 @@ data:
     sn: One
     givenName: CloudopsKube
     userPassword: somepass
+    mail: cloudopskube1@example.org
 
     dn: cn=cloudops-kube2,ou=Users,dc=example,dc=org
     objectClass: top
@@ -118,6 +138,7 @@ data:
     givenName: CloudopsKube
     sn: Two
     userPassword: somepass
+    mail: cloudopskube2@example.org
 
     dn: cn=cloudops-kube3,ou=Users,dc=example,dc=org
     objectClass: top
@@ -129,6 +150,7 @@ data:
     givenName: CloudopsKube
     sn: Three
     userPassword: somepass
+    mail: cloudopskube3@example.org
 
     dn: cn=appops-kube1,ou=Users,dc=example,dc=org
     objectClass: top
@@ -140,6 +162,7 @@ data:
     sn: One
     givenName: AppopsKube
     userPassword: somepass
+    mail: appopskube1@example.org
 
     dn: cn=appops-kube2,ou=Users,dc=example,dc=org
     objectClass: top
@@ -151,6 +174,7 @@ data:
     givenName: AppopsKube
     sn: Two
     userPassword: somepass
+    mail: appopskube2@example.org
 
     dn: cn=appops-kube3,ou=Users,dc=example,dc=org
     objectClass: top
@@ -162,6 +186,7 @@ data:
     givenName: AppopsKube
     sn: Three
     userPassword: somepass
+    mail: appopskube3@example.org
 
     dn: cn=product-owner1,ou=Users,dc=example,dc=org
     objectClass: top
@@ -173,6 +198,7 @@ data:
     sn: One
     givenName: ProductOwner
     userPassword: somepass
+    mail: productowner1@example.org
 
     dn: cn=product-owner2,ou=Users,dc=example,dc=org
     objectClass: top
@@ -184,6 +210,7 @@ data:
     givenName: ProductOwner
     sn: Two
     userPassword: somepass
+    mail: productowner2@example.org
 
     dn: cn=product-owner3,ou=Users,dc=example,dc=org
     objectClass: top
@@ -195,6 +222,33 @@ data:
     givenName: ProductOwner
     sn: Three
     userPassword: somepass
+    mail: productowner3@example.org
+
+    dn: cn=network-dev1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: network-dev1
+    uid: network-dev1
+    givenName: NetworkDev
+    sn: One
+    userPassword: somepass
+    mail: network-dev1@example.org
+
+
+    dn: cn=platform-dev1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: platform-dev1
+    uid: platform-dev1
+    givenName: PlatformDev
+    sn: One
+    userPassword: somepass
+    mail: platform-dev1@example.org
+
 
     dn: cn=service-account-kubernetes-team,ou=Users,dc=example,dc=org
     objectClass: top
@@ -206,6 +260,31 @@ data:
     givenName: ServiceAccount
     sn: KubernetesTeam
     userPassword: somepass
+    mail: serviceaccountk8steams@example.org
+
+    dn: cn=random-user,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: random-user
+    uid: random-user
+    givenName: RandomUser
+    sn: Three
+    userPassword: somepass
+    mail: random-user3@example.org
+
+    dn: cn=division4-user1,ou=Users,dc=example,dc=org
+    objectClass: top
+    objectClass: person
+    objectClass: organizationalPerson
+    objectClass: inetOrgPerson
+    cn: division4-user1
+    uid: division4-user1
+    givenName: division4User1
+    sn: Three
+    userPassword: somepass
+    mail: division4-user1@example.org
 
     dn: ou=Groups,dc=example,dc=org
     objectClass: organizationalUnit
@@ -215,6 +294,14 @@ data:
     objectClass: organizationalUnit
     ou: teams
 
+    dn: ou=DIVISION4,ou=TEAMS,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: DIVISION4
+
+    dn: ou=DIVISION,ou=Groups,dc=example,dc=org
+    objectClass: organizationalUnit
+    ou: division
+    
     dn: ou=CONTAINER,ou=Groups,dc=example,dc=org
     objectClass: organizationalUnit
     ou: container
@@ -233,6 +320,7 @@ data:
     member: cn=developer1,ou=Users,dc=example,dc=org
     member: cn=developer2,ou=Users,dc=example,dc=org
     member: cn=developer3,ou=Users,dc=example,dc=org
+    member: cn=developer4,ou=Users,dc=example,dc=org
 
     dn: cn=DL_KUB_CAGIPHP_OPS,ou=HORS-PROD,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
     cn: DL_KUB_CAGIPHP_OPS
@@ -253,7 +341,6 @@ data:
     objectClass: groupOfNames
     member: cn=service-account-kubernetes-team,ou=Users,dc=example,dc=org
 
-
     dn: cn=ADMIN_KUBERNETES,ou=TEAMS,ou=Groups,dc=example,dc=org
     cn: ADMIN_KUBERNETES
     objectClass: groupOfNames
@@ -268,12 +355,32 @@ data:
     member: cn=cloudops-kube2,ou=Users,dc=example,dc=org
     member: cn=cloudops-kube3,ou=Users,dc=example,dc=org
 
+    dn: cn=CLOUDOPS_KUBERNETES,ou=DIVISION4,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: CLOUDOPS_KUBERNETES
+    objectClass: groupOfNames
+    member: cn=division4-user1,ou=Users,dc=example,dc=org
+
     dn: cn=CAGIP_MEMBERS,ou=TEAMS,ou=Groups,dc=example,dc=org
     cn: CAGIP_MEMBERS
     objectClass: groupOfNames
     member: cn=developer1,ou=Users,dc=example,dc=org
     member: cn=developer2,ou=Users,dc=example,dc=org
     member: cn=developer3,ou=Users,dc=example,dc=org
+
+    dn: cn=NETWORK,ou=TEAMS,ou=Groups,dc=example,dc=org
+    cn: NETWORK
+    objectClass: groupOfNames
+    member: cn=network-dev1,ou=Users,dc=example,dc=org
+
+    dn: cn=PLATFORM,ou=CAGIP,ou=CONTAINER,ou=Groups,dc=example,dc=org
+    cn: PLATFORM
+    objectClass: groupOfNames
+    member: cn=platform-dev1,ou=Users,dc=example,dc=org
+
+    dn: cn=RANDOM_GROUP,ou=DIVISION,ou=Groups,dc=example,dc=org
+    cn: RANDOM_GROUP
+    objectClass: groupOfNames
+    member: cn=random-user,ou=Users,dc=example,dc=org
 kind: ConfigMap
 metadata:
   name: ldapconf

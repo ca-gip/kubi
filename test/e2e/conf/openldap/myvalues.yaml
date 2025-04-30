@@ -60,7 +60,7 @@ image:
   # Temporary fix
   repository: jpgouin/openldap
   tag: 2.6.8-fix
-  pullPolicy: Never
+  pullPolicy: IfNotPresent
   pullSecrets: []
 
 # Set the container log level
@@ -71,7 +71,7 @@ initSchema:
   image: 
     repository: debian
     tag: latest
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
     pullSecrets: []
 
 extraLabels: {}
@@ -458,7 +458,7 @@ initTLSSecret:
     ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
     ##
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
   # The name of a kubernetes.io/tls type secret to use for TLS
   secret: "" 
   ## init-tls-secret container's resource requests and limits
@@ -493,7 +493,7 @@ volumePermissions:
     registry: docker.io
     repository: bitnami/bitnami-shell
     tag: 10-debian-10
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
 
   ## Command to execute during the volumePermission startup
     command: [ 'sh', '-c', 'chmod -R g+rwX /bitnami' ]
