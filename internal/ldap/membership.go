@@ -39,7 +39,6 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 		strings.ToUpper(c.ViewerGroupBase):      &m.ViewerAccess,
 		strings.ToUpper(c.ServiceGroupBase):     &m.ServiceAccess,
 		strings.ToUpper(c.OpsMasterGroupBase):   &m.CloudOpsAccess,
-		strings.ToUpper(c.GroupBase):            &m.ClusterGroupsAccess,
 	}
 
 	for _, entry := range entries {
@@ -54,6 +53,9 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 			}
 		}
 		if !collected {
+			if strings.HasSuffix(upperDN, strings.ToUpper(c.GroupBase)){
+				m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
+			}
 			slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
 			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 		}
