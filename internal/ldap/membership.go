@@ -53,11 +53,12 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 			}
 		}
 		if !collected {
-			if strings.HasSuffix(upperDN, strings.ToUpper(c.GroupBase)){
+			if strings.HasSuffix(upperDN, strings.ToUpper(c.GroupBase)) {
 				m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
+			} else {
+				slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
+				m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 			}
-			slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
-			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
 		}
 	}
 
