@@ -31,7 +31,7 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 		return nil, fmt.Errorf("could not get groups: %w", err)
 	}
 
-	// Categorize groups based on their DN
+	// Categorize "special access" groups based on their DN
 	groupMapping := map[string]*[]*ldap.Entry{
 		strings.ToUpper(c.AdminGroupBase):       &m.AdminAccess,
 		strings.ToUpper(c.AppMasterGroupBase):   &m.AppOpsAccess,
@@ -39,7 +39,6 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 		strings.ToUpper(c.ViewerGroupBase):      &m.ViewerAccess,
 		strings.ToUpper(c.ServiceGroupBase):     &m.ServiceAccess,
 		strings.ToUpper(c.OpsMasterGroupBase):   &m.CloudOpsAccess,
-		strings.ToUpper(c.GroupBase):            &m.ClusterGroupsAccess,
 	}
 
 	for _, entry := range entries {
@@ -53,9 +52,14 @@ func (c *LDAPClient) getMemberships(userDN string) (*LDAPMemberships, error) {
 				break
 			}
 		}
+		
 		if !collected {
-			slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
-			m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
+			if strings.HasPrefix(upperDN, c.GroupBase) {
+				m.ClusterGroupsAccess = append(m.ClusterGroupsAccess, entry)
+			} else {
+				slog.Info(fmt.Sprintf("Couldn't collect %+v", entry))
+				m.NonSpecificGroups = append(m.NonSpecificGroups, entry)
+			}
 		}
 	}
 
@@ -83,7 +87,7 @@ func (m *LDAPMemberships) toGroupNames() []string {
 
 	for _, category := range accessCategories {
 		for _, entry := range category {
-			normalizedGroup := NormalizeGroupName(entry.DN)
+			normalizedGroup := strings.ToUpper(entry.GetAttributeValue("cn"))
 			groupMap[normalizedGroup] = struct{}{}
 		}
 	}
@@ -94,14 +98,6 @@ func (m *LDAPMemberships) toGroupNames() []string {
 	}
 
 	return groups
-}
-
-// Normalized group names will be used as subjects of k8s rolebindings
-// While ldap entry are not case-sensitive, k8s subjects are, so we
-// need to normalize the ldap entry so as to be robust to case or whitespace
-func NormalizeGroupName(groupName string) string {
-	withoutWhitespace := strings.ReplaceAll(groupName, " ", "")
-	return strings.ToUpper(withoutWhitespace)
 }
 
 // toProjectNames retuns a slice for all the project names the user is member of,

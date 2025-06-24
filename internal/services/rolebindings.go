@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	"github.com/ca-gip/kubi/internal/ldap"
 	"github.com/ca-gip/kubi/internal/utils"
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -115,17 +115,17 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
+					Name:     strings.ToUpper(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
+					Name:     strings.ToUpper(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
+					Name:     strings.ToUpper(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
 				},
 			},
 		},
@@ -141,7 +141,7 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     ldap.NormalizeGroupName(utils.Config.Ldap.ViewerGroupBase),
+					Name:     strings.ToUpper(utils.Config.Ldap.ViewerGroupBase),
 				},
 			},
 		},
