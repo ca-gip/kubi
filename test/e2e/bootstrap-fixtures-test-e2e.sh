@@ -3,13 +3,16 @@
 # - better handling of errors.
 # - where it is called, in e2e_suite_test.go, exiting if one of the commands fail. This would ensure that the tests don't execute if the fixtures didn't go well.
 # - at the beginning of the scripts, check the prerequisites are present: make docker kubectl HTTP_PROXY=${PROXY_URL} HTTPS_PROXY=${PROXY_URL} http_proxy=${PROXY_URL} https_proxy=${PROXY_URL} no_proxy=${NO_PROXY} NO_PROXY=${NO_PROXY} kind helm helm-images sleep cfssl openssl golang goreleaser
-PROXY_URL=http://10.245.146.98:8089
-export NO_PROXY="127.0.0.1,127.0.0.1:38300,scm.saas.cagip.group.gca,docker-remote.registry.saas.cagip.group.gca"
-export no_proxy="127.0.0.1,127.0.0.1:38300,scm.saas.cagip.group.gca,docker-remote.registry.saas.cagip.group.gca"
-export HTTP_PROXY=${PROXY_URL}
-export HTTPS_PROXY=${PROXY_URL}
-export http_proxy=${PROXY_URL}
-export https_proxy=${PROXY_URL}
+
+if [ ! "$GITHUB_ACTIONS" = "true" ]; then
+  PROXY_URL=http://10.245.146.98:8089
+  export NO_PROXY="127.0.0.1,127.0.0.1:38300,scm.saas.cagip.group.gca,docker-remote.registry.saas.cagip.group.gca"
+  export no_proxy="127.0.0.1,127.0.0.1:38300,scm.saas.cagip.group.gca,docker-remote.registry.saas.cagip.group.gca"
+  export HTTP_PROXY=${PROXY_URL}
+  export HTTPS_PROXY=${PROXY_URL}
+  export http_proxy=${PROXY_URL}
+  export https_proxy=${PROXY_URL}
+fi
 
 # KIND CLUSTER CREATION
 kind delete cluster --name test-e2e-kubi
