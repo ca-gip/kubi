@@ -59,7 +59,7 @@ jobs:
       contents: write
       packages: write
     runs-on: ubuntu-latest
-#    needs: build-test
+    needs: build-test
     strategy:
       matrix:
         component: [webhook, api, operator]
