@@ -850,7 +850,7 @@ var _ = Describe("Manager", Ordered, func() {
                         Environment:  "development",
                         Project:      "test-deletion",
                         SourceEntity: "TEST_GROUP",
-                        Stages:       []string{"test"},
+                        Stages:       []string{"scratch"},
                         Tenant:       "cagip",
                     },
                 }
