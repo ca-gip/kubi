@@ -847,7 +847,7 @@ var _ = Describe("Manager", Ordered, func() {
                         },
                     },
                     Spec: kubiv1.ProjectSpec{
-                        Environment:  "test",
+                        Environment:  "development",
                         Project:      "test-deletion",
                         SourceEntity: "TEST_GROUP",
                         Stages:       []string{"test"},
