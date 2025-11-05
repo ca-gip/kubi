@@ -13,18 +13,23 @@ if [ ! "$GITHUB_ACTIONS" = "true" ]; then
   export http_proxy=${PROXY_URL}
   export https_proxy=${PROXY_URL}
 fi
+#Ldap
+LDAP_IMAGE="bitnamilegacy/openldap:2.6.10-debian-12-r4"
+
+docker pull ${LDAP_IMAGE}
+
 
 # KIND CLUSTER CREATION
 kind delete cluster --name test-e2e-kubi
 kind create cluster --name test-e2e-kubi --config test/e2e/conf/kind/cluster-kind.yaml
 
-# OPENLDAP PREREQUISITES AND DEPLOY 
-helm repo add helm-openldap https://jp-gouin.github.io/helm-openldap/
 
 # Create configmap containing ldif file
-kubectl -n kube-system apply -f test/e2e/conf/openldap/config.yaml
-helm upgrade --install openldap helm-openldap/openldap-stack-ha  -f test/e2e/conf/openldap/myvalues.yaml --namespace kube-system
-# We wait 30s for Openldap to pop otherwise, Kubi tries to connect to it directly, 
+kind load docker-image --name test-e2e-kubi ${LDAP_IMAGE}
+INSTALL_FOLDER_LDAP="test/e2e/conf/openldap"
+kubectl apply -f ${INSTALL_FOLDER_LDAP}/config.yaml
+kubectl apply -f ${INSTALL_FOLDER_LDAP}/deploy.yaml
+# We wait 60s for Openldap to pop otherwise, Kubi tries to connect to it directly, 
 # fails to open a connection and waits for a new reconciliation loop to occur, 
 # which makes the fail test, due to 30s timeout (in e2e_test.go file.)
 
@@ -37,7 +42,7 @@ sleep 60
 # kubi-encryption-secret -> the PKI which signs the tokens
 # kubi -> i think it's the authn cert to api server. Unsure
 
-kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='Not@SecurePassw0rd'
+kubectl -n kube-system create secret generic kubi-secret  --from-literal ldap_passwd='adminpassword'
 ./scripts/generate_ecdsa_keys.sh
 kubectl -n kube-system create secret generic kubi-encryption-secret --from-file=/tmp/kubi/ecdsa/ecdsa-key.pem --from-file=/tmp/kubi/ecdsa/ecdsa-public.pem
 
