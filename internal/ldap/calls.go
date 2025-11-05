@@ -75,19 +75,11 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 	}
 	defer conn.Close()
 
-	var allResults []*ldap.Entry
-	for {
-		results, err := conn.SearchWithPaging(&request, c.PageSize)
-		if err != nil {
-			return nil, fmt.Errorf("error searching in LDAP with request %v, %v", request, err)
-		}
-		allResults = append(allResults, results.Entries...)
-		if len(results.Entries) < int(c.PageSize) {
-			break
-		}
-		request.Controls = results.Controls
+	results, err := conn.SearchWithPaging(&request, c.PageSize)
+	if err != nil {
+		return nil, fmt.Errorf("error searching in LDAP with request %v, %v", request, err)
 	}
-	return allResults, nil
+	return results.Entries, err
 }
 
 func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, error) {

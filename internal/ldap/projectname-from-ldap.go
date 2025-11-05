@@ -12,7 +12,6 @@ func (c *LDAPClient) getProjectGroups() ([]string, error) {
 		BaseDN:       c.GroupBase,
 		Scope:        ldap.ScopeWholeSubtree,
 		DerefAliases: ldap.NeverDerefAliases,
-		SizeLimit:    0, // limit number of entries in result, 0 values means no limitations
 		TimeLimit:    30,
 		TypesOnly:    false,
 		Filter:       "(|(objectClass=groupOfNames)(objectClass=group))", // filter default format : (&(objectClass=groupOfNames)(member=%s))

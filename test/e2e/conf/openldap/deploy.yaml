@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: openldap
+  name: openldap
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: openldap
+    spec:
+      volumes: 
+        - name: "ldapconfig"
+          configMap:
+            name: ldapconf
+      containers:
+      - image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+        imagePullPolicy: IfNotPresent
+        name: openldap
+        env:
+        - name: LDAP_ROOT
+          value: "dc=example,dc=org"
+        volumeMounts:
+        - name: ldapconfig
+          mountPath: /ldifs
+        resources: {}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: openldap
+  name: openldap
+  namespace: kube-system
+spec:
+  ports:
+  - port: 389
+    protocol: TCP
+    targetPort: 1389
+  selector:
+    app: openldap
+status:
+  loadBalancer: {}
