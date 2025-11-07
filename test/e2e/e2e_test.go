@@ -810,7 +810,13 @@ var _ = Describe("Manager", Ordered, func() {
                 _, err = clientset.NetworkingV1().NetworkPolicies(testProjectName).Get(context.TODO(), "kubi-default", v1.GetOptions{})
                 g.Expect(err).To(HaveOccurred(), "Network policy should be deleted")
                 g.Expect(err.Error()).To(ContainSubstring("not found"), "Network policy should return not found error")
-            }
+				//Check role bindings are deleted
+				rbs, err := clientset.RbacV1().RoleBindings(testProjectName).List(context.TODO(), v1.ListOptions{
+					LabelSelector: "creator=kubi",
+				})
+				g.Expect(err).NotTo(HaveOccurred(), "Should be able to list role bindings after deletion")
+				g.Expect(len(rbs.Items)).To(Equal(0), "Role bindings should be deleted")
+			}
 
             By("verifying project is removed from Kubernetes")
             verifyProjectDeleted := func(g Gomega) {

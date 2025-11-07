@@ -188,7 +188,7 @@ func deleteRoleBindings(namespaceName string) error {
 
 	// Delete all role bindings in the namespace that were created by Kubi
 	return clientSet.RbacV1().RoleBindings(namespaceName).DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: "kubi.ca-gip.com/managed=true",
-	})
+		LabelSelector: "creator=kubi",
+	})		
 }
 
