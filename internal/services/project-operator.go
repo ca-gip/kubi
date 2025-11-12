@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"context"
 	"log/slog"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	kubernetes "k8s.io/client-go/kubernetes"
 	kubernetes "k8s.io/client-go/kubernetes"
 )
 
