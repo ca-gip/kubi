@@ -34,6 +34,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		token, err := issuer.VerifyToken(tokenReview.Spec.Token)
 
 		if err != nil {
+			slog.Error("error verifying token", "error", err)
 			resp := v1beta1.TokenReview{
 				Status: v1beta1.TokenReviewStatus{
 					Authenticated: false,
@@ -42,6 +43,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(resp)
+			return
 		}
 
 		slog.Debug("preparing access for user", "user", token.User)
@@ -95,11 +97,6 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-
-		jwtTokenString, marshallError := json.Marshal(resp)
-		if marshallError != nil {
-			slog.Error("Error serializing json to token review", "error", marshallError.Error(), "token", jwtTokenString)
-		}
 
 		err = json.NewEncoder(w).Encode(resp)
 		if err != nil {
