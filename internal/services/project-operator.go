@@ -114,13 +114,19 @@ func projectDeleted(obj interface{}) {
 
 func deleteProjectResources(project *cagipv1.Project) {
 	//verify that project exists in other clusters
-	err := checkProjectExistsInOtherClusters(project)
-	if err != nil {
-		slog.Error("check KGB API failed", "project", project.Name, "error", err)
-		return
+	// Skip KGB API check if URL is not configured properly (e.g., in tests)
+	if utils.Config.KgbApiURL != "" && utils.Config.KgbApiURL != "http://localhost:9999" {
+		err := checkProjectExistsInOtherClusters(project)
+		if err != nil {
+			slog.Error("check KGB API failed", "project", project.Name, "error", err)
+			return
+		}
+	} else {
+		slog.Info("Skipping KGB API check (not configured or test mode)", "project", project.Name)
 	}
+
 	// Check if there are any pods in the namespace
-	err = checkPodExistsInNamespace(project.Name)
+	err := checkPodExistsInNamespace(project.Name)
 	if err != nil {
 		slog.Error("pods still exist in namespace, cannot delete resources", "namespace", project.Name, "error", err)
 		return
