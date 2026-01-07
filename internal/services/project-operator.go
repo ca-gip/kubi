@@ -2,7 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -10,9 +14,9 @@ import (
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble
@@ -63,7 +67,6 @@ func projectUpdated(old interface{}, new interface{}) {
 	createOrUpdateProjectResources(project)
 }
 
-
 func createOrUpdateProjectResources(project *cagipv1.Project) {
 
 	if err := generateNamespace(project); err != nil {
@@ -110,6 +113,19 @@ func projectDeleted(obj interface{}) {
 }
 
 func deleteProjectResources(project *cagipv1.Project) {
+	//verify that project exists in other clusters
+	err := checkProjectExistsInOtherClusters(project)
+	if err != nil {
+		slog.Error("check KGB API failed", "project", project.Name, "error", err)
+		return
+	}
+	// Check if there are any pods in the namespace
+	err = checkPodExistsInNamespace(project.Name)
+	if err != nil {
+		slog.Error("pods still exist in namespace, cannot delete resources", "namespace", project.Name, "error", err)
+		return
+	}
+
 	// Delete role bindings first
 	if err := deleteRoleBindings(project.Name); err != nil {
 		slog.Error("failed to delete role bindings", "namespace", project.Name, "error", err)
@@ -147,6 +163,46 @@ func deleteProjectResources(project *cagipv1.Project) {
 		slog.Debug("namespace deleted", "namespace", project.Name)
 		NamespaceCreation.WithLabelValues("deleted", project.Name).Inc()
 	}
+}
+
+func checkProjectExistsInOtherClusters(project *cagipv1.Project) error {
+	//call kgb api https://kgb-api.devops.caas.cagip.group.gca/api/v1/clusters for see if project exists in other clusters
+	//call kgb api
+	client := &http.Client{Timeout: 90 * time.Second}
+	apiURL := fmt.Sprintf("%s/api/v1/clusters", utils.Config.KgbApiURL)
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return err
+	}
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("unexpected status code for call KGB API: %d", resp.StatusCode)
+	}
+
+	var clusters []struct {
+		Projects []string `json:"projects"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&clusters); err != nil {
+		return err
+	}
+
+	var listExistClusters []string = []string{}
+	var i int = 0
+	for _, cluster := range clusters {
+		for _, p := range cluster.Projects {
+			if strings.Contains(p, project.Name) {
+				i++
+				listExistClusters = append(listExistClusters, p)
+			}
+		}
+	}
+	if i == 1 {
+		return nil
+	}
+	return fmt.Errorf("project %s exists in other clusters: %v", project.Name, listExistClusters)
 }
 
 func deleteNamespace(namespaceName string) error {
@@ -189,6 +245,25 @@ func deleteRoleBindings(namespaceName string) error {
 	// Delete all role bindings in the namespace that were created by Kubi
 	return clientSet.RbacV1().RoleBindings(namespaceName).DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{
 		LabelSelector: "creator=kubi",
-	})		
+	})
 }
 
+// checkPodExistsInNamespace returns an error if there are any pods in the given namespace.
+func checkPodExistsInNamespace(namespace string) error {
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		return err
+	}
+	pods, err := clientSet.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	if len(pods.Items) > 0 {
+		return fmt.Errorf("there are still %d pods in namespace %s", len(pods.Items), namespace)
+	}
+	return nil
+}

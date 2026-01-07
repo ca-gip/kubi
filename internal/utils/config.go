@@ -194,7 +194,7 @@ func MakeConfig() (*types.Config, error) {
 		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
 		Ldap: types.LdapConfig{
-			UserBase: ldapUserBase,
+			UserBase:              ldapUserBase,
 			EligibleGroupsParents: ldapEligibleGroupsParents,
 			GroupBase:             ldapGroupBase,
 			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),
@@ -234,6 +234,7 @@ func MakeConfig() (*types.Config, error) {
 		Blacklist:               strings.Split(getEnv("BLACKLIST", ""), ","),
 		Whitelist:               whitelist,
 		BlackWhitelistNamespace: getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
+		KgbApiURL:               getEnv("KGB_API_URL", "https://kgb-api.devops.caas.cagip.group.gca"),
 	}, nil
 }
 
