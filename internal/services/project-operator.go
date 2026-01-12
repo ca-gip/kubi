@@ -2,11 +2,8 @@ package services
 
 import (
 	"context"
-<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
-=======
->>>>>>> 4bf8160 (Add delete functions for project (#72))
 	"log/slog"
 	"net/http"
 	"strings"
@@ -20,7 +17,6 @@ import (
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble
@@ -71,10 +67,6 @@ func projectUpdated(old interface{}, new interface{}) {
 	createOrUpdateProjectResources(project)
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 4bf8160 (Add delete functions for project (#72))
 func createOrUpdateProjectResources(project *cagipv1.Project) {
 
 	if err := generateNamespace(project); err != nil {
@@ -121,7 +113,6 @@ func projectDeleted(obj interface{}) {
 }
 
 func deleteProjectResources(project *cagipv1.Project) {
-<<<<<<< HEAD
 	//verify that project exists in other clusters
 	// Skip KGB API check if URL is not configured properly (e.g., in tests)
 	if utils.Config.KgbApiURL != "" && utils.Config.KgbApiURL != "http://localhost:9999" {
@@ -141,8 +132,6 @@ func deleteProjectResources(project *cagipv1.Project) {
 		return
 	}
 
-=======
->>>>>>> 4bf8160 (Add delete functions for project (#72))
 	// Delete role bindings first
 	if err := deleteRoleBindings(project.Name); err != nil {
 		slog.Error("failed to delete role bindings", "namespace", project.Name, "error", err)
@@ -182,7 +171,6 @@ func deleteProjectResources(project *cagipv1.Project) {
 	}
 }
 
-<<<<<<< HEAD
 func checkProjectExistsInOtherClusters(project *cagipv1.Project) error {
 	//call kgb api https://kgb-api.devops.caas.cagip.group.gca/api/v1/clusters for see if project exists in other clusters
 	//call kgb api
@@ -223,8 +211,6 @@ func checkProjectExistsInOtherClusters(project *cagipv1.Project) error {
 	return fmt.Errorf("project %s exists in other clusters: %v", project.Name, listExistClusters)
 }
 
-=======
->>>>>>> 4bf8160 (Add delete functions for project (#72))
 func deleteNamespace(namespaceName string) error {
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, err := kubernetes.NewForConfig(kconfig)
@@ -265,7 +251,6 @@ func deleteRoleBindings(namespaceName string) error {
 	// Delete all role bindings in the namespace that were created by Kubi
 	return clientSet.RbacV1().RoleBindings(namespaceName).DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{
 		LabelSelector: "creator=kubi",
-<<<<<<< HEAD
 	})
 }
 
@@ -288,8 +273,3 @@ func checkPodExistsInNamespace(namespace string) error {
 	}
 	return nil
 }
-=======
-	})		
-}
-
->>>>>>> 4bf8160 (Add delete functions for project (#72))
