@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -90,18 +91,9 @@ func updateExistingNamespace(project *cagipv1.Project, api v13.CoreV1Interface) 
 	return nil
 }
 
-// Join two maps by value copy non-recursively
-func union(a map[string]string, b map[string]string) map[string]string {
-	for k, v := range b {
-		a[k] = v
-	}
-	return a
-}
-
 // Generate CustomLabels that should be applied on Kubi's Namespaces
 func generateNamespaceLabels(project *cagipv1.Project) (labels map[string]string) {
-
-	defaultLabels := map[string]string{
+	nsLabels := map[string]string{
 		"name":                               project.Name,
 		"type":                               "customer",
 		"creator":                            "kubi",
@@ -111,7 +103,8 @@ func generateNamespaceLabels(project *cagipv1.Project) (labels map[string]string
 		"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
 	}
 	// Todo: Decide whether this is still worth a separate function for testability.
-	return union(defaultLabels, utils.Config.CustomLabels)
+	maps.Copy(nsLabels, utils.Config.CustomLabels)
+	return nsLabels
 }
 
 func GetPodSecurityStandardName(namespace string) string {

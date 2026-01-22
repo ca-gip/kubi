@@ -52,8 +52,8 @@ func main() {
 	}
 
 	slog.Info("starting server", "port", 8002)
-	if err := http.ListenAndServeTLS(":8002", utils.TlsCertPath, utils.TlsKeyPath, router); err != nil {
+	//if err := http.ListenAndServeTLS(":8002", utils.TlsCertPath, utils.TlsKeyPath, router); err != nil {
+	if err := http.ListenAndServe(":8002", router); err != nil {
 		slog.Error("server failed to start", "error", err)
 	}
-
 }

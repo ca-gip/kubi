@@ -2,8 +2,6 @@ package utils
 
 const (
 	// TODO Add Environment variable
-	ECDSAPublicPath = "/var/run/secrets/ecdsa/ecdsa-public.pem"
-	ECDSAKeyPath    = "/var/run/secrets/ecdsa/ecdsa-key.pem"
 	TlsCertPath     = "/var/run/secrets/certs/tls.crt"
 	TlsKeyPath      = "/var/run/secrets/certs/tls.key"
 	TlsCaFile       = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"

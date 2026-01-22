@@ -37,7 +37,7 @@ jobs:
         id: install
 
       - name: Install helm plugin helm-images
-        run: helm plugin install https://github.com/nikhilsbhat/helm-images       
+        run: helm plugin install --verify=false https://github.com/nikhilsbhat/helm-images       
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v6
@@ -62,7 +62,7 @@ jobs:
     needs: build-test
     strategy:
       matrix:
-        component: [webhook, api, operator]
+        component: [operator]
         arch: [amd64]
     steps:
       - uses: actions/checkout@v4

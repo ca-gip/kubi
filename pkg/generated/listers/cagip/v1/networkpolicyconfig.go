@@ -33,7 +33,7 @@ func NewNetworkPolicyConfigLister(indexer cache.Indexer) NetworkPolicyConfigList
 
 // List lists all NetworkPolicyConfigs in the indexer.
 func (s *networkPolicyConfigLister) List(selector labels.Selector) (ret []*v1.NetworkPolicyConfig, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.ListAll(s.indexer, selector, func(m any) {
 		ret = append(ret, m.(*v1.NetworkPolicyConfig))
 	})
 	return ret, err

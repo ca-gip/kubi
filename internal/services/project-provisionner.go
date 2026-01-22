@@ -14,12 +14,13 @@ import (
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	"github.com/ca-gip/kubi/pkg/types"
+	projectv1 "github.com/openshift/api/project/v1"
+	projectclientv1 "github.com/openshift/client-go/project/clientset/versioned"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var ProjectCreation = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -70,6 +71,11 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 
 // generate a project config or update it if exists
 func generateProject(projectInfos *types.Project) {
+	generateCagipProject(projectInfos)
+	generateOpenShiftProject(projectInfos)
+}
+
+func generateCagipProject(projectInfos *types.Project) {
 	// todo: cleanup this funvtion for testability...
 	kconfig, _ := rest.InClusterConfig()
 	clientSet, _ := versioned.NewForConfig(kconfig)
@@ -92,10 +98,6 @@ func generateProject(projectInfos *types.Project) {
 				"creator": "kubi",
 			},
 		},
-	}
-
-	if utils.Config.Tenant != utils.KubiTenantUndeterminable {
-		project.Spec.Tenant = utils.Config.Tenant
 	}
 
 	project.Spec.Project = projectInfos.Project
@@ -158,6 +160,27 @@ func generateProject(projectInfos *types.Project) {
 		}
 		ProjectCreation.WithLabelValues("updated", projectInfos.Project).Inc()
 		return
+	}
+}
+
+func generateOpenShiftProject(projectInfos *types.Project) {
+	kconfig, _ := rest.InClusterConfig()
+
+	// Create Openshift Project object
+	osProject := &projectv1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: projectInfos.Namespace(),
+			Labels: map[string]string{
+				"creator": "kubi",
+			},
+		},
+	}
+	fmt.Printf("%v", osProject)
+	projClientset, err := projectclientv1.NewForConfig(kconfig)
+	if err != nil {
+		slog.Error("failed to get openshift project clientset.", "error", err.Error())
+	} else {
+		_, _ = projClientset.ProjectV1().Projects().Create(context.Background(), osProject, metav1.CreateOptions{})
 	}
 }
 

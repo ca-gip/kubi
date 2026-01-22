@@ -1,7 +1,7 @@
 {
   "type": "excalidraw",
   "version": 2,
-  "source": "https://excalidraw.com",
+  "source": "https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor",
   "elements": [
     {
       "id": "lzoYy4MucB8BotpVvgl6i",
@@ -2707,11 +2707,11 @@
       "index": "b1l",
       "roundness": null,
       "seed": 689872565,
-      "version": 218,
-      "versionNonce": 1511953720,
+      "version": 252,
+      "versionNonce": 1824603346,
       "isDeleted": false,
       "boundElements": [],
-      "updated": 1742229948417,
+      "updated": 1762441067268,
       "link": null,
       "locked": false,
       "text": "example of .kube/config \n\napiVersion: v1\nclusters:\n- cluster:\n    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUYxVENDQTcyZ0F3\n    server: https://api.<fqdn-cluster>\n  name: dev.kube.organization.org\ncontexts:\n\n- context:\n    cluster: dev.kube.organization.org\n    user: username_dev.kube.organization.org\n  name: username_dev.kube.organization.org\ncurrent-context: username_dev.kube.organization.org\nkind: Config\npreferences: {}\nusers:\n- name: username_dev.kube.organization.org\n  user:\n    token: eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdXRocyI6W10sInVzZXIiOiJ1MzBkczc1QHpv",

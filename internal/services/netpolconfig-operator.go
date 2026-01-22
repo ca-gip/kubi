@@ -51,13 +51,13 @@ func WatchNetPolConfig() cache.Store {
 
 	return store
 }
-func networkPolicyConfigCreated(obj interface{}) {
+func networkPolicyConfigCreated(obj any) {
 	netpolconfig := obj.(*cagipv1.NetworkPolicyConfig)
 	slog.Info("network config has been created, refreshing associated resources", "networkConfig", netpolconfig.Name)
 	createOrUpdateNetpols(netpolconfig)
 }
 
-func networkPolicyConfigUpdated(old interface{}, new interface{}) {
+func networkPolicyConfigUpdated(old any, new any) {
 	netpolconfig := new.(*cagipv1.NetworkPolicyConfig)
 	slog.Info("network config has been updated, refreshing associated resources", "networkConfig", netpolconfig.Name)
 	createOrUpdateNetpols(netpolconfig)
@@ -96,7 +96,7 @@ func createOrUpdateNetpols(netpolconfig *cagipv1.NetworkPolicyConfig) {
 
 }
 
-func networkPolicyConfigDeleted(obj interface{}) {
+func networkPolicyConfigDeleted(obj any) {
 	netpolconfig := obj.(*cagipv1.NetworkPolicyConfig)
 	slog.Info("network config has been deleted, please delete network policies manually", "networkConfig", netpolconfig.Name)
 }

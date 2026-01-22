@@ -33,7 +33,7 @@ func NewProjectLister(indexer cache.Indexer) ProjectLister {
 
 // List lists all Projects in the indexer.
 func (s *projectLister) List(selector labels.Selector) (ret []*v1.Project, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
+	err = cache.ListAll(s.indexer, selector, func(m any) {
 		ret = append(ret, m.(*v1.Project))
 	})
 	return ret, err
