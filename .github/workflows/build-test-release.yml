@@ -62,7 +62,7 @@ jobs:
     needs: build-test
     strategy:
       matrix:
-        component: [webhook, api, operator]
+        component: [operator]
         arch: [amd64]
     steps:
       - uses: actions/checkout@v4

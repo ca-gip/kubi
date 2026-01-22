@@ -22,13 +22,10 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8002
-          volumeMounts:
-            - name: kubi-tls
-              mountPath: "/var/run/secrets/certs"
-              readOnly: true
-            - name: kubi-encryption
-              mountPath: "/var/run/secrets/ecdsa"
-              readOnly: true
+#          volumeMounts:
+#            - name: kubi-tls
+#              mountPath: "/var/run/secrets/certs"
+#              readOnly: true
           envFrom:
             - configMapRef:
                 name: kubi-config
@@ -38,10 +35,7 @@ spec:
                 secretKeyRef:
                   name: kubi-secret
                   key: ldap_passwd
-      volumes:
-        - name: kubi-tls
-          secret:
-            secretName: kubi
-        - name: kubi-encryption
-          secret:
-            secretName: kubi-encryption-secret
+#      volumes:
+#        - name: kubi-tls
+#          secret:
+#            secretName: kubi

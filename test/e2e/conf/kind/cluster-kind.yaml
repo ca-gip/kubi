@@ -11,15 +11,3 @@ nodes:
   extraMounts:
     - hostPath: test/e2e/conf/kind/apiserver
       containerPath: /etc/kubernetes/additionals
-  kubeadmConfigPatches:
-  - |
-    kind: ClusterConfiguration
-    apiServer:
-      extraArgs:
-        authentication-token-webhook-config-file: /etc/kubernetes/additionals/webhook.yaml
-      extraVolumes:
-        - name: "some-volume"
-          hostPath: "/etc/kubernetes/additionals/webhook.yaml"
-          mountPath: "/etc/kubernetes/additionals/webhook.yaml"
-          readOnly: false
-          pathType: File

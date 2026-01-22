@@ -3,27 +3,63 @@ package ldap
 import (
 	"crypto/tls"
 	"fmt"
-	"log/slog"
 
+	"github.com/ca-gip/kubi/internal/project"
+	"github.com/ca-gip/kubi/pkg/types"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gopkg.in/ldap.v2"
 )
 
-var (
-	LdapGroupsHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "kubi_ldap_groups_number",
-		Help:    "Number of ldap groups of a user",
-		Buckets: []float64{10, 60, 100, 200, 500},
-	})
+// This is the internal API for LDAP auth.
+// The rest of the implementation is in the internal/ldap package.
 
-	LdapGroupsRequestDurationHistogram = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "kubi_ldap_groups_request_duration",
-		Help:    "Duration of ldap user's groups requests",
-		Buckets: []float64{1, 2, 5, 6, 10},
-	})
-)
+type LDAPClient struct {
+	types.LdapConfig
+}
+
+func NewLDAPClient(config types.LdapConfig) *LDAPClient {
+	return &LDAPClient{
+		config,
+	}
+}
+
+// ListProjects Implement ProjectLister interface to be able to replace with a list of projects for testing.
+func (c *LDAPClient) ListProjects() ([]*types.Project, error) {
+	// todo fix this long standing bug of view and ops groups not being filtered.
+	allClusterGroups, err := c.getProjectGroups()
+	if err != nil {
+		return nil, fmt.Errorf("get Project groups failed, preventing to List Projects: %v", err)
+	}
+	if len(allClusterGroups) == 0 {
+		return nil, fmt.Errorf("no ldap groups found")
+	}
+	return project.GetProjectsFromGrouplist(allClusterGroups), nil
+}
+
+// getProjectGroups returns all groupnames that are useful for projects.
+func (c *LDAPClient) getProjectGroups() ([]string, error) {
+
+	request := &ldap.SearchRequest{
+		BaseDN:       c.GroupBase,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldap.NeverDerefAliases,
+		TimeLimit:    30,
+		TypesOnly:    false,
+		Filter:       "(|(objectClass=groupOfNames)(objectClass=group))", // filter default format : (&(objectClass=groupOfNames)(member=%s))
+		Attributes:   []string{"cn"},
+	}
+
+	results, err := c.Query(*request)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error searching all groups")
+	}
+
+	var groups []string
+	for _, entry := range results {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+	return groups, nil
+}
 
 // Connect to LDAP and bind with given credentials
 func (c *LDAPClient) ldapConnectAndBind(login string, password string) (*ldap.Conn, error) {
@@ -80,33 +116,4 @@ func (c *LDAPClient) Query(request ldap.SearchRequest) ([]*ldap.Entry, error) {
 		return nil, fmt.Errorf("error searching in LDAP with request %v, %v", request, err)
 	}
 	return results.Entries, err
-}
-
-func (c *LDAPClient) getGroupsContainingUser(userDN string) ([]*ldap.Entry, error) {
-
-	filter := fmt.Sprintf("(&(|(objectClass=groupOfNames)(objectClass=group))(member=%s))", userDN)
-	slog.Info(fmt.Sprintf("LDAP_FILTER:%s", filter))
-	var res []*ldap.Entry
-
-	timer := prometheus.NewTimer(LdapGroupsRequestDurationHistogram)
-	for _, groupbase := range c.EligibleGroupsParents {
-		req := ldap.NewSearchRequest(
-			groupbase,
-			ldap.ScopeWholeSubtree,
-			ldap.NeverDerefAliases, 0, 30, false,
-			// We add group filters to extra only the needed subgroups
-			filter,
-			[]string{"cn"},
-			nil,
-		)
-
-		queryRes, err := c.Query(*req)
-		if err != nil {
-			return nil, errors.Wrap(err, "error querying for group memberships")
-		}
-		res = append(res, queryRes...)
-	}
-	timer.ObserveDuration()
-	LdapGroupsHistogram.Observe(float64(len(res)))
-	return res, nil
 }

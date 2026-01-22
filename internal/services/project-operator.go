@@ -10,9 +10,9 @@ import (
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	kubernetes "k8s.io/client-go/kubernetes"
 )
 
 // Watch NetworkPolicyConfig, which is a config object for namespace network bubble
@@ -51,18 +51,17 @@ func WatchProjects() cache.Store {
 
 	return store
 }
-func projectCreated(obj interface{}) {
+func projectCreated(obj any) {
 	project := obj.(*cagipv1.Project)
 	slog.Info("project has been created, creating associated resources", "project", project.Name)
 	createOrUpdateProjectResources(project)
 }
 
-func projectUpdated(old interface{}, new interface{}) {
+func projectUpdated(old any, new any) {
 	project := new.(*cagipv1.Project)
 	slog.Info("project has been updated, creating associated resources", "project", project.Name)
 	createOrUpdateProjectResources(project)
 }
-
 
 func createOrUpdateProjectResources(project *cagipv1.Project) {
 
@@ -103,7 +102,7 @@ func createOrUpdateProjectResources(project *cagipv1.Project) {
 
 }
 
-func projectDeleted(obj interface{}) {
+func projectDeleted(obj any) {
 	project := obj.(*cagipv1.Project)
 	slog.Info("Operator: a project was deleted, cleaning up associated resources", "namespace", project.Name)
 	deleteProjectResources(project)
@@ -189,6 +188,5 @@ func deleteRoleBindings(namespaceName string) error {
 	// Delete all role bindings in the namespace that were created by Kubi
 	return clientSet.RbacV1().RoleBindings(namespaceName).DeleteCollection(context.TODO(), metav1.DeleteOptions{}, metav1.ListOptions{
 		LabelSelector: "creator=kubi",
-	})		
+	})
 }
-
