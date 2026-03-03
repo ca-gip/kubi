@@ -31,13 +31,13 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - uses: azure/setup-helm@v4.3.0
         id: install
 
       - name: Install helm plugin helm-images
-        run: helm plugin install https://github.com/nikhilsbhat/helm-images       
+        run: helm plugin install --verify=false https://github.com/nikhilsbhat/helm-images       
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v6
