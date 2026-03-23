@@ -26,7 +26,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/services"
@@ -305,9 +304,9 @@ var _ = Describe("Manager", Ordered, func() {
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "ops:masters"},
 
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: testProject.Spec.SourceEntity},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_APP_GROUPBASE"])},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_CUSTOMER_OPS_GROUPBASE"])},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_OPS_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "CAGIP_MEMBERS"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "DL_KUB_CAGIPHP_OPS"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "CLOUDOPS_KUBERNETES"},
 				}
 				g.Expect(nsAdminSa.Subjects).To(Equal(nsAdminSaSubjects), "for rb namespaced-admin, expected binding to groups projet-toto-development:admin application:master and ops:masters  - TODO")
 
@@ -322,7 +321,7 @@ var _ = Describe("Manager", Ordered, func() {
 
 				viewSaSubjects := []rbacv1.Subject{
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "application:view"},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_VIEWER_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "DL_KUB_CAGIPHP_VIEW"},
 				}
 				g.Expect(viewSa.Subjects).To(Equal(viewSaSubjects), "for rb view, expected binding to the group application:view - TODO")
 			}
@@ -764,52 +763,52 @@ var _ = Describe("Manager", Ordered, func() {
 
 	// Remove the kerrors import and replace the checks
 
-    Context("Project deletion", func() {
-        It("should delete all project resources when project is deleted", func() {
-            By("verifying that all resources exist before deletion")
-            verifyAllResourcesExist := func(g Gomega) {
-                // Check namespace exists
-                _, err := clientset.CoreV1().Namespaces().Get(context.TODO(), testProjectName, v1.GetOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Namespace should exist before deletion")
+	Context("Project deletion", func() {
+		It("should delete all project resources when project is deleted", func() {
+			By("verifying that all resources exist before deletion")
+			verifyAllResourcesExist := func(g Gomega) {
+				// Check namespace exists
+				_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), testProjectName, v1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Namespace should exist before deletion")
 
-                // Check service account exists
-                _, err = clientset.CoreV1().ServiceAccounts(testProjectName).Get(context.TODO(), "service", v1.GetOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Service account should exist before deletion")
+				// Check service account exists
+				_, err = clientset.CoreV1().ServiceAccounts(testProjectName).Get(context.TODO(), "service", v1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Service account should exist before deletion")
 
-                // Check role bindings exist
-                rbs, err := clientset.RbacV1().RoleBindings(testProjectName).List(context.TODO(), v1.ListOptions{
-                    LabelSelector: "creator=kubi",
-                })
-                g.Expect(err).NotTo(HaveOccurred(), "Should be able to list role bindings")
-                g.Expect(len(rbs.Items)).To(BeNumerically(">", 0), "Role bindings should exist before deletion")
+				// Check role bindings exist
+				rbs, err := clientset.RbacV1().RoleBindings(testProjectName).List(context.TODO(), v1.ListOptions{
+					LabelSelector: "creator=kubi",
+				})
+				g.Expect(err).NotTo(HaveOccurred(), "Should be able to list role bindings")
+				g.Expect(len(rbs.Items)).To(BeNumerically(">", 0), "Role bindings should exist before deletion")
 
-                // Check network policy exists (if network policy is enabled)
-                _, err = clientset.NetworkingV1().NetworkPolicies(testProjectName).Get(context.TODO(), "kubi-default", v1.GetOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Network policy should exist before deletion")
-            }
+				// Check network policy exists (if network policy is enabled)
+				_, err = clientset.NetworkingV1().NetworkPolicies(testProjectName).Get(context.TODO(), "kubi-default", v1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Network policy should exist before deletion")
+			}
 
-            By("deleting the project")
-            deleteProject := func(g Gomega) {
-                err := kubiclient.CagipV1().Projects().Delete(context.TODO(), testProjectName, v1.DeleteOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Failed to delete project")
-            }
+			By("deleting the project")
+			deleteProject := func(g Gomega) {
+				err := kubiclient.CagipV1().Projects().Delete(context.TODO(), testProjectName, v1.DeleteOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to delete project")
+			}
 
-            By("verifying that all resources are cleaned up after project deletion")
-            verifyAllResourcesDeleted := func(g Gomega) {
-                // Check namespace is deleted
-                _, err := clientset.CoreV1().Namespaces().Get(context.TODO(), testProjectName, v1.GetOptions{})
-                g.Expect(err).To(HaveOccurred(), "Namespace should be deleted")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Namespace should return not found error")
+			By("verifying that all resources are cleaned up after project deletion")
+			verifyAllResourcesDeleted := func(g Gomega) {
+				// Check namespace is deleted
+				_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), testProjectName, v1.GetOptions{})
+				g.Expect(err).To(HaveOccurred(), "Namespace should be deleted")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Namespace should return not found error")
 
-                // Check service account is deleted
-                _, err = clientset.CoreV1().ServiceAccounts(testProjectName).Get(context.TODO(), "service", v1.GetOptions{})
-                g.Expect(err).To(HaveOccurred(), "Service account should be deleted")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Service account should return not found error")
+				// Check service account is deleted
+				_, err = clientset.CoreV1().ServiceAccounts(testProjectName).Get(context.TODO(), "service", v1.GetOptions{})
+				g.Expect(err).To(HaveOccurred(), "Service account should be deleted")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Service account should return not found error")
 
-                // Check network policy is deleted
-                _, err = clientset.NetworkingV1().NetworkPolicies(testProjectName).Get(context.TODO(), "kubi-default", v1.GetOptions{})
-                g.Expect(err).To(HaveOccurred(), "Network policy should be deleted")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Network policy should return not found error")
+				// Check network policy is deleted
+				_, err = clientset.NetworkingV1().NetworkPolicies(testProjectName).Get(context.TODO(), "kubi-default", v1.GetOptions{})
+				g.Expect(err).To(HaveOccurred(), "Network policy should be deleted")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Network policy should return not found error")
 				//Check role bindings are deleted
 				rbs, err := clientset.RbacV1().RoleBindings(testProjectName).List(context.TODO(), v1.ListOptions{
 					LabelSelector: "creator=kubi",
@@ -818,97 +817,97 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(len(rbs.Items)).To(Equal(0), "Role bindings should be deleted")
 			}
 
-            By("verifying project is removed from Kubernetes")
-            verifyProjectDeleted := func(g Gomega) {
-                _, err := kubiclient.CagipV1().Projects().Get(context.TODO(), testProjectName, v1.GetOptions{})
-                g.Expect(err).To(HaveOccurred(), "Project should be deleted from Kubernetes")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Project should return not found error")
-            }
+			By("verifying project is removed from Kubernetes")
+			verifyProjectDeleted := func(g Gomega) {
+				_, err := kubiclient.CagipV1().Projects().Get(context.TODO(), testProjectName, v1.GetOptions{})
+				g.Expect(err).To(HaveOccurred(), "Project should be deleted from Kubernetes")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Project should return not found error")
+			}
 
-            Eventually(verifyAllResourcesExist).Should(Succeed())
-            Eventually(deleteProject).Should(Succeed())
-            Eventually(verifyAllResourcesDeleted).Should(Succeed())
-            Eventually(verifyProjectDeleted).Should(Succeed())
-        })
+			Eventually(verifyAllResourcesExist).Should(Succeed())
+			Eventually(deleteProject).Should(Succeed())
+			Eventually(verifyAllResourcesDeleted).Should(Succeed())
+			Eventually(verifyProjectDeleted).Should(Succeed())
+		})
 
-        It("should handle deletion of non-existent project gracefully", func() {
-            By("attempting to delete a non-existent project")
-            deleteNonExistentProject := func(g Gomega) {
-                err := kubiclient.CagipV1().Projects().Delete(context.TODO(), "non-existent-project", v1.DeleteOptions{})
-                g.Expect(err).To(HaveOccurred(), "Deleting non-existent project should return error")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Deleting non-existent project should return NotFound error")
-            }
+		It("should handle deletion of non-existent project gracefully", func() {
+			By("attempting to delete a non-existent project")
+			deleteNonExistentProject := func(g Gomega) {
+				err := kubiclient.CagipV1().Projects().Delete(context.TODO(), "non-existent-project", v1.DeleteOptions{})
+				g.Expect(err).To(HaveOccurred(), "Deleting non-existent project should return error")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Deleting non-existent project should return NotFound error")
+			}
 
-            Eventually(deleteNonExistentProject).Should(Succeed())
-        })
+			Eventually(deleteNonExistentProject).Should(Succeed())
+		})
 
-        It("should handle partial deletion failures gracefully", func() {
-            By("creating a test project for deletion testing")
-            createTestProject := func(g Gomega) {
-                testProject := &kubiv1.Project{
-                    ObjectMeta: v1.ObjectMeta{
-                        Name: "test-deletion-project",
-                        Labels: map[string]string{
-                            "creator": "kubi",
-                        },
-                    },
-                    Spec: kubiv1.ProjectSpec{
-                        Environment:  "development",
-                        Project:      "test-deletion",
-                        SourceEntity: "TEST_GROUP",
-                        Stages:       []string{"scratch"},
-                        Tenant:       "cagip",
-                    },
-                }
+		It("should handle partial deletion failures gracefully", func() {
+			By("creating a test project for deletion testing")
+			createTestProject := func(g Gomega) {
+				testProject := &kubiv1.Project{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "test-deletion-project",
+						Labels: map[string]string{
+							"creator": "kubi",
+						},
+					},
+					Spec: kubiv1.ProjectSpec{
+						Environment:  "development",
+						Project:      "test-deletion",
+						SourceEntity: "TEST_GROUP",
+						Stages:       []string{"scratch"},
+						Tenant:       "cagip",
+					},
+				}
 
-                _, err := kubiclient.CagipV1().Projects().Create(context.TODO(), testProject, v1.CreateOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Failed to create test project")
-            }
+				_, err := kubiclient.CagipV1().Projects().Create(context.TODO(), testProject, v1.CreateOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to create test project")
+			}
 
-            By("waiting for resources to be created")
-            waitForResourceCreation := func(g Gomega) {
-                // Wait for namespace to be created
-                _, err := clientset.CoreV1().Namespaces().Get(context.TODO(), "test-deletion-project", v1.GetOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Test namespace should be created")
+			By("waiting for resources to be created")
+			waitForResourceCreation := func(g Gomega) {
+				// Wait for namespace to be created
+				_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), "test-deletion-project", v1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Test namespace should be created")
 
-                // Wait for service account to be created
-                _, err = clientset.CoreV1().ServiceAccounts("test-deletion-project").Get(context.TODO(), "service", v1.GetOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Test service account should be created")
-            }
+				// Wait for service account to be created
+				_, err = clientset.CoreV1().ServiceAccounts("test-deletion-project").Get(context.TODO(), "service", v1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Test service account should be created")
+			}
 
-            By("manually deleting some resources to simulate partial deletion")
-            simulatePartialDeletion := func(g Gomega) {
-                // Delete the service account manually to simulate a scenario where not all resources can be deleted
-                err := clientset.CoreV1().ServiceAccounts("test-deletion-project").Delete(context.TODO(), "service", v1.DeleteOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Should be able to manually delete service account")
-            }
+			By("manually deleting some resources to simulate partial deletion")
+			simulatePartialDeletion := func(g Gomega) {
+				// Delete the service account manually to simulate a scenario where not all resources can be deleted
+				err := clientset.CoreV1().ServiceAccounts("test-deletion-project").Delete(context.TODO(), "service", v1.DeleteOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Should be able to manually delete service account")
+			}
 
-            By("deleting the project and verifying graceful handling")
-            deleteProjectGracefully := func(g Gomega) {
-                err := kubiclient.CagipV1().Projects().Delete(context.TODO(), "test-deletion-project", v1.DeleteOptions{})
-                g.Expect(err).NotTo(HaveOccurred(), "Should be able to delete project even with missing resources")
-            }
+			By("deleting the project and verifying graceful handling")
+			deleteProjectGracefully := func(g Gomega) {
+				err := kubiclient.CagipV1().Projects().Delete(context.TODO(), "test-deletion-project", v1.DeleteOptions{})
+				g.Expect(err).NotTo(HaveOccurred(), "Should be able to delete project even with missing resources")
+			}
 
-            By("verifying cleanup completes despite missing resources")
-            verifyGracefulCleanup := func(g Gomega) {
-                // The namespace should still be deleted
-                _, err := clientset.CoreV1().Namespaces().Get(context.TODO(), "test-deletion-project", v1.GetOptions{})
-                g.Expect(err).To(HaveOccurred(), "Namespace should be deleted despite partial failures")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Namespace should return not found error")
+			By("verifying cleanup completes despite missing resources")
+			verifyGracefulCleanup := func(g Gomega) {
+				// The namespace should still be deleted
+				_, err := clientset.CoreV1().Namespaces().Get(context.TODO(), "test-deletion-project", v1.GetOptions{})
+				g.Expect(err).To(HaveOccurred(), "Namespace should be deleted despite partial failures")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Namespace should return not found error")
 
-                // Project should be removed
-                _, err = kubiclient.CagipV1().Projects().Get(context.TODO(), "test-deletion-project", v1.GetOptions{})
-                g.Expect(err).To(HaveOccurred(), "Project should be deleted")
-                g.Expect(err.Error()).To(ContainSubstring("not found"), "Project should return not found error")
-            }
+				// Project should be removed
+				_, err = kubiclient.CagipV1().Projects().Get(context.TODO(), "test-deletion-project", v1.GetOptions{})
+				g.Expect(err).To(HaveOccurred(), "Project should be deleted")
+				g.Expect(err.Error()).To(ContainSubstring("not found"), "Project should return not found error")
+			}
 
-            Eventually(createTestProject).Should(Succeed())
-            Eventually(waitForResourceCreation).Should(Succeed())
-            Eventually(simulatePartialDeletion).Should(Succeed())
-            Eventually(deleteProjectGracefully).Should(Succeed())
-            Eventually(verifyGracefulCleanup).Should(Succeed())
-        })
-    })
+			Eventually(createTestProject).Should(Succeed())
+			Eventually(waitForResourceCreation).Should(Succeed())
+			Eventually(simulatePartialDeletion).Should(Succeed())
+			Eventually(deleteProjectGracefully).Should(Succeed())
+			Eventually(verifyGracefulCleanup).Should(Succeed())
+		})
+	})
 })
 
 // serviceAccountToken returns a token for the specified service account in the given namespace.
