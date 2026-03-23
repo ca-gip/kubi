@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/ca-gip/kubi/internal/utils"
@@ -115,17 +116,17 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     strings.ToUpper(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
+					Name:     getGroupCN(utils.Config.Ldap.AppMasterGroupBase), // the equivalent of application master (appops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     strings.ToUpper(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
+					Name:     getGroupCN(utils.Config.Ldap.CustomerOpsGroupBase), // the equivalent of application master (customerops)
 				},
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     strings.ToUpper(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
+					Name:     getGroupCN(utils.Config.Ldap.OpsMasterGroupBase), // the equivalent of ops master
 				},
 			},
 		},
@@ -141,7 +142,7 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 				{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "Group",
-					Name:     strings.ToUpper(utils.Config.Ldap.ViewerGroupBase),
+					Name:     getGroupCN(utils.Config.Ldap.ViewerGroupBase),
 				},
 			},
 		},
@@ -183,4 +184,14 @@ func generateRoleBindings(project *cagipv1.Project, defaultServiceAccountRole st
 		return fmt.Errorf("encountered the following errors in rolebindings create or update: %v", errors)
 	}
 	return nil
+}
+
+func getGroupCN(ldapDN string) string {
+	// Example: "CN=group1,OU=groups,DC=example,DC=com" -> "group1"
+	pat := regexp.MustCompile(`CN=([^,]+)`)
+	matches := pat.FindStringSubmatch(ldapDN)
+	if len(matches) > 1 {
+		return strings.ToUpper(matches[1])
+	}
+	return strings.ToUpper(ldapDN)
 }

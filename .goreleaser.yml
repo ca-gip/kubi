@@ -22,7 +22,7 @@ builds:
       - -trimpath
 
 dockers:
-  - id: docker-operator
+  - id: docker-operator-amd64
     ids:
       - operator
     use: buildx
@@ -36,8 +36,26 @@ dockers:
       - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
+    goarch: amd64
     image_templates:
     - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-operator:{{.ShortCommit}}-amd64"
+  - id: docker-operator-arm64
+    ids:
+      - operator
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--build-arg=BINARYNAME=operator"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}-operator"
+      - "--label=org.opencontainers.image.source=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    goarch: arm64
+    image_templates:
+    - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-operator:{{.ShortCommit}}-arm64"
 
 snapshot:
   version_template: "{{ .ShortCommit }}"

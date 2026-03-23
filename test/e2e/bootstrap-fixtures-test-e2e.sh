@@ -89,7 +89,8 @@ EOF
 
 # Set deployments images
 COMMIT_SHA="$(git rev-parse --short HEAD)"
-IMG_VERSION="${COMMIT_SHA}-amd64"
+PLATFORM="$(go env GOARCH)"
+IMG_VERSION="${COMMIT_SHA}-${PLATFORM}"
 IMG_REPO="ghcr.io/ca-gip"
 
 ORG=ca-gip goreleaser release --clean --snapshot

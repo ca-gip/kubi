@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	kubiv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
@@ -288,9 +287,9 @@ var _ = Describe("Manager", Ordered, func() {
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "ops:masters"},
 
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: testProject.Spec.SourceEntity},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_APP_GROUPBASE"])},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_CUSTOMER_OPS_GROUPBASE"])},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_OPS_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "CAGIP_MEMBERS"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "DL_KUB_CAGIPHP_OPS"},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "CLOUDOPS_KUBERNETES"},
 				}
 				g.Expect(nsAdminSa.Subjects).To(Equal(nsAdminSaSubjects), "for rb namespaced-admin, expected binding to groups projet-toto-development:admin application:master and ops:masters  - TODO")
 
@@ -305,7 +304,7 @@ var _ = Describe("Manager", Ordered, func() {
 
 				viewSaSubjects := []rbacv1.Subject{
 					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "application:view"},
-					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: strings.ToUpper(kubiConfig.Data["LDAP_VIEWER_GROUPBASE"])},
+					{APIGroup: "rbac.authorization.k8s.io", Kind: "Group", Name: "DL_KUB_CAGIPHP_VIEW"},
 				}
 				g.Expect(viewSa.Subjects).To(Equal(viewSaSubjects), "for rb view, expected binding to the group application:view - TODO")
 			}

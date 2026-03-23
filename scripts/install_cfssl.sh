@@ -20,10 +20,11 @@ sudo mkdir -p "$CFSSL_DIR"
 docker pull cloudflare/cfssl
 
 # Run CFSSL inside a Docker container to download and store binaries in /opt/cfssl
+PLATFORM="$(go env GOARCH)"
 docker run --rm -v "$CFSSL_DIR":/cfssl cloudflare/cfssl \
-    sh -c "wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_amd64 -O /cfssl/cfssljson && \
+    sh -c "wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssljson_${VNUMBER}_linux_${PLATFORM} -O /cfssl/cfssljson && \
            chmod +x /cfssl/cfssljson && \
-           wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_amd64 -O /cfssl/cfssl && \
+           wget https://github.com/cloudflare/cfssl/releases/download/${VERSION}/cfssl_${VNUMBER}_linux_${PLATFORM} -O /cfssl/cfssl && \
            chmod +x /cfssl/cfssl && \
            cfssljson -version && \
            /cfssl/cfssl -version"
