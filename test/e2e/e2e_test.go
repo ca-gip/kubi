@@ -25,11 +25,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-<<<<<<< HEAD
-	"regexp"
-=======
-	"strings"
->>>>>>> 0983c6b (Clean up obsolete features and add Portal features)
 	"time"
 
 	kubiv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
