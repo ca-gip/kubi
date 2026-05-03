@@ -24,7 +24,9 @@ func main() {
 	}
 
 	ldapClient := ldap.NewLDAPClient(config.Ldap)
-
+	//1- Watch for new Project Ldap Group
+	// ==> Create Project.cagip to store project config (ldag group etc)
+	// ==> Project.openshift ==> create namespace
 	go services.RefreshProjectsFromLdap(ldapClient, config.Whitelist)
 
 	utils.Config = config
@@ -40,8 +42,12 @@ func main() {
 		slog.Info("endpoint not routed", "method", req.Method, "url", req.URL.String())
 	})
 	router.Handle("/metrics", promhttp.Handler())
+	// 2- Watch for namespace creation
+	// ==> On project namespace creation, create rolebinding, netpol, etc
 
-	services.WatchProjects()
+	// 2.1 ==> Setup informers to watch for namespaces
+
+	go services.WatchNamespaces()
 
 	// TODO, get rid of the guard and auto watch netpol config if that's
 	// relevant to keep.

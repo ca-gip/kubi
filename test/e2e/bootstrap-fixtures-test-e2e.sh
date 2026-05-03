@@ -33,7 +33,7 @@ kubectl apply -f ${INSTALL_FOLDER_LDAP}/deploy.yaml
 # fails to open a connection and waits for a new reconciliation loop to occur, 
 # which makes the fail test, due to 30s timeout (in e2e_test.go file.)
 
-sleep 30
+sleep 50
 
 # COMMAND TO CHECK THAT OPENLDAP IS DEPLOYED AND HAS GOOD CONF
 # <<<<ldapsearch -x -H ldap://openldap.kube-system.svc.cluster.local -b dc=example,dc=org -D "cn=admin,dc=example,dc=org" -w Not@SecurePassw0rd>>>>

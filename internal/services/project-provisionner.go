@@ -171,11 +171,13 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: projectInfos.Namespace(),
 			Labels: map[string]string{
-				"creator": "kubi",
+				"creator":     "kubi",
+				"type":        "customer",
+				"environment": projectInfos.Environment,
 			},
 		},
 	}
-	fmt.Printf("%v", osProject)
+
 	projClientset, err := projectclientv1.NewForConfig(kconfig)
 	if err != nil {
 		slog.Error("failed to get openshift project clientset.", "error", err.Error())
