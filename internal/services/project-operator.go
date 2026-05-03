@@ -64,6 +64,7 @@ func projectUpdated(old any, new any) {
 }
 
 func createOrUpdateProjectResources(project *cagipv1.Project) {
+	/* In Portal clusters, namespaces are managed by the openshift's Project CRD
 
 	if err := generateNamespace(project); err != nil {
 		slog.Error("generate namespace failed", "error", err)
@@ -72,7 +73,7 @@ func createOrUpdateProjectResources(project *cagipv1.Project) {
 	}
 	slog.Debug("namespace created", "namespace", project.Name)
 	NamespaceCreation.WithLabelValues("ok", project.Name).Inc()
-
+	*/
 	// TODO: Get rid of the guard, and automatically add netpol
 	if utils.Config.NetworkPolicy {
 		err := generateNetworkPolicy(project.Name, nil)
@@ -138,24 +139,17 @@ func deleteProjectResources(project *cagipv1.Project) {
 		}
 	}
 
-	// Delete namespace last
-	if err := deleteNamespace(project.Name); err != nil {
-		slog.Error("failed to delete namespace", "namespace", project.Name, "error", err)
-		NamespaceCreation.WithLabelValues("delete_error", project.Name).Inc()
-	} else {
-		slog.Debug("namespace deleted", "namespace", project.Name)
-		NamespaceCreation.WithLabelValues("deleted", project.Name).Inc()
-	}
-}
-
-func deleteNamespace(namespaceName string) error {
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, err := kubernetes.NewForConfig(kconfig)
-	if err != nil {
-		return err
-	}
-
-	return clientSet.CoreV1().Namespaces().Delete(context.TODO(), namespaceName, metav1.DeleteOptions{})
+	/*
+		 In Portal clusters, namespaces are managed by the openshift's Project CRD
+			// Delete namespace last
+			if err := deleteNamespace(project.Name); err != nil {
+				slog.Error("failed to delete namespace", "namespace", project.Name, "error", err)
+				NamespaceCreation.WithLabelValues("delete_error", project.Name).Inc()
+			} else {
+				slog.Debug("namespace deleted", "namespace", project.Name)
+				NamespaceCreation.WithLabelValues("deleted", project.Name).Inc()
+			}
+	*/
 }
 
 func deleteAppServiceAccount(namespaceName string) error {

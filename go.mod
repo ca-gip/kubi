@@ -19,6 +19,8 @@ require (
 	k8s.io/pod-security-admission v0.36.2
 )
 
+require github.com/Masterminds/semver/v3 v3.4.0 // indirect
+
 require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

@@ -2,23 +2,23 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
-	"reflect"
 	"slices"
+	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	corev1 "k8s.io/api/core/v1"
-	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	kubernetes "k8s.io/client-go/kubernetes"
-	v13 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	podSecurity "k8s.io/pod-security-admission/api"
 )
 
@@ -30,65 +30,52 @@ var NamespaceCreation = promauto.NewCounterVec(prometheus.CounterOpts{
 
 // generateNamespace from a name
 // If it doesn't exist or the number of labels is different from what it should be
-func generateNamespace(project *cagipv1.Project) (err error) {
-	if project == nil {
-		return errors.New("project reference is empty")
-	}
 
-	kconfig, _ := rest.InClusterConfig()
-	clientSet, _ := kubernetes.NewForConfig(kconfig)
-	api := clientSet.CoreV1()
-
-	ns, errNs := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
-
-	isNsUptodate := reflect.DeepEqual(ns.Labels, generateNamespaceLabels(project))
-
-	switch {
-	case errNs != nil && kerror.IsNotFound(errNs):
-		slog.Info("creating namespace", "namespace", project.Name)
-		return createNamespace(project, api)
-	case errNs != nil:
-		return errNs
-	case !isNsUptodate:
-		slog.Info("updating namespace", "namespace", project.Name)
-		return updateExistingNamespace(project, api)
-	default:
-		return nil
-	}
-}
-
-func createNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
-	ns := &corev1.Namespace{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Namespace",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   project.Name,
-			Labels: generateNamespaceLabels(project),
-		},
-	}
-	_, err := api.Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
+func WatchNamespaces() {
+	kconfig, err := rest.InClusterConfig()
 	if err != nil {
-		return fmt.Errorf("failed to api call create namespace on ns %v, %v", project.Name, err)
-	}
-	return err
-}
-
-func updateExistingNamespace(project *cagipv1.Project, api v13.CoreV1Interface) error {
-	ns, errns := api.Namespaces().Get(context.TODO(), project.Name, metav1.GetOptions{})
-	if errns != nil {
-		return fmt.Errorf("k8s api error while fetching ns %v for its update, %v", ns, errns)
+		slog.Error("failed to create in cluster config", "error", err)
+		return
 	}
 
-	ns.Name = project.Name
-	ns.ObjectMeta.Labels = generateNamespaceLabels(project)
-
-	_, err := api.Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+	clientset, err := kubernetes.NewForConfig(kconfig)
 	if err != nil {
-		return fmt.Errorf("k8s api error while updating ns %v, %v", ns, errns)
+		slog.Error("failed to create kubernetes clientset", "error", err)
+		return
 	}
-	return nil
+
+	cagipProjectClient, err := versioned.NewForConfig(kconfig)
+	if err != nil {
+		slog.Error("failed to create cagip projects clientset", "error", err)
+		return
+	}
+	tweakListOptions := func(options *metav1.ListOptions) {
+		options.LabelSelector = "creator=kubi"
+	}
+
+	factory := informers.NewSharedInformerFactoryWithOptions(clientset, 10*time.Minute,
+		informers.WithTweakListOptions(tweakListOptions))
+
+	nsInformer := factory.Core().V1().Namespaces()
+	nsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    nsCreated(cagipProjectClient),
+		DeleteFunc: nsDeleted(cagipProjectClient),
+		UpdateFunc: nsUpdated(cagipProjectClient),
+	})
+
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	factory.Start(stopCh)
+
+	// Wait for cache sync
+	if !cache.WaitForCacheSync(stopCh, nsInformer.Informer().HasSynced) {
+		panic("failed to sync cache")
+	}
+
+	fmt.Println("Informer synced, watching for ns changes...")
+
+	// Keep running
+	<-stopCh
 }
 
 // Generate CustomLabels that should be applied on Kubi's Namespaces
@@ -113,4 +100,44 @@ func GetPodSecurityStandardName(namespace string) string {
 		return string(podSecurity.LevelPrivileged)
 	}
 	return string(utils.Config.PodSecurityAdmissionEnforcement)
+}
+
+func nsCreated(cagipProjectClientset *versioned.Clientset) func(obj any) {
+
+	return func(obj any) {
+		ns := obj.(*corev1.Namespace)
+		slog.Info("project ns has been created , creating associated resources", "ns", ns.Name)
+		project, err := cagipProjectClientset.CagipV1().Projects().Get(context.Background(), ns.Name, metav1.GetOptions{})
+		if err != nil {
+			slog.Error("failed to get projects", "error", err)
+			return
+		}
+		createOrUpdateProjectResources(project)
+	}
+}
+
+func nsUpdated(cagipProjectClientset *versioned.Clientset) func(old any, new any) {
+	return func(old any, new any) {
+		ns := new.(*corev1.Namespace)
+		slog.Info("project ns has been updated, creating associated resources", "ns", ns.Name)
+		project, err := cagipProjectClientset.CagipV1().Projects().Get(context.Background(), ns.Name, metav1.GetOptions{})
+		if err != nil {
+			slog.Error("failed to get projects", "error", err)
+			return
+		}
+		createOrUpdateProjectResources(project)
+	}
+}
+
+func nsDeleted(cagipProjectClientset *versioned.Clientset) func(obj any) {
+
+	return func(obj any) {
+		ns := obj.(*corev1.Namespace)
+		slog.Info("project ns has been deleted , creating associated resources", "ns", ns.Name)
+		err := cagipProjectClientset.CagipV1().Projects().Delete(context.Background(), ns.Name, metav1.DeleteOptions{})
+		if err != nil {
+			slog.Error("failed to delete project", "error", err, "project", ns.Name)
+			return
+		}
+	}
 }
