@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/ca-gip/kubi/internal/utils"
 	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
@@ -13,6 +14,7 @@ import (
 	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -149,6 +151,51 @@ func generateNetworkPolicy(namespace string, networkPolicyConfig *cagipv1.Networ
 	default:
 		slog.Debug("updating netpol", "namespace", namespace)
 		_, err := api.NetworkPolicies(namespace).Update(context.TODO(), networkpolicy, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to update network policy in ns %v: %v", namespace, err)
+		}
+	}
+	return nil
+}
+
+func generateNetworkPolicyFromTemplate(namespace string) error {
+
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		return fmt.Errorf("failed to create in cluster config %v", err)
+	}
+	netpolTemplateFile, err := os.Open(os.Getenv("NETPOL_TEMPLATE_PATH"))
+	if err != nil {
+		return fmt.Errorf("failed to read network policy template %v", err)
+	}
+
+	var netpolTemplate networkingv1.NetworkPolicy
+	if err := yaml.NewYAMLOrJSONDecoder(netpolTemplateFile, 1000).Decode(&netpolTemplate); err != nil {
+		return fmt.Errorf("failed to decode network policy template %v", err)
+	}
+
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes clientset %v", err)
+	}
+
+	api := clientSet.NetworkingV1()
+	_, errNetpol := api.NetworkPolicies(namespace).Get(context.TODO(), utils.KubiDefaultNetworkPolicyName, metav1.GetOptions{})
+
+	netpolTemplate.Name = utils.KubiDefaultNetworkPolicyName
+	netpolTemplate.Namespace = namespace
+	switch {
+	case kerror.IsNotFound(errNetpol):
+		slog.Debug("creating netpol", "namespace", namespace)
+		_, err := api.NetworkPolicies(namespace).Create(context.TODO(), &netpolTemplate, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create network policy in ns %v: %v", namespace, err)
+		}
+	case errNetpol != nil:
+		return fmt.Errorf("failed to create network policy in ns %v: %v", namespace, errNetpol)
+	default:
+		slog.Debug("updating netpol", "namespace", namespace)
+		_, err := api.NetworkPolicies(namespace).Update(context.TODO(), &netpolTemplate, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to update network policy in ns %v: %v", namespace, err)
 		}

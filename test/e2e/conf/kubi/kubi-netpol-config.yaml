@@ -1,21 +1,58 @@
-apiVersion: "cagip.github.com/v1"
-kind: NetworkPolicyConfig
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: kubi-default
-spec:
-  egress:
-    # ports allowed for egress
-    ports:
-      - 636
-      - 389
-      - 123
-      - 53
-    # cidrs allowed for egress
-    # for ipvs, add the network used by calico, for kubernetes svc in default ns
-    cidrs:
-      - 172.20.0.0/16
-  ingress:
-    # namespaces allowed for ingress rules ( here only nginx )
-    namespaces:
-      - ingress-nginx
-      - monitoring
+  name: kubi-netpol-template
+  namespace: kube-system
+data:
+  networkpolicytemplate.yaml: |-
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: kubi-default
+    spec:
+      egress:
+      - ports:
+        - port: 636
+          protocol: UDP
+        - port: 636
+          protocol: TCP
+        - port: 389
+          protocol: UDP
+        - port: 389
+          protocol: TCP
+        - port: 123
+          protocol: UDP
+        - port: 123
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+        - port: 53
+          protocol: UDP
+      - to:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              component: kube-apiserver
+              tier: control-plane
+        - ipBlock:
+            cidr: 172.20.0.0/16
+      ingress:
+      - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+          podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+          podSelector: {}
+      podSelector: {}
+      policyTypes:
+      - Ingress
+      - Egress

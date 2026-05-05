@@ -22,6 +22,10 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8002
+          volumeMounts:
+            - name: kubi-netpol-template
+              mountPath: "/etc/kubi/netpol"
+              readOnly: true
 #          volumeMounts:
 #            - name: kubi-tls
 #              mountPath: "/var/run/secrets/certs"
@@ -35,6 +39,12 @@ spec:
                 secretKeyRef:
                   name: kubi-secret
                   key: ldap_passwd
+            - name: NETPOL_TEMPLATE_PATH
+              value: "/etc/kubi/netpol/networkpolicytemplate.yaml"
+      volumes:
+      - name: kubi-netpol-template
+        configMap:
+          name: kubi-netpol-template
 #      volumes:
 #        - name: kubi-tls
 #          secret:
