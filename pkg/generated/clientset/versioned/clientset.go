@@ -3,8 +3,8 @@
 package versioned
 
 import (
-	"fmt"
-	"net/http"
+	fmt "fmt"
+	http "net/http"
 
 	cagipv1 "github.com/ca-gip/kubi/pkg/generated/clientset/versioned/typed/cagip/v1"
 	discovery "k8s.io/client-go/discovery"
@@ -17,8 +17,7 @@ type Interface interface {
 	CagipV1() cagipv1.CagipV1Interface
 }
 
-// Clientset contains the clients for groups. Each group has exactly one
-// version included in a Clientset.
+// Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
 	cagipV1 *cagipv1.CagipV1Client

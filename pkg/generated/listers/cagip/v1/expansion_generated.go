@@ -4,8 +4,8 @@ package v1
 
 // NetworkPolicyConfigListerExpansion allows custom methods to be added to
 // NetworkPolicyConfigLister.
-type NetworkPolicyConfigListerExpansion any
+type NetworkPolicyConfigListerExpansion interface{}
 
 // ProjectListerExpansion allows custom methods to be added to
 // ProjectLister.
-type ProjectListerExpansion any
+type ProjectListerExpansion interface{}

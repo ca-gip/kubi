@@ -3,13 +3,13 @@
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	apiscagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	versioned "github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	internalinterfaces "github.com/ca-gip/kubi/pkg/generated/informers/externalversions/internalinterfaces"
-	v1 "github.com/ca-gip/kubi/pkg/generated/listers/cagip/v1"
+	cagipv1 "github.com/ca-gip/kubi/pkg/generated/listers/cagip/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -20,7 +20,7 @@ import (
 // NetworkPolicyConfigs.
 type NetworkPolicyConfigInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.NetworkPolicyConfigLister
+	Lister() cagipv1.NetworkPolicyConfigLister
 }
 
 type networkPolicyConfigInformer struct {
@@ -45,16 +45,28 @@ func NewFilteredNetworkPolicyConfigInformer(client versioned.Interface, resyncPe
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CagipV1().NetworkPolicyConfigs().List(context.TODO(), options)
+				return client.CagipV1().NetworkPolicyConfigs().List(context.Background(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CagipV1().NetworkPolicyConfigs().Watch(context.TODO(), options)
+				return client.CagipV1().NetworkPolicyConfigs().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CagipV1().NetworkPolicyConfigs().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.CagipV1().NetworkPolicyConfigs().Watch(ctx, options)
 			},
 		},
-		&cagipv1.NetworkPolicyConfig{},
+		&apiscagipv1.NetworkPolicyConfig{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,9 +77,9 @@ func (f *networkPolicyConfigInformer) defaultInformer(client versioned.Interface
 }
 
 func (f *networkPolicyConfigInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&cagipv1.NetworkPolicyConfig{}, f.defaultInformer)
+	return f.factory.InformerFor(&apiscagipv1.NetworkPolicyConfig{}, f.defaultInformer)
 }
 
-func (f *networkPolicyConfigInformer) Lister() v1.NetworkPolicyConfigLister {
-	return v1.NewNetworkPolicyConfigLister(f.Informer().GetIndexer())
+func (f *networkPolicyConfigInformer) Lister() cagipv1.NetworkPolicyConfigLister {
+	return cagipv1.NewNetworkPolicyConfigLister(f.Informer().GetIndexer())
 }
