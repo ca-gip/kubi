@@ -76,7 +76,7 @@ func createOrUpdateProjectResources(project *cagipv1.Project) {
 	*/
 	// TODO: Get rid of the guard, and automatically add netpol
 	if utils.Config.NetworkPolicy {
-		err := generateNetworkPolicy(project.Name, nil)
+		err := generateNetworkPolicyFromTemplate(project.Name)
 		if err != nil {
 			slog.Error("cannot generate network policy", "namespace", project.Name, "error", err)
 			NetworkPolicyCreation.WithLabelValues("error", project.Name, utils.KubiDefaultNetworkPolicyName).Inc()
