@@ -2,6 +2,6 @@
 
 package v1
 
-type NetworkPolicyConfigExpansion any
+type NetworkPolicyConfigExpansion interface{}
 
-type ProjectExpansion any
+type ProjectExpansion interface{}

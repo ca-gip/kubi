@@ -3,10 +3,10 @@
 package v1
 
 import (
-	v1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // NetworkPolicyConfigLister helps list NetworkPolicyConfigs.
@@ -14,39 +14,19 @@ import (
 type NetworkPolicyConfigLister interface {
 	// List lists all NetworkPolicyConfigs in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.NetworkPolicyConfig, err error)
+	List(selector labels.Selector) (ret []*cagipv1.NetworkPolicyConfig, err error)
 	// Get retrieves the NetworkPolicyConfig from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.NetworkPolicyConfig, error)
+	Get(name string) (*cagipv1.NetworkPolicyConfig, error)
 	NetworkPolicyConfigListerExpansion
 }
 
 // networkPolicyConfigLister implements the NetworkPolicyConfigLister interface.
 type networkPolicyConfigLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*cagipv1.NetworkPolicyConfig]
 }
 
 // NewNetworkPolicyConfigLister returns a new NetworkPolicyConfigLister.
 func NewNetworkPolicyConfigLister(indexer cache.Indexer) NetworkPolicyConfigLister {
-	return &networkPolicyConfigLister{indexer: indexer}
-}
-
-// List lists all NetworkPolicyConfigs in the indexer.
-func (s *networkPolicyConfigLister) List(selector labels.Selector) (ret []*v1.NetworkPolicyConfig, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m any) {
-		ret = append(ret, m.(*v1.NetworkPolicyConfig))
-	})
-	return ret, err
-}
-
-// Get retrieves the NetworkPolicyConfig from the index for a given name.
-func (s *networkPolicyConfigLister) Get(name string) (*v1.NetworkPolicyConfig, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1.Resource("networkpolicyconfig"), name)
-	}
-	return obj.(*v1.NetworkPolicyConfig), nil
+	return &networkPolicyConfigLister{listers.New[*cagipv1.NetworkPolicyConfig](indexer, cagipv1.Resource("networkpolicyconfig"))}
 }

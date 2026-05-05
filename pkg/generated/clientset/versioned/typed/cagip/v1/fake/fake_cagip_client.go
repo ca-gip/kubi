@@ -13,11 +13,11 @@ type FakeCagipV1 struct {
 }
 
 func (c *FakeCagipV1) NetworkPolicyConfigs() v1.NetworkPolicyConfigInterface {
-	return &FakeNetworkPolicyConfigs{c}
+	return newFakeNetworkPolicyConfigs(c)
 }
 
 func (c *FakeCagipV1) Projects() v1.ProjectInterface {
-	return &FakeProjects{c}
+	return newFakeProjects(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

@@ -24,6 +24,7 @@ deps:
 	go mod vendor
 	bash hack/update-codegen.sh
 	go mod tidy
+	go mod vendor
 
 test: bootstrap-tools
 	go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
