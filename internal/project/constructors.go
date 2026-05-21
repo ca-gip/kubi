@@ -60,7 +60,6 @@ func NewProject(group string) (*types.Project, error) {
 	}
 
 	rawNamespace, role := parts[1], parts[2]
-	fmt.Println("namespace:", rawNamespace, "role:", role)
 	projectName, environment := parseNamespace(rawNamespace)
 	project := &types.Project{
 		Project:     projectName,
