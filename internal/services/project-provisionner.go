@@ -18,6 +18,7 @@ import (
 	projectclientv1 "github.com/openshift/client-go/project/clientset/versioned"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	kerror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -62,7 +63,7 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 		}
 		// now that the project is well categorized we know that a project cannot be at the same  time to be deleted and to be generated
 		for _, project := range createdproject {
-			slog.Info("creating or updating projec", "namespace", project.Namespace())
+			slog.Info("creating or updating project", "namespace", project.Namespace())
 			generateProject(project)
 		}
 		time.Sleep(10 * time.Minute)
@@ -72,7 +73,7 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 // generate a project config or update it if exists
 func generateProject(projectInfos *types.Project) {
 	generateCagipProject(projectInfos)
-	generateOpenShiftProject(projectInfos)
+	generateOpenShiftProject_old(projectInfos)
 }
 
 func generateCagipProject(projectInfos *types.Project) {
@@ -165,6 +166,41 @@ func generateCagipProject(projectInfos *types.Project) {
 
 func generateOpenShiftProject(projectInfos *types.Project) {
 	kconfig, _ := rest.InClusterConfig()
+	projClientset, err := projectclientv1.NewForConfig(kconfig)
+	if err != nil {
+		slog.Error("failed to get openshift project clientset.", "error", err.Error())
+		return
+	}
+
+	_, err = projClientset.ProjectV1().Projects().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
+	switch {
+	case err == nil:
+		slog.Info("openshift project already exists", "namespace", projectInfos.Namespace())
+	case kerror.IsNotFound(err):
+		// if the project doesn't exist, we create it.
+		osProject := &projectv1.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: projectInfos.Namespace(),
+				Labels: map[string]string{
+					"creator":     "kubi",
+					"type":        "customer",
+					"environment": projectInfos.Environment,
+				},
+			},
+		}
+		if _, err := projClientset.ProjectV1().Projects().Create(context.Background(), osProject, metav1.CreateOptions{}); err != nil {
+			slog.Error("failed to create openshift project.", "namespace", projectInfos.Namespace(), "error", err.Error())
+		} else {
+			slog.Info("openshift project created", "namespace", projectInfos.Namespace())
+		}
+	default:
+		slog.Error("failed to get openshift project.", "error", err.Error())
+	}
+
+}
+
+func generateOpenShiftProject_old(projectInfos *types.Project) {
+	kconfig, _ := rest.InClusterConfig()
 
 	// Create Openshift Project object
 	osProject := &projectv1.Project{
@@ -182,7 +218,20 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 	if err != nil {
 		slog.Error("failed to get openshift project clientset.", "error", err.Error())
 	} else {
-		_, _ = projClientset.ProjectV1().Projects().Create(context.Background(), osProject, metav1.CreateOptions{})
+		{
+			currentProj, err := projClientset.ProjectV1().Projects().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
+			if err != nil {
+				slog.Error("failed to get current openshift project.", "namespace", projectInfos.Namespace(), "error", err.Error())
+			} else {
+				slog.Info("openshift project already exists", "namespace", projectInfos.Namespace(), "project", currentProj)
+			}
+		}
+		_, err = projClientset.ProjectV1().Projects().Create(context.Background(), osProject, metav1.CreateOptions{})
+		if err != nil {
+			slog.Error("failed to create openshift project.", "namespace", projectInfos.Namespace(), "error", err.Error())
+		} else {
+			slog.Info("openshift project created", "namespace", projectInfos.Namespace())
+		}
 	}
 }
 
