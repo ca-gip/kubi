@@ -73,7 +73,7 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 // generate a project config or update it if exists
 func generateProject(projectInfos *types.Project) {
 	generateCagipProject(projectInfos)
-	generateOpenShiftProject_old(projectInfos)
+	generateOpenShiftProject(projectInfos)
 }
 
 func generateCagipProject(projectInfos *types.Project) {
