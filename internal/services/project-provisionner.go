@@ -175,10 +175,10 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 	_, err = projClientset.ProjectV1().Projects().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		slog.Info("openshift project already exists", "namespace", projectInfos.Namespace())
+		slog.Info("openshift project already exists. Do nothing.", "namespace", projectInfos.Namespace())
 	case kerror.IsNotFound(err):
 		// if the project doesn't exist, we create it.
-		osProject := &projectv1.Project{
+		osProject := &projectv1.ProjectRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: projectInfos.Namespace(),
 				Labels: map[string]string{
@@ -187,8 +187,9 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 					"environment": projectInfos.Environment,
 				},
 			},
+			DisplayName: projectInfos.Namespace(),
 		}
-		if _, err := projClientset.ProjectV1().Projects().Create(context.Background(), osProject, metav1.CreateOptions{}); err != nil {
+		if _, err := projClientset.ProjectV1().ProjectRequests().Create(context.Background(), osProject, metav1.CreateOptions{}); err != nil {
 			slog.Error("failed to create openshift project.", "namespace", projectInfos.Namespace(), "error", err.Error())
 		} else {
 			slog.Info("openshift project created", "namespace", projectInfos.Namespace())
