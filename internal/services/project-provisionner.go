@@ -229,14 +229,12 @@ func checkLabels(expected, actual map[string]string) bool {
 func generateNamespaceLabels(namespace, projectEnv string) (labels map[string]string) {
 	nsLabels := map[string]string{
 		//"name":        namespace,
-		"type":        "customer",
-		"creator":     "kubi",
-		"environment": projectEnv,
-		/*
-			"pod-security.kubernetes.io/enforce": GetPodSecurityStandardName(namespace),
-			"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
-			"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
-		*/
+		"type":                               "customer",
+		"creator":                            "kubi",
+		"environment":                        projectEnv,
+		"pod-security.kubernetes.io/enforce": GetPodSecurityStandardName(namespace),
+		"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
+		"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
 	}
 	maps.Copy(nsLabels, utils.Config.CustomLabels)
 	return nsLabels
