@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -175,17 +176,33 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 	_, err = projClientset.ProjectV1().Projects().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		slog.Info("openshift project already exists. Do nothing.", "namespace", projectInfos.Namespace())
+		expectedLabels := generateNamespaceLabels(projectInfos.Namespace(), projectInfos.Environment)
+		k8sClientset, err := kubernetes.NewForConfig(kconfig)
+		if err != nil {
+			slog.Error("failed to create kubernetes clientset", "error", err)
+			return
+		}
+		ns, err := k8sClientset.CoreV1().Namespaces().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
+		if err != nil {
+			slog.Error("failed to get openshift namespace", "namespace", projectInfos.Namespace(), "error", err.Error())
+			return
+		}
+		if !checkLabels(expectedLabels, ns.Labels) {
+			maps.Copy(ns.Labels, expectedLabels)
+			if _, err := k8sClientset.CoreV1().Namespaces().Update(context.Background(), ns, metav1.UpdateOptions{}); err != nil {
+				slog.Error("failed to update openshift namespace.", "namespace", projectInfos.Namespace(), "error", err.Error())
+			} else {
+				slog.Info("openshift namespace updated", "namespace", projectInfos.Namespace())
+			}
+		} else {
+			slog.Info("openshift project already exists. Do nothing.", "namespace", projectInfos.Namespace())
+		}
 	case kerror.IsNotFound(err):
 		// if the project doesn't exist, we create it.
 		osProject := &projectv1.ProjectRequest{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: projectInfos.Namespace(),
-				Labels: map[string]string{
-					"creator":     "kubi",
-					"type":        "customer",
-					"environment": projectInfos.Environment,
-				},
+				Name:   projectInfos.Namespace(),
+				Labels: generateNamespaceLabels(projectInfos.Namespace(), projectInfos.Environment),
 			},
 			DisplayName: projectInfos.Namespace(),
 		}
@@ -197,43 +214,32 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 	default:
 		slog.Error("failed to get openshift project.", "error", err.Error())
 	}
-
 }
 
-func generateOpenShiftProject_old(projectInfos *types.Project) {
-	kconfig, _ := rest.InClusterConfig()
-
-	// Create Openshift Project object
-	osProject := &projectv1.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: projectInfos.Namespace(),
-			Labels: map[string]string{
-				"creator":     "kubi",
-				"type":        "customer",
-				"environment": projectInfos.Environment,
-			},
-		},
-	}
-
-	projClientset, err := projectclientv1.NewForConfig(kconfig)
-	if err != nil {
-		slog.Error("failed to get openshift project clientset.", "error", err.Error())
-	} else {
-		{
-			currentProj, err := projClientset.ProjectV1().Projects().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
-			if err != nil {
-				slog.Error("failed to get current openshift project.", "namespace", projectInfos.Namespace(), "error", err.Error())
-			} else {
-				slog.Info("openshift project already exists", "namespace", projectInfos.Namespace(), "project", currentProj)
-			}
-		}
-		_, err = projClientset.ProjectV1().Projects().Create(context.Background(), osProject, metav1.CreateOptions{})
-		if err != nil {
-			slog.Error("failed to create openshift project.", "namespace", projectInfos.Namespace(), "error", err.Error())
-		} else {
-			slog.Info("openshift project created", "namespace", projectInfos.Namespace())
+func checkLabels(expected, actual map[string]string) bool {
+	for k, v := range expected {
+		if actual[k] != v {
+			return false
 		}
 	}
+	return true
+}
+
+// Generate CustomLabels that should be applied on Kubi's Namespaces
+func generateNamespaceLabels(namespace, projectEnv string) (labels map[string]string) {
+	nsLabels := map[string]string{
+		//"name":        namespace,
+		"type":        "customer",
+		"creator":     "kubi",
+		"environment": projectEnv,
+		/*
+			"pod-security.kubernetes.io/enforce": GetPodSecurityStandardName(namespace),
+			"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
+			"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
+		*/
+	}
+	maps.Copy(nsLabels, utils.Config.CustomLabels)
+	return nsLabels
 }
 
 // delete a project ( for blacklist purpose )

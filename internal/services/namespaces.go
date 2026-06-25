@@ -2,14 +2,11 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"maps"
 	"slices"
 	"time"
 
 	"github.com/ca-gip/kubi/internal/utils"
-	cagipv1 "github.com/ca-gip/kubi/pkg/apis/cagip/v1"
 	"github.com/ca-gip/kubi/pkg/generated/clientset/versioned"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -72,26 +69,8 @@ func WatchNamespaces() {
 		panic("failed to sync cache")
 	}
 
-	fmt.Println("Informer synced, watching for ns changes...")
-
 	// Keep running
 	<-stopCh
-}
-
-// Generate CustomLabels that should be applied on Kubi's Namespaces
-func generateNamespaceLabels(project *cagipv1.Project) (labels map[string]string) {
-	nsLabels := map[string]string{
-		"name":                               project.Name,
-		"type":                               "customer",
-		"creator":                            "kubi",
-		"environment":                        project.Spec.Environment,
-		"pod-security.kubernetes.io/enforce": GetPodSecurityStandardName(project.Name),
-		"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
-		"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
-	}
-	// Todo: Decide whether this is still worth a separate function for testability.
-	maps.Copy(nsLabels, utils.Config.CustomLabels)
-	return nsLabels
 }
 
 func GetPodSecurityStandardName(namespace string) string {
