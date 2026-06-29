@@ -23,8 +23,8 @@ func TestParseCustomLabels(t *testing.T) {
 	})
 
 	t.Run("three k/v containing two illegals key should return a single label", func(t *testing.T) {
-		result := parseCustomLabels("customer=ca,creator=kubi,test=123123")
-		assert.Equal(t, result, map[string]string{"test": "123123"})
+		result := parseCustomLabels("customer=ca,creator=kubi,kubernetes.io/test-label=123123")
+		assert.Equal(t, result, map[string]string{"kubernetes.io/test-label": "123123"})
 	})
 
 	t.Run("a single illegal label should not return label", func(t *testing.T) {
