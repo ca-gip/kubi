@@ -194,7 +194,7 @@ func MakeConfig() (*types.Config, error) {
 		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
 		Ldap: types.LdapConfig{
-			UserBase: ldapUserBase,
+			UserBase:              ldapUserBase,
 			EligibleGroupsParents: ldapEligibleGroupsParents,
 			GroupBase:             ldapGroupBase,
 			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),
@@ -238,22 +238,17 @@ func MakeConfig() (*types.Config, error) {
 }
 
 // Parse CustomLabels from a string to a map holding the key value
-func parseCustomLabels(rawLabels string) (labels map[string]string) {
-	labelsPattern := regexp.MustCompile(`(?P<key>\w+)=(?P<value>[^,]+)`)
-
-	if !labelsPattern.MatchString(rawLabels) {
-		return map[string]string{}
-	}
+func parseCustomLabels(rawLabels string) map[string]string {
+	labelsPattern := regexp.MustCompile(`(?P<key>[\w\./-]+)=(?P<value>[^,]+)`)
 
 	matches := labelsPattern.FindAllStringSubmatch(rawLabels, -1)
-	labels = make(map[string]string, len(matches))
+	labels := make(map[string]string, len(matches))
 	for _, match := range matches {
 		if !(match[1] == "creator" || match[1] == "customer") {
 			labels[match[1]] = match[2]
 		}
 	}
-
-	return
+	return labels
 }
 
 // Modifier that Fix too old resource version issues
