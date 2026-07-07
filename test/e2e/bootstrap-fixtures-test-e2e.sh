@@ -102,8 +102,8 @@ kind load docker-image ${IMG_REPO}/kubi-webhook:${IMG_VERSION} --name test-e2e-k
 OPERATOR_DEPLOY_YAML=/tmp/updated-operator-deployment.yaml
 API_WEBHOOK_DEPLOY_YAML=/tmp/updated-api-webhook-deployment.yaml
 sed "s|<kubi-operator-image>|${IMG_REPO}/kubi-operator:${IMG_VERSION}|" test/e2e/conf/kubi/kubi-operator-deployment.yaml > ${OPERATOR_DEPLOY_YAML}
-sed "s|<kubi-webhook-image>|${IMG_REPO}/kubi-webhook:${IMG_VERSION}|" test/e2e/conf/kubi/kubi-api-and-authn-webhook-deployment.yaml > ${API_WEBHOOK_DEPLOY_YAML}
-sed -i "s|<kubi-api-image>|${IMG_REPO}/kubi-api:${IMG_VERSION}|" ${API_WEBHOOK_DEPLOY_YAML}
+sed "s|<kubi-webhook-image>|${IMG_REPO}/kubi-webhook:${IMG_VERSION}|" test/e2e/conf/kubi/kubi-api-and-authn-webhook-deployment.yaml > /tmp/temp.yaml
+sed "s|<kubi-api-image>|${IMG_REPO}/kubi-api:${IMG_VERSION}|" /tmp/temp.yaml > ${API_WEBHOOK_DEPLOY_YAML}
 
 # resign the cert and replace in CSR as said in doc -> wrong
 

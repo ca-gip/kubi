@@ -89,7 +89,7 @@ dockers:
     image_templates:
     - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-operator:{{.ShortCommit}}-arm64"
 
-  - id: docker-api
+  - id: docker-api-amd64
     ids:
       - api
     use: buildx
@@ -103,10 +103,29 @@ dockers:
       - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
+    goarch: amd64
     image_templates:
     - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-api:{{.ShortCommit}}-amd64"
 
-  - id: docker-webhook
+  - id: docker-api-arm64
+    ids:
+      - api
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--build-arg=BINARYNAME=api"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}-api"
+      - "--label=org.opencontainers.image.source=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    goarch: arm64
+    image_templates:
+    - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-api:{{.ShortCommit}}-arm64"
+
+  - id: docker-webhook-amd64
     ids:
       - webhook
     use: buildx
@@ -120,8 +139,27 @@ dockers:
       - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
+    goarch: amd64
     image_templates:
     - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-webhook:{{.ShortCommit}}-amd64"
+
+  - id: docker-webhook-arm64
+    ids:
+      - webhook
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--build-arg=BINARYNAME=webhook"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}-webhook"
+      - "--label=org.opencontainers.image.source=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.url=https://github.com/{{.Env.ORG}}/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    goarch: arm64
+    image_templates:
+    - "ghcr.io/{{.Env.ORG}}/{{.ProjectName}}-webhook:{{.ShortCommit}}-arm64"
 
 snapshot:
   version_template: "{{ .ShortCommit }}"

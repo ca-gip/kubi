@@ -42,6 +42,7 @@ func AuthenticateHandler(issuer *TokenIssuer) http.HandlerFunc {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(resp)
+			return
 		}
 
 		slog.Debug("preparing access for user", "user", token.User)
