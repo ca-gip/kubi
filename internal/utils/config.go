@@ -194,7 +194,7 @@ func MakeConfig() (*types.Config, error) {
 		PodSecurityAdmissionWarning:     podSecurityAdmissionWarning,
 		PodSecurityAdmissionAudit:       podSecurityAdmissionAudit,
 		Ldap: types.LdapConfig{
-			UserBase: ldapUserBase,
+			UserBase:              ldapUserBase,
 			EligibleGroupsParents: ldapEligibleGroupsParents,
 			GroupBase:             ldapGroupBase,
 			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),

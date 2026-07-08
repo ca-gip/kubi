@@ -14,7 +14,7 @@ import (
 
 func main() {
 
-	utils.InitLogger(os.Stdout)
+	utils.InitLogger(os.Stdout, utils.GetLogLevelFromEnv(slog.LevelInfo))
 
 	config, err := utils.MakeConfig()
 	if err != nil {
