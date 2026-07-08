@@ -11,7 +11,7 @@ func TestInitLogger(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Initialize the logger
-	InitLogger(&buf)
+	InitLogger(&buf, slog.LevelDebug)
 
 	// Log a test message
 	slog.Debug("test message")
