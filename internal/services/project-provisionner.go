@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -30,7 +31,7 @@ var ProjectCreation = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "Number of project created",
 }, []string{"status", "name"})
 
-func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool) {
+func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool, productsNs []string) {
 	slog.Info("Generating resources from LDAP groups")
 
 	for {
@@ -65,16 +66,16 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 		// now that the project is well categorized we know that a project cannot be at the same  time to be deleted and to be generated
 		for _, project := range createdproject {
 			slog.Info("creating or updating project", "namespace", project.Namespace())
-			generateProject(project)
+			generateProject(project, productsNs)
 		}
 		time.Sleep(10 * time.Minute)
 	}
 }
 
 // generate a project config or update it if exists
-func generateProject(projectInfos *types.Project) {
+func generateProject(projectInfos *types.Project, productsNs []string) {
 	generateCagipProject(projectInfos)
-	generateOpenShiftProject(projectInfos)
+	generateOpenShiftProject(projectInfos, productsNs)
 }
 
 func generateCagipProject(projectInfos *types.Project) {
@@ -165,7 +166,7 @@ func generateCagipProject(projectInfos *types.Project) {
 	}
 }
 
-func generateOpenShiftProject(projectInfos *types.Project) {
+func generateOpenShiftProject(projectInfos *types.Project, productsNs []string) {
 	kconfig, _ := rest.InClusterConfig()
 	projClientset, err := projectclientv1.NewForConfig(kconfig)
 	if err != nil {
@@ -176,7 +177,7 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 	_, err = projClientset.ProjectV1().Projects().Get(context.Background(), projectInfos.Namespace(), metav1.GetOptions{})
 	switch {
 	case err == nil:
-		expectedLabels := generateNamespaceLabels(projectInfos.Namespace(), projectInfos.Environment)
+		expectedLabels := generateNamespaceLabels(projectInfos.Namespace(), projectInfos.Environment, productsNs)
 		k8sClientset, err := kubernetes.NewForConfig(kconfig)
 		if err != nil {
 			slog.Error("failed to create kubernetes clientset", "error", err)
@@ -202,7 +203,7 @@ func generateOpenShiftProject(projectInfos *types.Project) {
 		osProject := &projectv1.ProjectRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   projectInfos.Namespace(),
-				Labels: generateNamespaceLabels(projectInfos.Namespace(), projectInfos.Environment),
+				Labels: generateNamespaceLabels(projectInfos.Namespace(), projectInfos.Environment, productsNs),
 			},
 			DisplayName: projectInfos.Namespace(),
 		}
@@ -226,7 +227,7 @@ func checkLabels(expected, actual map[string]string) bool {
 }
 
 // Generate CustomLabels that should be applied on Kubi's Namespaces
-func generateNamespaceLabels(namespace, projectEnv string) (labels map[string]string) {
+func generateNamespaceLabels(namespace, projectEnv string, productsNs []string) (labels map[string]string) {
 	nsLabels := map[string]string{
 		//"name":        namespace,
 		"type":                               "customer",
@@ -236,6 +237,17 @@ func generateNamespaceLabels(namespace, projectEnv string) (labels map[string]st
 		"pod-security.kubernetes.io/warn":    string(utils.Config.PodSecurityAdmissionWarning),
 		"pod-security.kubernetes.io/audit":   string(utils.Config.PodSecurityAdmissionAudit),
 	}
+
+	for _, productNs := range productsNs {
+		pat := fmt.Sprintf("^%s-.*$", productNs)
+		customNs := regexp.MustCompile(pat)
+		if customNs.MatchString(namespace) {
+			nsLabels["type"] = "product"
+			nsLabels["product"] = productNs
+			break
+		}
+	}
+
 	maps.Copy(nsLabels, utils.Config.CustomLabels)
 	return nsLabels
 }

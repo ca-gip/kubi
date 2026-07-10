@@ -202,3 +202,22 @@ func generateNetworkPolicyFromTemplate(namespace string) error {
 	}
 	return nil
 }
+
+func removeNetworkPolicy(namespace string) error {
+	kconfig, err := rest.InClusterConfig()
+
+	clientSet, err := kubernetes.NewForConfig(kconfig)
+	if err != nil {
+		return fmt.Errorf("failed to create kubernetes clientset %v", err)
+	}
+	api := clientSet.NetworkingV1()
+	errNetpol := api.NetworkPolicies(namespace).Delete(context.TODO(), utils.KubiDefaultNetworkPolicyName, metav1.DeleteOptions{})
+
+	switch {
+	case kerror.IsNotFound(errNetpol):
+		slog.Debug("Could not delete network policy. Do nothing", "error", errNetpol, "name", utils.KubiDefaultNetworkPolicyName, "namespace", namespace)
+	case errNetpol != nil:
+		return fmt.Errorf("failed to delete network policy in ns %v: %v", namespace, errNetpol)
+	}
+	return nil
+}
