@@ -54,6 +54,7 @@ type Config struct {
 	Blacklist                       []string
 	BlackWhitelistNamespace         string
 	Whitelist                       bool
+	ProductsNs                      []string
 }
 
 // Note: struct fields must be public in order for unmarshal to

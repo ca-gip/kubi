@@ -83,6 +83,10 @@ func createOrUpdateProjectResources(project *cagipv1.Project) {
 		}
 		slog.Debug("network policy created", "object", utils.KubiDefaultNetworkPolicyName, "namespace", project.Name)
 		NetworkPolicyCreation.WithLabelValues("updated", project.Name, utils.KubiDefaultNetworkPolicyName).Inc()
+	} else { // remove network policies if any
+		if err := removeNetworkPolicy(project.Name); err != nil {
+			slog.Error("NetworkPolicy deletion error", "error", err, "namespace", project.Name)
+		}
 	}
 
 	if err := GenerateAppServiceAccount(project.Name); err != nil {

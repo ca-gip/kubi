@@ -27,7 +27,7 @@ func main() {
 	//1- Watch for new Project Ldap Group
 	// ==> Create Project.cagip to store project config (ldag group etc)
 	// ==> Project.openshift ==> create namespace
-	go services.RefreshProjectsFromLdap(ldapClient, config.Whitelist)
+	go services.RefreshProjectsFromLdap(ldapClient, config.Whitelist, config.ProductsNs)
 
 	utils.Config = config
 

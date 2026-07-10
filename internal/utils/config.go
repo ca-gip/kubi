@@ -234,6 +234,7 @@ func MakeConfig() (*types.Config, error) {
 		Blacklist:               strings.Split(getEnv("BLACKLIST", ""), ","),
 		Whitelist:               whitelist,
 		BlackWhitelistNamespace: getEnv("BLACK_WHITELIST_NAMESPACE", "default"),
+		ProductsNs:              strings.Split(getEnv("PRODUCTS_NS", ""), ","),
 	}, nil
 }
 
