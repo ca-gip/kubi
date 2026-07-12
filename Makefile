@@ -9,6 +9,7 @@ $(HACKDIR):
 	mkdir -p $(HACKDIR)
 
 bootstrap-tools: $(HACKDIR)
+	if ! command -v sha256sum &> /dev/null; then echo "sha256sum could not be found"; exit 1; fi
 	command -v $(HACKDIR)/goreleaser || VERSION=v2.5.0 TMPDIR=$(HACKDIR) bash hack/goreleaser-install.sh
 	command -v staticcheck || go install honnef.co/go/tools/cmd/staticcheck@latest
 	chmod +x $(HACKDIR)/goreleaser
