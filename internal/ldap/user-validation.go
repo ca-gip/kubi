@@ -36,9 +36,11 @@ func (c *LDAPClient) validateUserCredentials(base string, username string, passw
 		Email:    mail,
 	}
 
-	_, err = c.ldapConnectAndBind(userDN, password)
+	userConn, err = c.ldapConnectAndBind(userDN, password)
 	if err != nil {
 		return &types.User{}, fmt.Errorf("cannot authenticate user %s in LDAP", username)
 	}
+	userConn.Close()
+
 	return user, nil
 }
