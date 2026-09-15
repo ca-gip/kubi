@@ -94,6 +94,25 @@ func MakeConfig() (*types.Config, error) {
 	}
 
 	ldapUserFilter := getEnv("LDAP_USERFILTER", "(cn=%s)")
+	ldapGroupSearchFilter := getEnv("LDAP_GROUP_SEARCH_FILTER", "(|(objectClass=groupOfNames)(objectClass=group))")
+	ldapGroupNameAttribute := strings.TrimSpace(getEnv("LDAP_GROUP_NAME_ATTRIBUTE", "cn"))
+	if ldapGroupNameAttribute == "" {
+		return nil, errors.New("LDAP_GROUP_NAME_ATTRIBUTE cannot be empty")
+	}
+
+	ldapGroupAttributes := strings.Split(getEnv("LDAP_GROUP_ATTRIBUTES", ldapGroupNameAttribute), ",")
+	for i := range ldapGroupAttributes {
+		ldapGroupAttributes[i] = strings.TrimSpace(ldapGroupAttributes[i])
+	}
+	cleanGroupAttributes := make([]string, 0, len(ldapGroupAttributes))
+	for _, attr := range ldapGroupAttributes {
+		if attr != "" {
+			cleanGroupAttributes = append(cleanGroupAttributes, attr)
+		}
+	}
+	if len(cleanGroupAttributes) == 0 {
+		return nil, errors.New("LDAP_GROUP_ATTRIBUTES must contain at least one attribute")
+	}
 
 	ldapPageSizeEnv := getEnv("LDAP_PAGE_SIZE", "1000")
 	ldapPageSize, errLdapPageSize := strconv.Atoi(ldapPageSizeEnv)
@@ -197,6 +216,9 @@ func MakeConfig() (*types.Config, error) {
 			UserBase:              ldapUserBase,
 			EligibleGroupsParents: ldapEligibleGroupsParents,
 			GroupBase:             ldapGroupBase,
+			GroupSearchFilter:     ldapGroupSearchFilter,
+			GroupNameAttribute:    ldapGroupNameAttribute,
+			GroupAttributes:       cleanGroupAttributes,
 			AppMasterGroupBase:    getEnv("LDAP_APP_GROUPBASE", ""),
 			CustomerOpsGroupBase:  getEnv("LDAP_CUSTOMER_OPS_GROUPBASE", ""),
 			ServiceGroupBase:      getEnv("LDAP_SERVICE_GROUPBASE", ""),

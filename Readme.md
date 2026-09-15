@@ -69,6 +69,13 @@ You can modify following diagrams using the excalidraw file under `docs/` folder
 ## Index
 
 - [Kubi](#kubi)
+- [Kubi components goals](#kubi-components-goals)
+  - [Architectural diagrams](#architectural-diagrams)
+    - [Kubi operator](#kubi-operator)
+    - [Kubi CLI + API](#kubi-cli--api)
+    - [Kubi authentication webhook](#kubi-authentication-webhook)
+    - [Example of kubeconfig file](#example-of-kubeconfig-file)
+    - [Example of TokenReview](#example-of-tokenreview)
   - [Index](#index)
 - [General](#general)
   - [Parameters](#parameters)
@@ -81,26 +88,7 @@ You can modify following diagrams using the excalidraw file under `docs/` folder
       - [For Mac](#for-mac)
       - [Connection](#connection)
     - [With `curl`](#with-curl)
-- [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-  - [Create a crt signed by Kubernetes CA](#create-a-crt-signed-by-kubernetes-ca)
-  - [Create the signing request](#create-the-signing-request)
-  - [Approve the csr](#approve-the-csr)
-  - [Retrieve the crt](#retrieve-the-crt)
-  - [Create a secret for the deployment](#create-a-secret-for-the-deployment)
-  - [Create a secret for LDAP Bind password](#create-a-secret-for-ldap-bind-password)
-  - [Deploy the config map](#deploy-the-config-map)
-  - [Deploy the Custom Resource Definitions](#deploy-the-custom-resource-definitions)
-  - [Deploy the prerequisites](#deploy-the-prerequisites)
-  - [Deploy Kubi](#deploy-kubi)
-  - [Customize the default network policy](#customize-the-default-network-policy)
-  - [Basic Webhook configuration](#basic-webhook-configuration)
-  - [Advanced Webhook configuration](#advanced-webhook-configuration)
-- [Roadmap](#roadmap)
-- [Development environment](#development-environment)
-  - [Deploy the local config](#deploy-the-local-config)
-  - [Copy the secret from you Kubernetes cluster](#copy-the-secret-from-you-kubernetes-cluster)
-  - [Running](#running)
+- [Contributing](#contributing)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -149,6 +137,9 @@ For specific exceptions, add another network policy.
 |  **LDAP_BINDDN**                   |  *LDAP bind account DN*              | `"CN=admin,DC=example,DC=ORG"  ` | `yes  `     | -           |
 |  **LDAP_PASSWD**                   |  *LDAP bind account password*        | `"password"                    ` | `yes  `     | -           |
 |  **LDAP_USERFILTER**               |  *LDAP filter for user search*       | `"(userPrincipalName=%s)"      ` | `no   `     | `(cn=%s)`   |
+|  **LDAP_GROUP_SEARCH_FILTER**      |  *LDAP filter for group search (operator)* | `"(&(objectClass=group)(|(CN=DL_KUB_*)))"` | `no   ` | `(|(objectClass=groupOfNames)(objectClass=group))` |
+|  **LDAP_GROUP_NAME_ATTRIBUTE**     |  *Group name attribute to read*      | `cn`                             | `no   `     | `cn`        |
+|  **LDAP_GROUP_ATTRIBUTES**         |  *Comma-separated attributes requested in group search* | `cn,member,uniqueMember` | `no   ` | value of `LDAP_GROUP_NAME_ATTRIBUTE` |
 |  **TOKEN_LIFETIME**                |  *Duration for the JWT token*        | `"4h"                          ` | `no   `     | 4h          |
 |  **LOCATOR**                       |  *Locator: must be internet or extranet*  | `"intranet"             `   | `no   `     | intranet    |
 |  **PROVISIONING_NETWORK_POLICIES** |  *Enable or disable NetPol Mgmt*     | `true                           `   | `no   `     | yes         |
