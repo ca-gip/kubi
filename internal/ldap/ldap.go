@@ -38,6 +38,20 @@ func (c *LDAPClient) ListProjects() ([]*types.Project, error) {
 
 // getProjectGroups returns all groupnames that are useful for projects.
 func (c *LDAPClient) getProjectGroups() ([]string, error) {
+	groupSearchFilter := c.GroupSearchFilter
+	if groupSearchFilter == "" {
+		groupSearchFilter = "(|(objectClass=groupOfNames)(objectClass=group))"
+	}
+
+	groupNameAttribute := c.GroupNameAttribute
+	if groupNameAttribute == "" {
+		groupNameAttribute = "cn"
+	}
+
+	groupAttributes := c.GroupAttributes
+	if len(groupAttributes) == 0 {
+		groupAttributes = []string{groupNameAttribute}
+	}
 
 	request := &ldap.SearchRequest{
 		BaseDN:       c.GroupBase,
@@ -45,8 +59,8 @@ func (c *LDAPClient) getProjectGroups() ([]string, error) {
 		DerefAliases: ldap.NeverDerefAliases,
 		TimeLimit:    30,
 		TypesOnly:    false,
-		Filter:       "(|(objectClass=groupOfNames)(objectClass=group))", // filter default format : (&(objectClass=groupOfNames)(member=%s))
-		Attributes:   []string{"cn"},
+		Filter:       groupSearchFilter,
+		Attributes:   groupAttributes,
 	}
 
 	results, err := c.Query(*request)
@@ -56,7 +70,10 @@ func (c *LDAPClient) getProjectGroups() ([]string, error) {
 
 	var groups []string
 	for _, entry := range results {
-		groups = append(groups, entry.GetAttributeValue("cn"))
+		groupName := entry.GetAttributeValue(groupNameAttribute)
+		if groupName != "" {
+			groups = append(groups, groupName)
+		}
 	}
 	return groups, nil
 }

@@ -13,6 +13,9 @@ type LdapConfig struct {
 	UserBase              string
 	EligibleGroupsParents []string
 	GroupBase             string // base path for all the cluster's project groups
+	GroupSearchFilter     string
+	GroupNameAttribute    string
+	GroupAttributes       []string
 	AppMasterGroupBase    string
 	CustomerOpsGroupBase  string
 	ServiceGroupBase      string
