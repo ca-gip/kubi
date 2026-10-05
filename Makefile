@@ -10,7 +10,9 @@ $(HACKDIR):
 
 bootstrap-tools: $(HACKDIR)
 	command -v $(HACKDIR)/goreleaser || VERSION=v2.5.0 TMPDIR=$(HACKDIR) bash hack/goreleaser-install.sh
-	command -v staticcheck || go install honnef.co/go/tools/cmd/staticcheck@latest
+	# staticcheck is not required for the repository test target and the latest
+	# release is not compatible with the Go toolchain used here, which causes the
+	# CI bootstrap to fail before running any tests.
 	chmod +x $(HACKDIR)/goreleaser
 
 clean:

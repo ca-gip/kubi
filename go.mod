@@ -7,6 +7,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.40.0
+	github.com/openshift/api v0.0.0-20260107103503-6d35063ca179
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
@@ -19,10 +20,12 @@ require (
 	k8s.io/pod-security-admission v0.36.2
 )
 
-require github.com/Masterminds/semver/v3 v3.4.0 // indirect
-
 require (
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
+)
+
+require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
