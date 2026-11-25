@@ -64,7 +64,51 @@ func RefreshProjectsFromLdap(ldapClient *ldap.LDAPClient, whitelistEnabled bool)
 			slog.Info("creating or updating projec", "namespace", project.Namespace())
 			generateProject(project)
 		}
+
+		// delete projects whose LDAP group no longer exists
+		if err == nil && len(clusterProjects) > 0 {
+			deleteOrphanProjects(clusterProjects)
+		}
 		time.Sleep(10 * time.Minute)
+	}
+}
+
+// deleteOrphanProjects removes Project CRDs created by kubi without a matching LDAP group
+func deleteOrphanProjects(ldapProjects []*types.Project) {
+	kconfig, err := rest.InClusterConfig()
+	if err != nil {
+		slog.Error("cannot get in-cluster config", "error", err)
+		return
+	}
+	clientSet, err := versioned.NewForConfig(kconfig)
+	if err != nil {
+		slog.Error("cannot create clientset", "error", err)
+		return
+	}
+
+	existing, err := clientSet.CagipV1().Projects().List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "creator=kubi",
+	})
+	if err != nil {
+		slog.Error("cannot list projects", "error", err)
+		return
+	}
+
+	inLdap := make(map[string]struct{}, len(ldapProjects))
+	for _, p := range ldapProjects {
+		inLdap[p.Namespace()] = struct{}{}
+	}
+
+	for _, p := range existing.Items {
+		if _, ok := inLdap[p.Name]; ok {
+			continue
+		}
+		slog.Info("LDAP group not found, deleting project", "namespace", p.Name)
+		deleteProject(&types.Project{
+			Project:     p.Spec.Project,
+			Environment: p.Spec.Environment,
+			Source:      p.Spec.SourceEntity,
+		})
 	}
 }
 
